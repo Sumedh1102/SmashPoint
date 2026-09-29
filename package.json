@@ -2,7 +2,7 @@
   "name": "smashpoint-academy",
   "version": "1.0.0",
   "private": true,
-  "description": "SmashPoint Badminton Academy \u2014 public website, court booking and academy management platform.",
+  "description": "SmashPoint Badminton Academy — public website, court booking and academy management platform.",
   "engines": {
     "node": ">=20.9.0"
   },
@@ -23,6 +23,7 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.3",
+    "firebase": "^12.19.0",
     "jose": "^6.2.12",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.47.0",
@@ -44,6 +45,7 @@
     "@types/react-dom": "^19.3.0",
     "dotenv": "^16.6.1",
     "drizzle-kit": "^0.31.11",
+    "firebase-admin": "^14.5.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",

@@ -17,6 +17,7 @@
  */
 import { relations, sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   customType,
@@ -38,7 +39,7 @@ import {
 /* Enums                                                                     */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-export const userRole = pgEnum("user_role", ["ADMIN", "MANAGER", "COACH", "RECEPTION", "STUDENT"]);
+export const userRole = pgEnum("user_role", ["ADMIN", "MANAGER", "COACH", "RECEPTION", "CUSTOMER"]);
 export const gender = pgEnum("gender", ["MALE", "FEMALE", "OTHER"]);
 export const studentStatus = pgEnum("student_status", ["ACTIVE", "INACTIVE", "SUSPENDED"]);
 export const skillLevel = pgEnum("skill_level", ["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
@@ -54,6 +55,8 @@ export const bookingStatus = pgEnum("booking_status", [
   "REFUNDED",
   "EXPIRED",
 ]);
+/** Single visit, or a recurring block of sessions paid up front. */
+export const bookingType = pgEnum("booking_type", ["SINGLE", "MONTHLY", "QUARTERLY"]);
 export const bookingSource = pgEnum("booking_source", ["ONLINE", "WALK_IN", "ADMIN"]);
 export const paymentStatus = pgEnum("payment_status", ["CREATED", "INITIATED", "PAID", "FAILED", "REFUNDED"]);
 export const paymentPurpose = pgEnum("payment_purpose", ["BOOKING", "MEMBERSHIP", "EVENT", "BATCH_FEE", "OTHER"]);
@@ -81,6 +84,8 @@ export const announcementAudience = pgEnum("announcement_audience", ["EVERYONE",
 export const couponType = pgEnum("coupon_type", ["PERCENT", "FLAT"]);
 export const couponScope = pgEnum("coupon_scope", ["ALL", "BOOKING", "MEMBERSHIP", "EVENT"]);
 export const enquiryStatus = pgEnum("enquiry_status", ["NEW", "IN_PROGRESS", "CLOSED"]);
+export const equipmentPricing = pgEnum("equipment_pricing", ["PER_BOOKING", "PER_HOUR"]);
+export const rentalStatus = pgEnum("rental_status", ["RESERVED", "ISSUED", "RETURNED", "CANCELLED", "DAMAGED", "LOST"]);
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Helpers                                                                   */
@@ -118,8 +123,11 @@ export const users = pgTable(
     name: varchar("name", { length: 120 }).notNull(),
     email: varchar("email", { length: 180 }).notNull(),
     phone: varchar("phone", { length: 20 }),
-    passwordHash: text("password_hash").notNull(),
-    role: userRole("role").notNull().default("STUDENT"),
+    /** Firebase Authentication uid. Identity lives in Firebase; this row holds the profile and role. */
+    firebaseUid: varchar("firebase_uid", { length: 128 }).unique(),
+    /** Legacy scrypt hash from before Firebase (kept only so accounts can be imported into Firebase). */
+    passwordHash: text("password_hash"),
+    role: userRole("role").notNull().default("CUSTOMER"),
     avatarUrl: text("avatar_url"),
     isActive: boolean("is_active").notNull().default(true),
     emergencyContactName: varchar("emergency_contact_name", { length: 120 }),
@@ -257,14 +265,44 @@ export const students = pgTable(
 /* Courts & bookings                                                         */
 /* ────────────────────────────────────────────────────────────────────────── */
 
+export const sports = pgTable(
+  "sports",
+  {
+    id: id(),
+    slug: varchar("slug", { length: 60 }).notNull().unique(),
+    name: varchar("name", { length: 60 }).notNull(),
+    tagline: varchar("tagline", { length: 160 }),
+    description: text("description"),
+    imageUrl: text("image_url"),
+    imageAssetId: uuid("image_asset_id").references(() => mediaAssets.id, { onDelete: "set null" }),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("sports_sort_idx").on(t.sortOrder)],
+);
+
 export const courts = pgTable(
   "courts",
   {
     id: id(),
+    sportId: uuid("sport_id")
+      .notNull()
+      .references(() => sports.id, { onDelete: "restrict" }),
     name: varchar("name", { length: 60 }).notNull(),
     description: text("description"),
     surface: varchar("surface", { length: 80 }).notNull().default("Synthetic PU mat"),
     status: courtStatus("status").notNull().default("ACTIVE"),
+    imageUrl: text("image_url"),
+    imageAssetId: uuid("image_asset_id").references(() => mediaAssets.id, { onDelete: "set null" }),
+    /** Bookable durations in minutes, e.g. {60,120}. */
+    durations: smallint("durations").array().notNull().default(sql`'{60,120}'::smallint[]`),
+    /** Which booking types this court accepts. */
+    bookingTypes: bookingType("booking_types").array().notNull().default(sql`'{SINGLE}'::booking_type[]`),
+    /** Optional per-court opening hours; null falls back to the academy-wide hours. */
+    openMinute: smallint("open_minute"),
+    closeMinute: smallint("close_minute"),
     /** Non-peak price per hour (minor units). */
     hourlyRate: integer("hourly_rate").notNull(),
     /** Peak price per hour (minor units). Peak windows live in settings. */
@@ -275,7 +313,12 @@ export const courts = pgTable(
   },
   (t) => [
     check("courts_rates_positive", sql`${t.hourlyRate} >= 0 AND ${t.peakHourlyRate} >= 0`),
+    check(
+      "courts_hours",
+      sql`(${t.openMinute} IS NULL AND ${t.closeMinute} IS NULL) OR (${t.openMinute} IS NOT NULL AND ${t.closeMinute} > ${t.openMinute})`,
+    ),
     index("courts_sort_idx").on(t.sortOrder),
+    index("courts_sport_idx").on(t.sportId),
   ],
 );
 
@@ -334,9 +377,14 @@ export const bookings = pgTable(
     id: id(),
     /** Human-friendly, non-sequential reference, e.g. SP-7K3D9Q. */
     code: varchar("code", { length: 16 }).notNull().unique(),
+    sportId: uuid("sport_id")
+      .notNull()
+      .references(() => sports.id, { onDelete: "restrict" }),
     courtId: uuid("court_id")
       .notNull()
       .references(() => courts.id, { onDelete: "restrict" }),
+    /** Set for sessions that belong to a monthly/quarterly booking. */
+    seriesId: uuid("series_id").references((): AnyPgColumn => bookingSeries.id, { onDelete: "cascade" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     customerName: varchar("customer_name", { length: 120 }).notNull(),
     customerPhone: varchar("customer_phone", { length: 20 }).notNull(),
@@ -344,8 +392,12 @@ export const bookings = pgTable(
     date: date("date", { mode: "string" }).notNull(),
     startMinute: smallint("start_minute").notNull(),
     endMinute: smallint("end_minute").notNull(),
+    /** Court price before discounts. */
     subtotal: integer("subtotal").notNull(),
     discount: integer("discount").notNull().default(0),
+    /** Equipment rental charges (not discounted). */
+    equipmentTotal: integer("equipment_total").notNull().default(0),
+    /** subtotal − discount + equipmentTotal */
     total: integer("total").notNull(),
     couponId: uuid("coupon_id").references(() => coupons.id, { onDelete: "set null" }),
     status: bookingStatus("status").notNull().default("PENDING"),
@@ -368,9 +420,223 @@ export const bookings = pgTable(
     index("bookings_user_idx").on(t.userId),
     index("bookings_status_idx").on(t.status),
     index("bookings_phone_idx").on(t.customerPhone),
+    index("bookings_sport_date_idx").on(t.sportId, t.date),
+    index("bookings_series_idx").on(t.seriesId),
     check("bookings_time_order", sql`${t.endMinute} > ${t.startMinute}`),
-    check("bookings_amounts", sql`${t.total} >= 0 AND ${t.discount} >= 0 AND ${t.subtotal} >= 0`),
+    check("bookings_amounts", sql`${t.total} >= 0 AND ${t.discount} >= 0 AND ${t.subtotal} >= 0 AND ${t.equipmentTotal} >= 0`),
   ],
+);
+
+/**
+ * A monthly or quarterly booking: the same court and time on chosen weekdays between two
+ * dates, paid up front. Each session is a row in `bookings` (with series_id), so the
+ * overlap constraint protects every session exactly like a single booking.
+ */
+export const bookingSeries = pgTable(
+  "booking_series",
+  {
+    id: id(),
+    code: varchar("code", { length: 16 }).notNull().unique(),
+    type: bookingType("type").notNull(),
+    sportId: uuid("sport_id")
+      .notNull()
+      .references(() => sports.id, { onDelete: "restrict" }),
+    courtId: uuid("court_id")
+      .notNull()
+      .references(() => courts.id, { onDelete: "restrict" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    customerName: varchar("customer_name", { length: 120 }).notNull(),
+    customerPhone: varchar("customer_phone", { length: 20 }).notNull(),
+    customerEmail: varchar("customer_email", { length: 180 }),
+    startDate: date("start_date", { mode: "string" }).notNull(),
+    endDate: date("end_date", { mode: "string" }).notNull(),
+    /** 0 = Sunday … 6 = Saturday */
+    daysOfWeek: smallint("days_of_week").array().notNull(),
+    startMinute: smallint("start_minute").notNull(),
+    endMinute: smallint("end_minute").notNull(),
+    sessionCount: smallint("session_count").notNull(),
+    subtotal: integer("subtotal").notNull(),
+    discount: integer("discount").notNull().default(0),
+    equipmentTotal: integer("equipment_total").notNull().default(0),
+    total: integer("total").notNull(),
+    status: bookingStatus("status").notNull().default("PENDING"),
+    source: bookingSource("source").notNull().default("ONLINE"),
+    notes: text("notes"),
+    holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: varchar("cancel_reason", { length: 300 }),
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("booking_series_user_idx").on(t.userId),
+    index("booking_series_court_idx").on(t.courtId, t.startDate),
+    check("booking_series_dates", sql`${t.endDate} >= ${t.startDate}`),
+    check("booking_series_time_order", sql`${t.endMinute} > ${t.startMinute}`),
+    check("booking_series_amounts", sql`${t.total} >= 0 AND ${t.subtotal} >= 0 AND ${t.discount} >= 0`),
+  ],
+);
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Equipment                                                                 */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export const equipmentItems = pgTable(
+  "equipment_items",
+  {
+    id: id(),
+    /** Null = usable for every sport. */
+    sportId: uuid("sport_id").references(() => sports.id, { onDelete: "set null" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    category: varchar("category", { length: 40 }).notNull(),
+    description: text("description"),
+    size: varchar("size", { length: 40 }),
+    imageUrl: text("image_url"),
+    imageAssetId: uuid("image_asset_id").references(() => mediaAssets.id, { onDelete: "set null" }),
+    totalQuantity: integer("total_quantity").notNull(),
+    /** Units out of service (damaged / under repair); not rentable. */
+    damagedQuantity: integer("damaged_quantity").notNull().default(0),
+    rentalPrice: integer("rental_price").notNull(),
+    pricing: equipmentPricing("pricing").notNull().default("PER_BOOKING"),
+    /** Refundable deposit collected at the desk (minor units). */
+    deposit: integer("deposit").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("equipment_items_sport_idx").on(t.sportId),
+    check("equipment_quantities", sql`${t.totalQuantity} >= 0 AND ${t.damagedQuantity} >= 0 AND ${t.damagedQuantity} <= ${t.totalQuantity}`),
+    check("equipment_prices", sql`${t.rentalPrice} >= 0 AND ${t.deposit} >= 0`),
+  ],
+);
+
+/**
+ * Units of an item held for a time window. Rentals attached to a booking follow its lifecycle;
+ * staff can also record walk-in rentals without a booking.
+ */
+export const equipmentRentals = pgTable(
+  "equipment_rentals",
+  {
+    id: id(),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => equipmentItems.id, { onDelete: "restrict" }),
+    bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    customerName: varchar("customer_name", { length: 120 }),
+    date: date("date", { mode: "string" }).notNull(),
+    startMinute: smallint("start_minute").notNull(),
+    endMinute: smallint("end_minute").notNull(),
+    quantity: smallint("quantity").notNull(),
+    unitPrice: integer("unit_price").notNull(),
+    amount: integer("amount").notNull(),
+    deposit: integer("deposit").notNull().default(0),
+    status: rentalStatus("status").notNull().default("RESERVED"),
+    issuedAt: timestamp("issued_at", { withTimezone: true }),
+    returnedAt: timestamp("returned_at", { withTimezone: true }),
+    notes: varchar("notes", { length: 300 }),
+    createdById: uuid("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("equipment_rentals_item_date_idx").on(t.itemId, t.date),
+    index("equipment_rentals_booking_idx").on(t.bookingId),
+    index("equipment_rentals_user_idx").on(t.userId),
+    check("equipment_rentals_quantity", sql`${t.quantity} > 0`),
+    check("equipment_rentals_time_order", sql`${t.endMinute} > ${t.startMinute}`),
+  ],
+);
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Public content                                                            */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export const galleryItems = pgTable(
+  "gallery_items",
+  {
+    id: id(),
+    category: varchar("category", { length: 40 }).notNull(),
+    caption: varchar("caption", { length: 200 }),
+    imageUrl: text("image_url").notNull(),
+    imageAssetId: uuid("image_asset_id").references(() => mediaAssets.id, { onDelete: "set null" }),
+    width: integer("width"),
+    height: integer("height"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isPublished: boolean("is_published").notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [index("gallery_items_order_idx").on(t.isPublished, t.sortOrder)],
+);
+
+export const facilities = pgTable(
+  "facilities",
+  {
+    id: id(),
+    name: varchar("name", { length: 120 }).notNull(),
+    /** SPORTS | EQUIPMENT | FOOD_BEVERAGE | AMENITY */
+    category: varchar("category", { length: 40 }).notNull(),
+    description: text("description"),
+    imageUrl: text("image_url"),
+    imageAssetId: uuid("image_asset_id").references(() => mediaAssets.id, { onDelete: "set null" }),
+    availability: varchar("availability", { length: 120 }),
+    price: integer("price"),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("facilities_category_idx").on(t.category, t.sortOrder)],
+);
+
+/** Café menu. Informational today; price + availability are stored so ordering can be added later. */
+export const foodItems = pgTable(
+  "food_items",
+  {
+    id: id(),
+    name: varchar("name", { length: 120 }).notNull(),
+    category: varchar("category", { length: 40 }).notNull(),
+    description: text("description"),
+    imageUrl: text("image_url"),
+    imageAssetId: uuid("image_asset_id").references(() => mediaAssets.id, { onDelete: "set null" }),
+    price: integer("price"),
+    isAvailable: boolean("is_available").notNull().default(true),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("food_items_category_idx").on(t.category, t.sortOrder), check("food_items_price", sql`${t.price} IS NULL OR ${t.price} >= 0`)],
+);
+
+/** Coaching is advertised only; enquiries go through the contact form. */
+export const coachingAds = pgTable(
+  "coaching_ads",
+  {
+    id: id(),
+    slug: varchar("slug", { length: 80 }).notNull().unique(),
+    title: varchar("title", { length: 120 }).notNull(),
+    summary: varchar("summary", { length: 240 }).notNull(),
+    description: text("description"),
+    sportId: uuid("sport_id").references(() => sports.id, { onDelete: "set null" }),
+    coachId: uuid("coach_id").references(() => coaches.id, { onDelete: "set null" }),
+    imageUrl: text("image_url"),
+    imageAssetId: uuid("image_asset_id").references(() => mediaAssets.id, { onDelete: "set null" }),
+    skillLevel: varchar("skill_level", { length: 60 }),
+    ageRange: varchar("age_range", { length: 60 }),
+    timing: varchar("timing", { length: 120 }),
+    highlights: text("highlights").array().notNull().default(sql`'{}'::text[]`),
+    ctaLabel: varchar("cta_label", { length: 40 }).notNull().default("Enquire now"),
+    isPublished: boolean("is_published").notNull().default(true),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("coaching_ads_order_idx").on(t.isPublished, t.sortOrder)],
 );
 
 /** Lifecycle audit trail: Pending → Payment Initiated → Paid → Confirmed (→ Cancelled → Refunded). */
@@ -675,6 +941,7 @@ export const payments = pgTable(
     studentId: uuid("student_id").references(() => students.id, { onDelete: "set null" }),
     purpose: paymentPurpose("purpose").notNull(),
     bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "set null" }),
+    seriesId: uuid("series_id").references(() => bookingSeries.id, { onDelete: "set null" }),
     membershipId: uuid("membership_id").references(() => memberships.id, { onDelete: "set null" }),
     eventRegistrationId: uuid("event_registration_id").references(() => eventRegistrations.id, { onDelete: "set null" }),
     payerName: varchar("payer_name", { length: 120 }).notNull(),
@@ -700,6 +967,7 @@ export const payments = pgTable(
   },
   (t) => [
     index("payments_booking_idx").on(t.bookingId),
+    index("payments_series_idx").on(t.seriesId),
     index("payments_membership_idx").on(t.membershipId),
     index("payments_user_idx").on(t.userId),
     index("payments_student_idx").on(t.studentId),
@@ -793,6 +1061,28 @@ export const settings = pgTable("settings", {
   updatedAt: updatedAt(),
 });
 
+/** Files in object storage (Supabase). Only the path, public URL and metadata live here. */
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: id(),
+    /** supabase | local */
+    provider: varchar("provider", { length: 20 }).notNull(),
+    bucket: varchar("bucket", { length: 63 }).notNull(),
+    path: varchar("path", { length: 300 }).notNull(),
+    url: text("url").notNull(),
+    folder: varchar("folder", { length: 40 }).notNull(),
+    contentType: varchar("content_type", { length: 60 }).notNull(),
+    byteSize: integer("byte_size").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    uploadedById: uuid("uploaded_by_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("media_assets_location_key").on(t.provider, t.bucket, t.path), index("media_assets_folder_idx").on(t.folder)],
+);
+
+/** Legacy in-database images (pre–object storage). Served read-only and migrated by scripts/migrate-media.ts. */
 export const media = pgTable("media", {
   id: id(),
   ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
@@ -851,7 +1141,13 @@ export const studentsRelations = relations(students, ({ one, many }) => ({
   payments: many(payments),
 }));
 
-export const courtsRelations = relations(courts, ({ many }) => ({
+export const sportsRelations = relations(sports, ({ many }) => ({
+  courts: many(courts),
+  equipment: many(equipmentItems),
+}));
+
+export const courtsRelations = relations(courts, ({ one, many }) => ({
+  sport: one(sports, { fields: [courts.sportId], references: [sports.id] }),
   bookings: many(bookings),
   blocks: many(courtBlocks),
   batches: many(batches),
@@ -862,11 +1158,37 @@ export const courtBlocksRelations = relations(courtBlocks, ({ one }) => ({
 }));
 
 export const bookingsRelations = relations(bookings, ({ one, many }) => ({
+  sport: one(sports, { fields: [bookings.sportId], references: [sports.id] }),
+  series: one(bookingSeries, { fields: [bookings.seriesId], references: [bookingSeries.id] }),
+  rentals: many(equipmentRentals),
   court: one(courts, { fields: [bookings.courtId], references: [courts.id] }),
   user: one(users, { fields: [bookings.userId], references: [users.id] }),
   coupon: one(coupons, { fields: [bookings.couponId], references: [coupons.id] }),
   events: many(bookingEvents),
   payments: many(payments),
+}));
+
+export const bookingSeriesRelations = relations(bookingSeries, ({ one, many }) => ({
+  sport: one(sports, { fields: [bookingSeries.sportId], references: [sports.id] }),
+  court: one(courts, { fields: [bookingSeries.courtId], references: [courts.id] }),
+  user: one(users, { fields: [bookingSeries.userId], references: [users.id] }),
+  bookings: many(bookings),
+  payments: many(payments),
+}));
+
+export const equipmentItemsRelations = relations(equipmentItems, ({ one, many }) => ({
+  sport: one(sports, { fields: [equipmentItems.sportId], references: [sports.id] }),
+  rentals: many(equipmentRentals),
+}));
+
+export const equipmentRentalsRelations = relations(equipmentRentals, ({ one }) => ({
+  item: one(equipmentItems, { fields: [equipmentRentals.itemId], references: [equipmentItems.id] }),
+  booking: one(bookings, { fields: [equipmentRentals.bookingId], references: [bookings.id] }),
+}));
+
+export const coachingAdsRelations = relations(coachingAds, ({ one }) => ({
+  sport: one(sports, { fields: [coachingAds.sportId], references: [sports.id] }),
+  coach: one(coaches, { fields: [coachingAds.coachId], references: [coaches.id] }),
 }));
 
 export const bookingEventsRelations = relations(bookingEvents, ({ one }) => ({
@@ -935,6 +1257,7 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   user: one(users, { fields: [payments.userId], references: [users.id] }),
   student: one(students, { fields: [payments.studentId], references: [students.id] }),
   booking: one(bookings, { fields: [payments.bookingId], references: [bookings.id] }),
+  series: one(bookingSeries, { fields: [payments.seriesId], references: [bookingSeries.id] }),
   membership: one(memberships, { fields: [payments.membershipId], references: [memberships.id] }),
   eventRegistration: one(eventRegistrations, {
     fields: [payments.eventRegistrationId],
@@ -954,7 +1277,18 @@ export type User = typeof users.$inferSelect;
 export type Role = (typeof userRole.enumValues)[number];
 export type Student = typeof students.$inferSelect;
 export type Coach = typeof coaches.$inferSelect;
+export type Sport = typeof sports.$inferSelect;
 export type Court = typeof courts.$inferSelect;
+export type BookingSeries = typeof bookingSeries.$inferSelect;
+export type BookingType = (typeof bookingType.enumValues)[number];
+export type EquipmentItem = typeof equipmentItems.$inferSelect;
+export type EquipmentRental = typeof equipmentRentals.$inferSelect;
+export type RentalStatus = (typeof rentalStatus.enumValues)[number];
+export type GalleryItem = typeof galleryItems.$inferSelect;
+export type Facility = typeof facilities.$inferSelect;
+export type FoodItem = typeof foodItems.$inferSelect;
+export type CoachingAd = typeof coachingAds.$inferSelect;
+export type MediaAsset = typeof mediaAssets.$inferSelect;
 export type CourtBlock = typeof courtBlocks.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type BookingStatus = (typeof bookingStatus.enumValues)[number];

@@ -10,6 +10,8 @@ export class DomainError extends Error {
       | "EXPIRED"
       | "PAYMENT_FAILED"
       | "CAPACITY_FULL"
+      | "NOT_RELEASED"
+      | "EQUIPMENT_UNAVAILABLE"
       | "CONFLICT" = "INVALID_INPUT",
     public status = 400,
   ) {

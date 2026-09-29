@@ -2,7 +2,9 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { db, type Transaction } from "@/server/db";
 import {
+  bookingSeries,
   bookings,
+  courts,
   eventRegistrations,
   events,
   memberships,
@@ -16,7 +18,7 @@ import { DomainError, isExclusionViolation } from "@/server/errors";
 import { bookingAccessToken, randomCode } from "@/server/security";
 import { getBookingSettings } from "@/server/settings";
 import { notify } from "@/server/notifications";
-import { transitionBooking } from "@/server/services/bookings";
+import { transitionBooking, transitionSeries } from "@/server/services/bookings";
 import { incrementCouponUse } from "@/server/services/coupons";
 import { getPaymentProvider } from "./index";
 import type { CheckoutInstruction } from "./types";
@@ -31,6 +33,7 @@ type StartPaymentInput = {
   userId?: string | null;
   studentId?: string | null;
   bookingId?: string | null;
+  seriesId?: string | null;
   membershipId?: string | null;
   eventRegistrationId?: string | null;
 };
@@ -54,6 +57,7 @@ export async function startPayment(input: StartPaymentInput): Promise<{ paymentI
       userId: input.userId ?? null,
       studentId: input.studentId ?? null,
       bookingId: input.bookingId ?? null,
+      seriesId: input.seriesId ?? null,
       membershipId: input.membershipId ?? null,
       eventRegistrationId: input.eventRegistrationId ?? null,
     })
@@ -140,6 +144,54 @@ export async function initiateBookingPayment(code: string): Promise<{ checkout: 
   return { checkout };
 }
 
+/** Checkout for a monthly/quarterly booking: one payment covers every session. */
+export async function initiateSeriesPayment(code: string): Promise<{ checkout: CheckoutInstruction }> {
+  const settings = await getBookingSettings();
+  const [series] = await db.select().from(bookingSeries).where(eq(bookingSeries.code, code)).limit(1);
+  if (!series) throw new DomainError("Booking not found.", "NOT_FOUND", 404);
+  if (series.status === "PAID" || series.status === "CONFIRMED") throw new DomainError("This booking is already paid.", "CONFLICT", 409);
+  if (!["PENDING", "PAYMENT_INITIATED"].includes(series.status)) {
+    throw new DomainError("This booking can no longer be paid. Please make a new booking.", "EXPIRED", 410);
+  }
+  if (series.holdExpiresAt && series.holdExpiresAt < new Date()) {
+    await db.transaction((tx) => transitionSeries(tx, series.id, "EXPIRED", { note: "Payment window elapsed", fromStatuses: ["PENDING", "PAYMENT_INITIATED"] }));
+    throw new DomainError("Your slot hold expired. Please choose the slots again.", "EXPIRED", 410);
+  }
+  if (series.total === 0) {
+    await recordOfflinePayment({
+      purpose: "BOOKING",
+      seriesId: series.id,
+      amount: 0,
+      method: "ONLINE",
+      payer: { name: series.customerName, email: series.customerEmail, phone: series.customerPhone },
+      userId: series.userId,
+      note: "Fully discounted",
+    });
+    return { checkout: { kind: "redirect", url: bookingReceiptPath(code) } };
+  }
+  await db
+    .update(payments)
+    .set({ status: "FAILED", failureReason: "Superseded by a new payment attempt" })
+    .where(and(eq(payments.seriesId, series.id), inArray(payments.status, ["CREATED", "INITIATED"])));
+  const { checkout } = await startPayment({
+    purpose: "BOOKING",
+    amount: series.total,
+    description: `${series.type === "MONTHLY" ? "Monthly" : "Quarterly"} court booking ${series.code}`,
+    payer: { name: series.customerName, email: series.customerEmail, phone: series.customerPhone },
+    userId: series.userId,
+    seriesId: series.id,
+  });
+  const holdExpiresAt = new Date(Date.now() + settings.holdMinutes * 60_000);
+  await db.transaction(async (tx) => {
+    await tx.update(bookingSeries).set({ status: "PAYMENT_INITIATED", holdExpiresAt }).where(eq(bookingSeries.id, series.id));
+    await tx
+      .update(bookings)
+      .set({ status: "PAYMENT_INITIATED", holdExpiresAt })
+      .where(and(eq(bookings.seriesId, series.id), inArray(bookings.status, ["PENDING", "PAYMENT_INITIATED"])));
+  });
+  return { checkout };
+}
+
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Capture / fail / refund                                                   */
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -147,6 +199,29 @@ export async function initiateBookingPayment(code: string): Promise<{ checkout: 
 type FulfilmentOutcome = { needsRefund: boolean; reason?: string };
 
 async function fulfil(tx: Transaction, payment: Payment, actorId?: string | null): Promise<FulfilmentOutcome> {
+  if (payment.purpose === "BOOKING" && payment.seriesId) {
+    const [series] = await tx.select().from(bookingSeries).where(eq(bookingSeries.id, payment.seriesId)).for("update");
+    if (!series) return { needsRefund: true, reason: "Booking no longer exists" };
+    if (series.status === "PAID" || series.status === "CONFIRMED") return { needsRefund: true, reason: "Duplicate payment" };
+    if (series.status === "CANCELLED" || series.status === "REFUNDED") return { needsRefund: true, reason: "Booking was cancelled" };
+    try {
+      // Late payments re-activate expired sessions only if every one is still free.
+      await tx.transaction(async (sp) => {
+        await transitionSeries(sp, series.id, "PAID", {
+          note: `Payment ${payment.receiptNumber} received`,
+          actorId,
+          fromStatuses: ["PENDING", "PAYMENT_INITIATED", "EXPIRED"],
+          patch: { paidAt: new Date(), holdExpiresAt: null },
+        });
+      });
+    } catch (err) {
+      if (isExclusionViolation(err)) return { needsRefund: true, reason: "Some sessions were taken after the hold expired" };
+      throw err;
+    }
+    await transitionSeries(tx, series.id, "CONFIRMED", { note: "Booking confirmed", actorId, fromStatuses: ["PAID"], patch: { confirmedAt: new Date() } });
+    return { needsRefund: false };
+  }
+
   if (payment.purpose === "BOOKING" && payment.bookingId) {
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).for("update");
     if (!booking) return { needsRefund: true, reason: "Booking no longer exists" };
@@ -189,6 +264,24 @@ async function fulfil(tx: Transaction, payment: Payment, actorId?: string | null
 
 /** Sends the customer-facing confirmation for a fulfilled payment. */
 async function announceFulfilment(payment: Payment) {
+  if (payment.purpose === "BOOKING" && payment.seriesId) {
+    const [s] = await db
+      .select({ series: bookingSeries, court: courts.name })
+      .from(bookingSeries)
+      .innerJoin(courts, eq(courts.id, bookingSeries.courtId))
+      .where(eq(bookingSeries.id, payment.seriesId))
+      .limit(1);
+    if (!s) return;
+    await notify({
+      userId: s.series.userId,
+      recipient: { name: s.series.customerName, email: s.series.customerEmail, phone: s.series.customerPhone },
+      type: "BOOKING_CONFIRMED",
+      title: `${s.series.type === "MONTHLY" ? "Monthly" : "Quarterly"} booking confirmed · ${s.series.code}`,
+      body: `${s.court}, ${formatTimeRange(s.series.startMinute, s.series.endMinute)}, ${s.series.sessionCount} sessions from ${formatDate(s.series.startDate, "long")} to ${formatDate(s.series.endDate, "long")}. Amount paid: ${formatMoney(s.series.total)}.`,
+      link: s.series.userId ? "/dashboard/bookings" : bookingReceiptPath(s.series.code),
+    });
+    return;
+  }
   if (payment.purpose === "BOOKING" && payment.bookingId) {
     const [b] = await db.query.bookings.findMany({ where: eq(bookings.id, payment.bookingId), with: { court: true }, limit: 1 });
     if (!b) return;
@@ -297,6 +390,7 @@ export async function recordOfflinePayment(input: {
   userId?: string | null;
   studentId?: string | null;
   bookingId?: string | null;
+  seriesId?: string | null;
   membershipId?: string | null;
   eventRegistrationId?: string | null;
   actorId?: string | null;
@@ -318,6 +412,7 @@ export async function recordOfflinePayment(input: {
         userId: input.userId ?? null,
         studentId: input.studentId ?? null,
         bookingId: input.bookingId ?? null,
+        seriesId: input.seriesId ?? null,
         membershipId: input.membershipId ?? null,
         eventRegistrationId: input.eventRegistrationId ?? null,
         paidAt: new Date(),
@@ -349,6 +444,18 @@ export async function refundPayment(paymentId: string, opts: { reason: string; a
       .update(payments)
       .set({ status: "REFUNDED", refundedAmount: payment.amount, refundedAt: new Date(), refundReference, failureReason: opts.reason.slice(0, 300) })
       .where(eq(payments.id, payment.id));
+    if (payment.seriesId) {
+      const [series] = await tx.select({ status: bookingSeries.status }).from(bookingSeries).where(eq(bookingSeries.id, payment.seriesId));
+      if (series && series.status !== "REFUNDED") {
+        await transitionSeries(tx, payment.seriesId, "CANCELLED", {
+          note: opts.reason,
+          actorId: opts.actorId,
+          fromStatuses: ["PENDING", "PAYMENT_INITIATED", "PAID", "CONFIRMED"],
+          patch: { cancelledAt: new Date(), cancelReason: opts.reason },
+        });
+        await transitionSeries(tx, payment.seriesId, "REFUNDED", { note: `Refund ${refundReference}`, actorId: opts.actorId, fromStatuses: ["CANCELLED"] });
+      }
+    }
     if (payment.bookingId) {
       const [booking] = await tx.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, payment.bookingId));
       if (booking && booking.status !== "REFUNDED") {
@@ -379,7 +486,11 @@ export async function refundPayment(paymentId: string, opts: { reason: string; a
 }
 
 /** Where the customer lands after a completed (or failed) checkout. */
-export async function paymentReturnUrl(payment: Pick<Payment, "purpose" | "bookingId" | "eventRegistrationId">, outcome: "success" | "failed" = "success") {
+export async function paymentReturnUrl(payment: Pick<Payment, "purpose" | "bookingId" | "seriesId" | "eventRegistrationId">, outcome: "success" | "failed" = "success") {
+  if (payment.purpose === "BOOKING" && payment.seriesId) {
+    const [s] = await db.select({ code: bookingSeries.code }).from(bookingSeries).where(eq(bookingSeries.id, payment.seriesId)).limit(1);
+    if (s) return `${bookingReceiptPath(s.code)}${outcome === "failed" ? "&payment=failed" : ""}`;
+  }
   if (payment.purpose === "BOOKING" && payment.bookingId) {
     const [b] = await db.select({ code: bookings.code }).from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1);
     if (b) return `${bookingReceiptPath(b.code)}${outcome === "failed" ? "&payment=failed" : ""}`;

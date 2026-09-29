@@ -47,7 +47,7 @@ const eventSchema = z
   });
 
 async function announceEvent(name: string, date: string, slug: string) {
-  const members = await db.select({ id: users.id }).from(users).where(eq(users.role, "STUDENT"));
+  const members = await db.select({ id: users.id }).from(users).where(eq(users.role, "CUSTOMER"));
   await notifyUsers(
     members.map((m) => m.id),
     { type: "EVENT", title: `New event · ${name}`, body: `Registrations are open for ${name} on ${formatDate(date, "long")}.`, link: `/events/${slug}` },

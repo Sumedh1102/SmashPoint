@@ -13,6 +13,9 @@ export type CourtForAvailability = {
   status: "ACTIVE" | "MAINTENANCE" | "INACTIVE";
   hourlyRate: number;
   peakHourlyRate: number;
+  /** Per-court opening hours; null/undefined uses the academy-wide hours. */
+  openMinute?: number | null;
+  closeMinute?: number | null;
 };
 
 export type OccupiedRange = { courtId: string; startMinute: number; endMinute: number; label?: string };
@@ -51,7 +54,7 @@ export type AvailabilityResult = {
 export type AvailabilityInput = {
   date: string;
   duration: number;
-  settings: Pick<BookingSettings, "openMinute" | "closeMinute" | "peakWindows">;
+  settings: Pick<BookingSettings, "openMinute" | "closeMinute" | "peakWindows"> & { slotStepMinutes?: number };
   courts: CourtForAvailability[];
   bookings: OccupiedRange[];
   blocks: BlockRange[];
@@ -63,13 +66,23 @@ export type AvailabilityInput = {
   nowMinute: number | null;
 };
 
-/** Slot start times for a duration, aligned to opening time. */
-export function slotTimes(openMinute: number, closeMinute: number, duration: number) {
+/**
+ * Slot start times for a duration, aligned to opening time. Slots start every `step` minutes
+ * (default: back-to-back), so a 2-hour booking can start on any hour when step = 60.
+ */
+export function slotTimes(openMinute: number, closeMinute: number, duration: number, step = duration) {
   const times: { startMinute: number; endMinute: number }[] = [];
-  for (let s = openMinute; s + duration <= closeMinute; s += duration) {
+  for (let s = openMinute; s + duration <= closeMinute; s += Math.max(step, 15)) {
     times.push({ startMinute: s, endMinute: s + duration });
   }
   return times;
+}
+
+/** Opening hours that apply to a court. */
+export function courtHours(court: Pick<CourtForAvailability, "openMinute" | "closeMinute">, settings: Pick<BookingSettings, "openMinute" | "closeMinute">) {
+  return court.openMinute != null && court.closeMinute != null
+    ? { openMinute: court.openMinute, closeMinute: court.closeMinute }
+    : { openMinute: settings.openMinute, closeMinute: settings.closeMinute };
 }
 
 function windowApplies(window: PeakWindow, dow: number) {
@@ -105,7 +118,8 @@ export function priceForRange(
 
 export function computeAvailability(input: AvailabilityInput): AvailabilityResult {
   const { date, duration, settings, nowMinute } = input;
-  const times = slotTimes(settings.openMinute, settings.closeMinute, duration);
+  const step = settings.slotStepMinutes ?? duration;
+  const allTimes = new Map<number, { startMinute: number; endMinute: number }>();
 
   const courts = input.courts
     .filter((c) => c.status !== "INACTIVE")
@@ -113,6 +127,9 @@ export function computeAvailability(input: AvailabilityInput): AvailabilityResul
       const bookings = input.bookings.filter((b) => b.courtId === court.id);
       const blocks = input.blocks.filter((b) => b.courtId === court.id);
       const training = input.training.filter((t) => t.courtId === court.id);
+      const hours = courtHours(court, settings);
+      const times = slotTimes(hours.openMinute, hours.closeMinute, duration, step);
+      for (const t of times) allTimes.set(t.startMinute, t);
 
       const slots = times.map<Slot>(({ startMinute, endMinute }) => {
         const { price, isPeak } = priceForRange(court, settings.peakWindows, date, startMinute, endMinute);
@@ -146,6 +163,7 @@ export function computeAvailability(input: AvailabilityInput): AvailabilityResul
       };
     });
 
+  const times = [...allTimes.values()].sort((a, b) => a.startMinute - b.startMinute);
   return { date, duration, times, courts };
 }
 

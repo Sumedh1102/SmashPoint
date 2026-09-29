@@ -39,7 +39,7 @@ export async function createAnnouncement(_prev: ActionResult | null, formData: F
       .returning({ id: announcements.id });
     let sent = 0;
     if (input.notify) {
-      const roles = input.audience === "STUDENTS" ? ["STUDENT" as const] : input.audience === "STAFF" ? (["ADMIN", "MANAGER", "COACH", "RECEPTION"] as const) : (["ADMIN", "MANAGER", "COACH", "RECEPTION", "STUDENT"] as const);
+      const roles = input.audience === "STUDENTS" ? ["CUSTOMER" as const] : input.audience === "STAFF" ? (["ADMIN", "MANAGER", "COACH", "RECEPTION"] as const) : (["ADMIN", "MANAGER", "COACH", "RECEPTION", "CUSTOMER"] as const);
       const recipients = await db.select({ id: users.id }).from(users).where(inArray(users.role, [...roles]));
       sent = await notifyUsers(
         recipients.map((r) => r.id).filter((id) => id !== actor.id),
