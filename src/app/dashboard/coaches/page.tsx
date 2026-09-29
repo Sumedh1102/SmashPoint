@@ -34,8 +34,8 @@ export default async function CoachesAdminPage() {
               <div className="flex items-start gap-4">
                 <Avatar name={c.name} src={c.photoUrl} size={56} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-extrabold leading-tight">{c.name}</p>
-                  <p className="text-sm font-bold text-brand">{c.title}</p>
+                  <p className="text-lg font-semibold leading-tight">{c.name}</p>
+                  <p className="text-sm font-medium text-brand">{c.title}</p>
                   <p className="mt-1 line-clamp-2 text-sm text-muted">{c.specialization}</p>
                 </div>
               </div>
@@ -45,9 +45,9 @@ export default async function CoachesAdminPage() {
                   ["Students", Math.max(c.studentCount, c.primaryStudents)],
                   ["Sessions (mo)", c.sessionsThisMonth],
                 ].map(([k, v]) => (
-                  <div key={k} className="rounded-xl border-2 border-ink bg-paper px-2 py-2">
-                    <dd className="font-display text-2xl font-extrabold leading-none">{v}</dd>
-                    <dt className="mt-1 text-[11px] font-bold uppercase text-muted">{k}</dt>
+                  <div key={k} className="rounded-xl border border-line bg-paper px-2 py-2">
+                    <dd className="font-display text-2xl font-semibold leading-none">{v}</dd>
+                    <dt className="mt-1 text-[11px] font-medium uppercase text-muted">{k}</dt>
                   </div>
                 ))}
               </dl>

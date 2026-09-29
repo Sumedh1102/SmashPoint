@@ -1,21 +1,24 @@
 /**
- * Demo data for SmashPoint: WIPES application tables and re-creates a realistic academy
- * (courts, coaches, batches, 72 students, ~4 months of bookings, payments, attendance,
- * performance scores, events and announcements). Used by `npm run db:seed` and by
- * `npm run db:deploy` when SEED_DEMO_DATA=true on an empty database.
+ * Demo data for SmashPoint: WIPES application tables and re-creates a realistic multi-sport
+ * facility (badminton, pickleball and basketball courts, equipment and rentals, monthly and
+ * quarterly bookings, ~4 months of single bookings and payments, the academy's coaches,
+ * batches, students and attendance, café menu, coaching adverts, gallery and events).
+ * Used by `npm run db:seed` and by `npm run db:deploy` when SEED_DEMO_DATA=true.
  */
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "../../src/server/db/schema";
-import { hashPassword } from "../../src/server/auth/password";
 import { priceForRange } from "../../src/lib/booking/engine";
 import { DEFAULT_ATTENDANCE_SETTINGS, DEFAULT_BOOKING_SETTINGS, DEFAULT_NOTIFICATION_SETTINGS } from "../../src/lib/settings-types";
 import { addDays, addMonths, dayOfWeek, nowMinutesInTz, rangesOverlap, todayInTz } from "../../src/lib/time";
-import { COURTS, MEMBERSHIP_PLANS, PROGRAMS } from "./catalogue";
+import { seriesDates, seriesEndDate } from "../../src/lib/booking/recurring";
+import { COACHING_ADS, COURTS, EQUIPMENT, FACILITIES, FOOD_ITEMS, MEMBERSHIP_PLANS, PROGRAMS, SPORTS } from "./catalogue";
 
 /** Settings key marking a database as holding demo data (the seed refuses to wipe anything else). */
 export const DEMO_MARKER = "demo_data";
+/** Bump when the demo data changes shape; `db:deploy` re-seeds demo databases on an older version. */
+export const DEMO_VERSION = 2;
 
 let db: NodePgDatabase<typeof schema>;
 const s = schema;
@@ -66,7 +69,9 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
     audit_logs, media, settings, enquiries, notification_deliveries, notifications, announcements,
     payments, tournament_matches, event_registrations, events, memberships, membership_plans,
     performance_records, attendance_records, attendance_sessions, batch_students, batches, programs,
-    booking_events, bookings, coupons, court_blocks, courts, students, coaches, parents, sessions, users
+    equipment_rentals, equipment_items, booking_events, bookings, booking_series, coupons, court_blocks,
+    courts, gallery_items, facilities, food_items, coaching_ads, sports, media_assets,
+    students, coaches, parents, sessions, users
     RESTART IDENTITY CASCADE`);
 
   /* ── settings ─────────────────────────────────────────────────────────── */
@@ -74,19 +79,20 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
     { key: "booking", value: DEFAULT_BOOKING_SETTINGS },
     { key: "notifications", value: DEFAULT_NOTIFICATION_SETTINGS },
     { key: "attendance", value: DEFAULT_ATTENDANCE_SETTINGS },
-    { key: DEMO_MARKER, value: { seededAt: new Date().toISOString() } },
+    { key: DEMO_MARKER, value: { seededAt: new Date().toISOString(), version: DEMO_VERSION } },
   ]);
 
-  /* ── staff ────────────────────────────────────────────────────────────── */
-  const password = await hashPassword("SmashPoint@123");
+  /* ── staff ──────────────────────────────────────────────────────────────
+     No passwords: on the demo everyone uses one-click demo sign-in; real accounts sign in
+     with Firebase and link by verified email. */
   const prefs = { emailNotifications: true, smsNotifications: false, whatsappNotifications: true, bookingReminders: true, classReminders: true, marketing: false };
 
   const [admin, manager, reception] = await db
     .insert(s.users)
     .values([
-      { name: "Rohan Deshmukh", email: "admin@smashpoint.in", phone: "+91 98220 41190", passwordHash: password, role: "ADMIN", preferences: prefs },
-      { name: "Priya Nair", email: "manager@smashpoint.in", phone: "+91 98225 10442", passwordHash: password, role: "MANAGER", preferences: prefs },
-      { name: "Sneha Patil", email: "reception@smashpoint.in", phone: "+91 90040 22871", passwordHash: password, role: "RECEPTION", preferences: prefs },
+      { name: "Rohan Deshmukh", email: "admin@smashpoint.in", phone: "+91 98220 41190", role: "ADMIN", preferences: prefs },
+      { name: "Priya Nair", email: "manager@smashpoint.in", phone: "+91 98225 10442", role: "MANAGER", preferences: prefs },
+      { name: "Sneha Patil", email: "reception@smashpoint.in", phone: "+91 90040 22871", role: "RECEPTION", preferences: prefs },
     ])
     .returning();
 
@@ -141,17 +147,24 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
       bio: "A SmashPoint alumnus, Sagar remembers exactly what it's like to hold a racket for the first time. Patient, structured and brilliant with adult beginners.",
     },
     {
-      name: "Neha Gawde", email: "neha@smashpoint.in", slug: "neha-gawde", title: "Assistant Coach · Adult Fitness", years: 6,
-      specialization: "Recreational & fitness badminton for adults",
-      certifications: ["BAI Level 1 Certified Coach", "ACE Group Fitness Instructor"],
-      achievements: ["Runs the Sunday Adult Fitness & Fun community batch"],
-      bio: "Neha runs the batches where working professionals and parents fall in love with the sport — sweat, laughs and steadily better rallies.",
+      name: "Rahul D'Souza", email: "rahul@smashpoint.in", slug: "rahul-dsouza", title: "Pickleball Coach", years: 6,
+      specialization: "Pickleball fundamentals, dinking and doubles strategy",
+      certifications: ["PPR Certified Pickleball Instructor", "ITF Level 1 (Tennis)"],
+      achievements: ["Mumbai Open Pickleball — Men's Doubles 3.5 champion 2025"],
+      bio: "A former club tennis coach, Rahul now runs SmashPoint's pickleball clinics. Expect patient drilling of the soft game and a lot of doubles play.",
+    },
+    {
+      name: "Karan Mehta", email: "karan@smashpoint.in", slug: "karan-mehta", title: "Basketball Coach", years: 12,
+      specialization: "Youth basketball skills, shooting mechanics and team play",
+      certifications: ["FIBA Level 1 Coach", "Basketball Federation of India — Coach Education"],
+      achievements: ["Coached Palghar District U-16 boys to state quarter-finals"],
+      bio: "Karan has coached school and district teams for over a decade. His weekend skills academy focuses on fundamentals, footwork and making the extra pass.",
     },
   ];
 
   const coachUsers = await db
     .insert(s.users)
-    .values(coachSeed.map((c) => ({ name: c.name, email: c.email, phone: phone(), passwordHash: password, role: "COACH" as const, preferences: prefs })))
+    .values(coachSeed.map((c) => ({ name: c.name, email: c.email, phone: phone(), role: "COACH" as const, preferences: prefs })))
     .returning();
   const coaches = await db
     .insert(s.coaches)
@@ -171,18 +184,25 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
     .returning();
   const coachBySlug = Object.fromEntries(coaches.map((c) => [c.slug, c]));
 
-  /* ── courts ───────────────────────────────────────────────────────────── */
+  /* ── sports, courts & equipment ───────────────────────────────────────── */
+  const sports = await db.insert(s.sports).values(SPORTS).returning();
+  const sportBySlug = Object.fromEntries(sports.map((sp) => [sp.slug, sp]));
   const courts = await db
     .insert(s.courts)
-    .values(COURTS)
+    .values(COURTS.map(({ sport, ...c }) => ({ ...c, sportId: sportBySlug[sport]!.id })))
     .returning();
-  const [c1, c2, c3, c4, c5] = courts as [typeof courts[0], typeof courts[0], typeof courts[0], typeof courts[0], typeof courts[0]];
+  const [b1, b2, p1, p2, bb] = courts as [typeof courts[0], typeof courts[0], typeof courts[0], typeof courts[0], typeof courts[0]];
+  const equipment = await db
+    .insert(s.equipmentItems)
+    .values(EQUIPMENT.map(({ sport, ...e }, i) => ({ ...e, sportId: sport ? sportBySlug[sport]!.id : null, damagedQuantity: i === 0 ? 1 : 0 })))
+    .returning();
+  const itemsFor = (sportId: string) => equipment.filter((e) => e.sportId === sportId || e.sportId === null);
 
   const maintenanceStart = addDays(TODAY, 2);
   const maintenanceEnd = addDays(TODAY, 4);
   await db.insert(s.courtBlocks).values([
-    { courtId: c2.id, type: "MAINTENANCE", startDate: maintenanceStart, endDate: maintenanceEnd, reason: "Floor mat resurfacing", createdById: admin!.id },
-    { courtId: c4.id, type: "BLOCKED", startDate: addDays(TODAY, 1), endDate: addDays(TODAY, 1), startMinute: 600, endMinute: 720, reason: "Corporate team session", createdById: manager!.id },
+    { courtId: b2.id, type: "MAINTENANCE", startDate: maintenanceStart, endDate: maintenanceEnd, reason: "Floor mat resurfacing", createdById: admin!.id },
+    { courtId: p2.id, type: "BLOCKED", startDate: addDays(TODAY, 1), endDate: addDays(TODAY, 1), startMinute: 600, endMinute: 720, reason: "Corporate team session", createdById: manager!.id },
   ]);
 
   /* ── programs & batches ───────────────────────────────────────────────── */
@@ -193,14 +213,11 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
   const prog = Object.fromEntries(programs.map((p) => [p.slug, p]));
 
   const batchSeed = [
-    { name: "Advanced Morning Batch", program: "advanced", coach: "vikram-joshi", court: c1, days: [1, 2, 3, 4, 5, 6], start: 360, end: 480, cap: 12, fee: 3900, level: "ADVANCED" as const },
-    { name: "Intermediate Early Birds", program: "intermediate", coach: "kavya-menon", court: c2, days: [1, 2, 3, 4, 5], start: 300, end: 390, cap: 14, fee: 2900, level: "INTERMEDIATE" as const },
-    { name: "Beginner Morning Batch", program: "beginner", coach: "sagar-thakur", court: c3, days: [2, 4, 6], start: 420, end: 480, cap: 16, fee: 2200, level: "BEGINNER" as const },
-    { name: "Intermediate Evening Batch", program: "intermediate", coach: "aditya-rane", court: c2, days: [1, 3, 5], start: 960, end: 1050, cap: 14, fee: 2900, level: "INTERMEDIATE" as const },
-    { name: "Kids Evening Batch", program: "kids", coach: "meera-iyer", court: c4, days: [1, 2, 3, 4, 5], start: 930, end: 990, cap: 10, fee: 1900, level: "KIDS" as const },
-    { name: "Kids Weekend Batch", program: "kids", coach: "meera-iyer", court: c3, days: [6, 0], start: 480, end: 600, cap: 10, fee: 1900, level: "KIDS" as const },
-    { name: "Competitive Squad (Evening)", program: "advanced", coach: "vikram-joshi", court: c5, days: [2, 4, 6], start: 1020, end: 1140, cap: 10, fee: 3900, level: "ADVANCED" as const },
-    { name: "Adult Fitness & Fun", program: "beginner", coach: "neha-gawde", court: c4, days: [6, 0], start: 360, end: 450, cap: 16, fee: 2200, level: "BEGINNER" as const },
+    { name: "Advanced Morning Batch", program: "advanced", coach: "vikram-joshi", court: b1, days: [1, 2, 3, 4, 5, 6], start: 360, end: 480, cap: 12, fee: 3900, level: "ADVANCED" as const },
+    { name: "Beginner Morning Batch", program: "beginner", coach: "sagar-thakur", court: b2, days: [2, 4, 6], start: 420, end: 480, cap: 16, fee: 2200, level: "BEGINNER" as const },
+    { name: "Intermediate Evening Batch", program: "intermediate", coach: "aditya-rane", court: b2, days: [1, 3, 5], start: 960, end: 1050, cap: 14, fee: 2900, level: "INTERMEDIATE" as const },
+    { name: "Kids Evening Batch", program: "kids", coach: "meera-iyer", court: b1, days: [1, 2, 3, 4, 5], start: 930, end: 990, cap: 10, fee: 1900, level: "KIDS" as const },
+    { name: "Kids Weekend Batch", program: "kids", coach: "meera-iyer", court: b2, days: [6, 0], start: 480, end: 600, cap: 10, fee: 1900, level: "KIDS" as const },
   ];
   const batches = await db
     .insert(s.batches)
@@ -237,13 +254,13 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
   // Demo student (has own login)
   const [studentUser] = await db
     .insert(s.users)
-    .values({ name: "Ishaan Patil", email: "student@smashpoint.in", phone: "+91 97654 33120", passwordHash: password, role: "STUDENT", preferences: prefs, emergencyContactName: "Sunil Patil", emergencyContactPhone: "+91 98221 76540" })
+    .values({ name: "Ishaan Patil", email: "student@smashpoint.in", phone: "+91 97654 33120", role: "CUSTOMER", preferences: prefs, emergencyContactName: "Sunil Patil", emergencyContactPhone: "+91 98221 76540" })
     .returning();
 
   // Demo parent with two kids
   const [parentUser] = await db
     .insert(s.users)
-    .values({ name: "Rutuja Sawant", email: "parent@smashpoint.in", phone: "+91 98501 22457", passwordHash: password, role: "STUDENT", preferences: prefs })
+    .values({ name: "Rutuja Sawant", email: "parent@smashpoint.in", phone: "+91 98501 22457", role: "CUSTOMER", preferences: prefs })
     .returning();
   const [demoParent] = await db
     .insert(s.parents)
@@ -261,16 +278,16 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
   studentDrafts.push({
     parentId: demoParent!.id, studentCode: nextCode(), name: "Aarav Sawant", dateOfBirth: dob(10), gender: "MALE",
     address: "12, Gurukrupa Society, Station Road, Palghar", emergencyContactName: "Rutuja Sawant", emergencyContactPhone: "+91 98501 22457",
-    joiningDate: addDays(TODAY, -240), level: "BEGINNER", qrToken: token(), _batch: 4, _plan: "half-yearly",
+    joiningDate: addDays(TODAY, -240), level: "BEGINNER", qrToken: token(), _batch: 3, _plan: "half-yearly",
   });
   studentDrafts.push({
     parentId: demoParent!.id, studentCode: nextCode(), name: "Siya Sawant", dateOfBirth: dob(8), gender: "FEMALE",
     address: "12, Gurukrupa Society, Station Road, Palghar", emergencyContactName: "Rutuja Sawant", emergencyContactPhone: "+91 98501 22457",
-    joiningDate: addDays(TODAY, -150), level: "BEGINNER", qrToken: token(), _batch: 5, _plan: "quarterly",
+    joiningDate: addDays(TODAY, -150), level: "BEGINNER", qrToken: token(), _batch: 4, _plan: "quarterly",
   });
 
   // Everyone else
-  const batchPlan = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7];
+  const batchPlan = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4];
   const parentRows: (typeof s.parents.$inferInsert)[] = [];
   const extraStudents: StudentDraft[] = [];
   for (const batchIndex of batchPlan) {
@@ -325,8 +342,6 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
     s.batchStudents,
     studentMeta.map((st) => ({ batchId: batches[st.batchIndex]!.id, studentId: st.id, joinedOn: st.joiningDate, isActive: st.status === "ACTIVE" })),
   );
-  // Ishaan also trains with the evening competitive squad.
-  await db.insert(s.batchStudents).values({ batchId: batches[6]!.id, studentId: studentMeta[0]!.id, joinedOn: addDays(TODAY, -200) });
 
   /* ── memberships & payments ───────────────────────────────────────────── */
   const membershipRows: (typeof s.memberships.$inferInsert)[] = [];
@@ -375,92 +390,141 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
   }
 
   /* ── bookings ─────────────────────────────────────────────────────────── */
-  const guestNames = ["Nikhil Pawar", "Sameer Joshi", "Pooja Vartak", "Akshay Bhoir", "Rahul Mhatre", "Snehal Naik", "Kunal Save", "Amit Shinde", "Prachi Jadhav", "Omkar Kadam", "Swapnil More", "Rashmi Churi", "Tejas Raut", "Hemant Chaudhari", "Varun Thakur", "Mansi Gawde"];
+  const guestNames = ["Sameer Joshi", "Pooja Vartak", "Akshay Bhoir", "Rahul Mhatre", "Snehal Naik", "Kunal Save", "Amit Shinde", "Prachi Jadhav", "Omkar Kadam", "Swapnil More", "Rashmi Churi", "Tejas Raut", "Hemant Chaudhari", "Varun Thakur", "Mansi Gawde", "Aniket Vaze"];
   const guests = guestNames.map((name) => ({ name, phone: phone(), email: `${name.split(" ")[0]!.toLowerCase()}.${name.split(" ")[1]!.toLowerCase()}@gmail.com` }));
 
+  // The demo customer: books courts, rents equipment and holds a monthly pickleball slot.
+  const [customerUser] = await db
+    .insert(s.users)
+    .values({ name: "Nikhil Pawar", email: "customer@smashpoint.in", phone: "+91 98670 45123", role: "CUSTOMER", preferences: prefs })
+    .returning();
+  const customer = { userId: customerUser!.id, name: "Nikhil Pawar", phone: "+91 98670 45123", email: "customer@smashpoint.in" };
+
   type BookingDraft = typeof s.bookings.$inferInsert;
+  type RentalDraft = { item: (typeof equipment)[number]; quantity: number };
   const bookingDrafts: BookingDraft[] = [];
-  const statusPlan: { i: number; paid: boolean; refunded: boolean }[] = [];
+  const rentalPlan: { i: number; rentals: RentalDraft[] }[] = [];
+  const statusPlan: { i: number; paid: boolean; refunded: boolean; seriesKey?: string }[] = [];
 
   const settings = DEFAULT_BOOKING_SETTINGS;
   const trainingFor = (courtId: string, date: string) =>
-    batchSeed
-      .map((b, idx) => ({ b, idx }))
-      .filter(({ b }) => b.court.id === courtId && b.days.includes(dayOfWeek(date)))
-      .map(({ b }) => ({ start: b.start, end: b.end }));
+    batchSeed.filter((b) => b.court.id === courtId && b.days.includes(dayOfWeek(date))).map((b) => ({ start: b.start, end: b.end }));
 
   const reserved: Record<string, { start: number; end: number }[]> = {};
   const reserve = (courtId: string, date: string, start: number, end: number) => {
     (reserved[`${courtId}:${date}`] ??= []).push({ start, end });
   };
-
-  // Fixed demo bookings for Ishaan: upcoming "Court 2 — Saturday — 5:00 PM" and a couple of past ones.
-  let firstSat = addDays(maintenanceEnd, 1);
-  while (dayOfWeek(firstSat) !== 6) firstSat = addDays(firstSat, 1);
-  const demoBookings = [
-    { court: c2, date: firstSat, start: 1020, dur: 60, when: "future" },
-    { court: c1, date: addDays(TODAY, -5), start: 1020, dur: 90, when: "past" },
-    { court: c5, date: addDays(TODAY, -12), start: 600, dur: 60, when: "past" },
-  ];
+  const isFree = (court: (typeof courts)[number], date: string, start: number, end: number) =>
+    ![...trainingFor(court.id, date), ...(reserved[`${court.id}:${date}`] ?? [])].some((r) => rangesOverlap(start, end, r.start, r.end)) &&
+    !(court.id === b2.id && date >= maintenanceStart && date <= maintenanceEnd) &&
+    !(court.id === p2.id && date === addDays(TODAY, 1) && rangesOverlap(start, end, 600, 720));
   const paidAtFor = (date: string) => {
     const t = at(addDays(date, -2), 1200);
     return t > new Date() ? new Date(Date.now() - 26 * 3600_000) : t;
   };
-  for (const d of demoBookings) {
-    const { price } = priceForRange(d.court, settings.peakWindows, d.date, d.start, d.start + d.dur);
-    const discount = Math.round((price * 5) / 100);
+  const rentalCost = (rentals: RentalDraft[]) => rentals.reduce((a, r) => a + r.item.rentalPrice * r.quantity, 0);
+  const item = (name: string) => equipment.find((e) => e.name === name)!;
+
+  function addBooking(d: {
+    court: (typeof courts)[number]; date: string; start: number; dur: number; who: { userId?: string | null; name: string; phone: string; email: string };
+    status?: "CONFIRMED" | "CANCELLED" | "REFUNDED"; source?: "ONLINE" | "WALK_IN"; rentals?: RentalDraft[]; discountPct?: number; createdAt?: Date; seriesKey?: string;
+  }) {
+    const end = d.start + d.dur;
+    const { price } = priceForRange(d.court, settings.peakWindows, d.date, d.start, end);
+    const discount = Math.round((price * (d.discountPct ?? 0)) / 100);
+    const rentals = d.rentals ?? [];
+    const equipmentTotal = rentalCost(rentals);
+    const status = d.status ?? "CONFIRMED";
+    const created = d.createdAt ?? paidAtFor(d.date);
     bookingDrafts.push({
-      code: code("SP"), courtId: d.court.id, userId: studentUser!.id, customerName: "Ishaan Patil", customerPhone: "+91 97654 33120",
-      customerEmail: "student@smashpoint.in", date: d.date, startMinute: d.start, endMinute: d.start + d.dur,
-      subtotal: price, discount, total: price - discount, status: "CONFIRMED", source: "ONLINE",
-      paidAt: paidAtFor(d.date), confirmedAt: paidAtFor(d.date), createdAt: paidAtFor(d.date),
+      code: code("SP"), sportId: d.court.sportId, courtId: d.court.id, userId: d.who.userId ?? null, customerName: d.who.name, customerPhone: d.who.phone,
+      customerEmail: d.who.email, date: d.date, startMinute: d.start, endMinute: end, subtotal: price, discount, equipmentTotal,
+      total: price - discount + equipmentTotal, status, source: d.source ?? "ONLINE",
+      paidAt: status === "CANCELLED" ? null : created, confirmedAt: status === "CANCELLED" ? null : created,
+      cancelledAt: status !== "CONFIRMED" ? created : null,
+      cancelReason: status === "CANCELLED" ? "Customer cancelled" : status === "REFUNDED" ? "Rain — customer could not travel" : null,
+      createdAt: created,
     });
-    statusPlan.push({ i: bookingDrafts.length - 1, paid: true, refunded: false });
-    reserve(d.court.id, d.date, d.start, d.start + d.dur);
+    const i = bookingDrafts.length - 1;
+    if (rentals.length) rentalPlan.push({ i, rentals });
+    statusPlan.push({ i, paid: status !== "CANCELLED", refunded: status === "REFUNDED", seriesKey: d.seriesKey });
+    if (status === "CONFIRMED") reserve(d.court.id, d.date, d.start, end);
+    return i;
   }
 
+  // Ishaan (academy student) also books courts: one upcoming, two past.
+  let firstSat = addDays(maintenanceEnd, 1);
+  while (dayOfWeek(firstSat) !== 6) firstSat = addDays(firstSat, 1);
+  const ishaan = { userId: studentUser!.id, name: "Ishaan Patil", phone: "+91 97654 33120", email: "student@smashpoint.in" };
+  const ishaanFirst = addBooking({ court: b2, date: firstSat, start: 1020, dur: 60, who: ishaan, discountPct: 5 });
+  addBooking({ court: b1, date: addDays(TODAY, -5), start: 1080, dur: 120, who: ishaan, discountPct: 5 });
+  addBooking({ court: p1, date: addDays(TODAY, -12), start: 600, dur: 60, who: ishaan, discountPct: 5 });
+
+  // Nikhil: upcoming badminton with rentals, past games across all three sports, one cancellation.
+  const nextBadminton = addDays(TODAY, 3);
+  const customerNext = addBooking({ court: b1, date: nextBadminton, start: 1140, dur: 60, who: customer, rentals: [{ item: item("Badminton racket"), quantity: 2 }, { item: item("Feather shuttles (tube of 6)"), quantity: 1 }] });
+  addBooking({ court: bb, date: addDays(TODAY, 9), start: 1080, dur: 120, who: customer, rentals: [{ item: item("Basketball"), quantity: 1 }, { item: item("Training bibs (set of 10)"), quantity: 1 }] });
+  addBooking({ court: b2, date: addDays(TODAY, -3), start: 1200, dur: 60, who: customer, rentals: [{ item: item("Nylon shuttles (tube of 6)"), quantity: 1 }] });
+  addBooking({ court: bb, date: addDays(TODAY, -10), start: 1080, dur: 120, who: customer });
+  addBooking({ court: p2, date: addDays(TODAY, -18), start: 420, dur: 60, who: customer, rentals: [{ item: item("Pickleball paddle"), quantity: 2 }] });
+  addBooking({ court: b1, date: addDays(TODAY, -25), start: 1260, dur: 60, who: customer, status: "CANCELLED" });
+
+  /* ── monthly & quarterly bookings ─────────────────────────────────────── */
+  type SeriesDraft = typeof s.bookingSeries.$inferInsert & { key: string };
+  const seriesDrafts: SeriesDraft[] = [];
+  function addSeries(d: { key: string; type: "MONTHLY" | "QUARTERLY"; court: (typeof courts)[number]; startDate: string; days: number[]; start: number; dur: number; who: typeof customer }) {
+    const endDate = seriesEndDate(d.startDate, d.type);
+    const dates = seriesDates(d.startDate, endDate, d.days).filter((date) => isFree(d.court, date, d.start, d.start + d.dur));
+    const pct = d.type === "MONTHLY" ? settings.recurring.monthlyDiscountPercent : settings.recurring.quarterlyDiscountPercent;
+    const created = paidAtFor(d.startDate);
+    let subtotal = 0;
+    let discount = 0;
+    for (const date of dates) {
+      const i = addBooking({ court: d.court, date, start: d.start, dur: d.dur, who: d.who, discountPct: pct, createdAt: created, seriesKey: d.key });
+      subtotal += bookingDrafts[i]!.subtotal!;
+      discount += bookingDrafts[i]!.discount!;
+    }
+    seriesDrafts.push({
+      key: d.key, code: code("SPR"), type: d.type, sportId: d.court.sportId, courtId: d.court.id, userId: d.who.userId, customerName: d.who.name,
+      customerPhone: d.who.phone, customerEmail: d.who.email, startDate: d.startDate, endDate, daysOfWeek: d.days, startMinute: d.start,
+      endMinute: d.start + d.dur, sessionCount: dates.length, subtotal, discount, total: subtotal - discount, status: "CONFIRMED", source: "ONLINE",
+      paidAt: created, confirmedAt: created, createdAt: created,
+    });
+  }
+  addSeries({ key: "nikhil-pickleball", type: "MONTHLY", court: p1, startDate: addDays(TODAY, -13), days: [2, 4], start: 1140, dur: 60, who: customer });
+  addSeries({
+    key: "hoopers", type: "QUARTERLY", court: bb, startDate: addDays(TODAY, -35), days: [6], start: 1080, dur: 120,
+    who: { userId: null as unknown as string, name: "Palghar Hoopers (Tejas Raut)", phone: phone(), email: "tejas.raut@gmail.com" },
+  });
+
+  // Everyone else: ~4 months of walk-in and online bookings.
   for (let offset = -120; offset <= 7; offset++) {
     const date = addDays(TODAY, offset);
     const dow = dayOfWeek(date);
     const weekend = dow === 0 || dow === 6;
     for (const court of courts) {
-      if (court.id === c2.id && date >= maintenanceStart && date <= maintenanceEnd) continue;
-      const busy = [...trainingFor(court.id, date), ...(reserved[`${court.id}:${date}`] ?? [])];
-      if (court.id === c4.id && date === addDays(TODAY, 1)) busy.push({ start: 600, end: 720 });
       let t = settings.openMinute;
       while (t < settings.closeMinute) {
-        const dur = pick([60, 60, 60, 90, 30]);
+        const dur = pick([60, 60, 60, 120]);
         const end = t + dur;
         const evening = t >= 1020;
-        const early = t < 420;
-        let p = (weekend ? 0.42 : 0.3) + (evening ? 0.35 : 0) + (early ? 0.12 : 0) - (t >= 660 && t < 900 ? 0.18 : 0);
+        const early = t < 480;
+        const sportBias = court.id === bb.id ? -0.08 : court.sportId === p1.sportId ? 0.02 : 0.06;
+        let p = (weekend ? 0.36 : 0.24) + (evening ? 0.32 : 0) + (early ? 0.1 : 0) - (t >= 660 && t < 900 ? 0.16 : 0) + sportBias;
         if (offset > 0) p *= 0.55 - offset * 0.05;
-        if (offset === 0 && t <= NOW_MIN) p *= 1;
-        const free = end <= settings.closeMinute && !busy.some((r) => rangesOverlap(t, end, r.start, r.end));
-        if (free && chance(p)) {
+        if (end <= settings.closeMinute && isFree(court, date, t, end) && chance(p)) {
           const guest = pick(guests);
-          const { price } = priceForRange(court, settings.peakWindows, date, t, end);
           const past = offset < 0 || (offset === 0 && end <= NOW_MIN);
           const r = rand();
-          const cancelled = past && r < 0.05;
-          const refunded = past && r >= 0.05 && r < 0.08;
-          const createdAt = at(addDays(date, -int(0, 3)), int(300, 1100));
+          const status = past && r < 0.05 ? "CANCELLED" : past && r < 0.08 ? "REFUNDED" : "CONFIRMED";
+          const createdAt = at(addDays(date, -int(0, 3)), int(360, 1200));
           const created = createdAt > new Date() ? new Date(Date.now() - int(10, 600) * 60_000) : createdAt;
-          bookingDrafts.push({
-            code: code("SP"), courtId: court.id, customerName: guest.name, customerPhone: guest.phone, customerEmail: guest.email,
-            date, startMinute: t, endMinute: end, subtotal: price, discount: 0, total: price,
-            status: cancelled ? "CANCELLED" : refunded ? "REFUNDED" : "CONFIRMED",
-            source: chance(0.82) ? "ONLINE" : "WALK_IN",
-            paidAt: cancelled ? null : created, confirmedAt: cancelled ? null : created,
-            cancelledAt: cancelled || refunded ? created : null,
-            cancelReason: cancelled ? "Customer cancelled" : refunded ? "Rain — customer could not travel" : null,
-            createdAt: created,
-          });
-          statusPlan.push({ i: bookingDrafts.length - 1, paid: !cancelled, refunded });
-          busy.push({ start: t, end });
+          const options = itemsFor(court.sportId);
+          const rentals = status === "CONFIRMED" && chance(0.18) ? [{ item: pick(options), quantity: int(1, 2) }] : [];
+          addBooking({ court, date, start: t, dur, who: guest, status, source: chance(0.8) ? "ONLINE" : "WALK_IN", rentals, createdAt: created });
           t = end;
         } else {
-          t += 30;
+          t += 60;
         }
       }
     }
@@ -469,6 +533,41 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
   const bookingsInserted: (typeof s.bookings.$inferSelect)[] = [];
   for (let i = 0; i < bookingDrafts.length; i += 400) {
     bookingsInserted.push(...(await db.insert(s.bookings).values(bookingDrafts.slice(i, i + 400)).returning()));
+  }
+  const seriesInserted = await db.insert(s.bookingSeries).values(seriesDrafts.map(({ key: _k, ...d }) => d)).returning();
+  const seriesIdByKey = Object.fromEntries(seriesDrafts.map((d, i) => [d.key, seriesInserted[i]!.id]));
+  for (const plan of statusPlan) {
+    if (!plan.seriesKey) continue;
+    const b = bookingsInserted[plan.i]!;
+    await db.update(s.bookings).set({ seriesId: seriesIdByKey[plan.seriesKey]! }).where(sql`${s.bookings.id} = ${b.id}`);
+    b.seriesId = seriesIdByKey[plan.seriesKey]!;
+  }
+
+  // Equipment rentals, following each booking's lifecycle.
+  const rentalRows: (typeof s.equipmentRentals.$inferInsert)[] = [];
+  for (const { i, rentals } of rentalPlan) {
+    const b = bookingsInserted[i]!;
+    const ended = b.date < TODAY || (b.date === TODAY && b.endMinute <= NOW_MIN);
+    const started = b.date < TODAY || (b.date === TODAY && b.startMinute <= NOW_MIN);
+    for (const r of rentals) {
+      rentalRows.push({
+        itemId: r.item.id, bookingId: b.id, userId: b.userId, customerName: b.customerName, date: b.date, startMinute: b.startMinute, endMinute: b.endMinute,
+        quantity: r.quantity, unitPrice: r.item.rentalPrice, amount: r.item.rentalPrice * r.quantity, deposit: r.item.deposit * r.quantity,
+        status: b.status === "CONFIRMED" ? (ended ? "RETURNED" : started ? "ISSUED" : "RESERVED") : "CANCELLED",
+        issuedAt: started && b.status === "CONFIRMED" ? at(b.date, b.startMinute - 5) : null,
+        returnedAt: ended && b.status === "CONFIRMED" ? at(b.date, b.endMinute + 5) : null,
+        createdAt: b.createdAt,
+      });
+    }
+  }
+  if (rentalRows.length) {
+    // One damaged racket reported last week.
+    const damaged = rentalRows.find((r) => r.itemId === item("Badminton racket").id && r.status === "RETURNED");
+    if (damaged) {
+      damaged.status = "DAMAGED";
+      damaged.notes = "Frame cracked at the throat";
+    }
+    await chunkInsert(s.equipmentRentals, rentalRows);
   }
 
   const bookingEventRows: (typeof s.bookingEvents.$inferInsert)[] = [];
@@ -481,16 +580,18 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
       bookingEventRows.push({ bookingId: b.id, status: "PAYMENT_INITIATED", createdAt: plus(1) });
       bookingEventRows.push({ bookingId: b.id, status: "PAID", createdAt: plus(2) });
       bookingEventRows.push({ bookingId: b.id, status: "CONFIRMED", createdAt: plus(2) });
-      const method = b.source === "WALK_IN" ? pick(["CASH", "UPI"] as const) : "ONLINE";
-      paymentRows.push({
-        receiptNumber: code("RCP", 8), purpose: "BOOKING", bookingId: b.id, userId: b.userId,
-        payerName: b.customerName, payerEmail: b.customerEmail, payerPhone: b.customerPhone, amount: b.total,
-        status: plan.refunded ? "REFUNDED" : "PAID", method, provider: method === "ONLINE" ? "mock" : "offline",
-        providerOrderId: method === "ONLINE" ? `mock_order_${randomBytes(9).toString("hex")}` : null,
-        providerPaymentId: method === "ONLINE" ? `mock_pay_${randomBytes(9).toString("hex")}` : null,
-        paidAt: plus(2), createdAt: plus(1),
-        refundedAmount: plan.refunded ? b.total : 0, refundedAt: plan.refunded ? plus(600) : null, refundReference: plan.refunded ? `mock_rfnd_${randomBytes(6).toString("hex")}` : null,
-      });
+      if (!plan.seriesKey) {
+        const method = b.source === "WALK_IN" ? pick(["CASH", "UPI"] as const) : "ONLINE";
+        paymentRows.push({
+          receiptNumber: code("RCP", 8), purpose: "BOOKING", bookingId: b.id, userId: b.userId,
+          payerName: b.customerName, payerEmail: b.customerEmail, payerPhone: b.customerPhone, amount: b.total,
+          status: plan.refunded ? "REFUNDED" : "PAID", method, provider: method === "ONLINE" ? "mock" : "offline",
+          providerOrderId: method === "ONLINE" ? `mock_order_${randomBytes(9).toString("hex")}` : null,
+          providerPaymentId: method === "ONLINE" ? `mock_pay_${randomBytes(9).toString("hex")}` : null,
+          paidAt: plus(2), createdAt: plus(1),
+          refundedAmount: plan.refunded ? b.total : 0, refundedAt: plan.refunded ? plus(600) : null, refundReference: plan.refunded ? `mock_rfnd_${randomBytes(6).toString("hex")}` : null,
+        });
+      }
       if (plan.refunded) {
         bookingEventRows.push({ bookingId: b.id, status: "CANCELLED", note: b.cancelReason, createdAt: plus(599) });
         bookingEventRows.push({ bookingId: b.id, status: "REFUNDED", createdAt: plus(600) });
@@ -499,11 +600,41 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
       bookingEventRows.push({ bookingId: b.id, status: "CANCELLED", note: "Customer cancelled", createdAt: plus(5) });
     }
   }
+  for (const series of seriesInserted) {
+    paymentRows.push({
+      receiptNumber: code("RCP", 8), purpose: "BOOKING", seriesId: series.id, userId: series.userId,
+      payerName: series.customerName, payerEmail: series.customerEmail, payerPhone: series.customerPhone, amount: series.total,
+      status: "PAID", method: "ONLINE", provider: "mock",
+      providerOrderId: `mock_order_${randomBytes(9).toString("hex")}`, providerPaymentId: `mock_pay_${randomBytes(9).toString("hex")}`,
+      paidAt: series.paidAt, createdAt: series.createdAt,
+    });
+  }
   await chunkInsert(s.bookingEvents, bookingEventRows, 800);
+
+  /* ── public content: gallery, facilities, café, coaching adverts ──────── */
+  const GALLERY: { category: string; caption: string; file: string }[] = [
+    { category: "Badminton", caption: "Badminton Court 1 under match lighting", file: "badminton-court-1" },
+    { category: "Pickleball", caption: "Pickleball Court 1 — doubles set-up", file: "pickleball-court-1" },
+    { category: "Basketball", caption: "The full-size hardwood court", file: "basketball-court" },
+    { category: "Facilities", caption: "Courtside café and lounge", file: "cafe-lounge" },
+    { category: "Badminton", caption: "Evening doubles on Court 2", file: "badminton-court-2" },
+    { category: "Training", caption: "Footwork ladder drills", file: "training-footwork" },
+    { category: "Equipment", caption: "Rental rackets, paddles and balls", file: "equipment-wall" },
+    { category: "Events", caption: "Monsoon Open finals day", file: "events-finals" },
+    { category: "Pickleball", caption: "Kitchen-line dink rallies", file: "pickleball-court-2" },
+    { category: "Academy", caption: "Kids weekend batch", file: "academy-kids" },
+    { category: "Facilities", caption: "Changing rooms and lockers", file: "facilities-lockers" },
+    { category: "Basketball", caption: "Weekend skills academy", file: "basketball-skills" },
+  ];
+  await db.insert(s.galleryItems).values(GALLERY.map((g, i) => ({ category: g.category, caption: g.caption, imageUrl: `/demo/gallery/${g.file}.svg`, width: 1600, height: 1000, sortOrder: i })));
+  await db.insert(s.facilities).values(FACILITIES);
+  await db.insert(s.foodItems).values(FOOD_ITEMS);
+  await db.insert(s.coachingAds).values(
+    COACHING_ADS.map(({ sport, coachSlug, ...a }) => ({ ...a, sportId: sportBySlug[sport]?.id ?? null, coachId: coachSlug ? coachBySlug[coachSlug]?.id ?? null : null })),
+  );
 
   /* ── attendance ───────────────────────────────────────────────────────── */
   const enrolments = studentMeta.map((st) => ({ studentId: st.id, batchIndex: st.batchIndex, joined: st.joiningDate, active: st.status === "ACTIVE" }));
-  enrolments.push({ studentId: studentMeta[0]!.id, batchIndex: 6, joined: addDays(TODAY, -200), active: true });
 
   const sessionRows: (typeof s.attendanceSessions.$inferInsert)[] = [];
   const sessionKeys: { batchIndex: number; date: string }[] = [];
@@ -584,7 +715,7 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
       {
         slug: "free-trial-weekend", name: "Free Trial Weekend", category: "TRIAL", status: "PUBLISHED",
         summary: "Two days of free coaching sessions for new players of every age.",
-        description: "Never trained formally? Bring your family and try a full 60-minute session with our coaches on any court, free. Rackets and shuttles provided.\n\nKids sessions run 8–10 AM, adult sessions 10 AM–12 PM on both days. Register below so we can plan coaches and courts.",
+        description: "New to badminton, pickleball or basketball? Bring your family and try a free 60-minute session with our coaches. Rackets, paddles and balls provided.\n\nKids sessions run 8–10 AM, adult sessions 10 AM–12 PM on both days. Register below so we can plan coaches and courts.",
         date: addDays(TODAY, 4), endDate: addDays(TODAY, 5), startMinute: 480, endMinute: 720, fee: 0, registrationLimit: 60,
         registrationDeadline: addDays(TODAY, 3), divisions: ["Kids (6–12)", "Teens (13–17)", "Adults (18+)"], createdById: manager!.id,
       },
@@ -598,7 +729,7 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
       {
         slug: "smashpoint-monsoon-open-2026", name: "SmashPoint Monsoon Open 2026", category: "TOURNAMENT", status: "PUBLISHED",
         summary: "Our flagship open tournament — 7 categories, cash prizes and ranking points.",
-        description: "The biggest badminton weekend in Palghar is back. Knockout format across junior and open categories, played on all five courts with certified line umpires for semi-finals and finals.\n\nPrize pool of ₹60,000, trophies for winners and runners-up, and medals for semi-finalists. Yonex Mavis 350 shuttles for junior categories, feather shuttles for open categories.",
+        description: "The biggest badminton weekend in Palghar is back. Knockout format across junior and open categories, played on both badminton courts with certified line umpires for semi-finals and finals.\n\nPrize pool of ₹60,000, trophies for winners and runners-up, and medals for semi-finalists. Yonex Mavis 350 shuttles for junior categories, feather shuttles for open categories.",
         date: addDays(TODAY, 17), endDate: addDays(TODAY, 18), startMinute: 420, endMinute: 1140, fee: rupees(600), registrationLimit: 128,
         registrationDeadline: addDays(TODAY, 12), format: "KNOCKOUT",
         divisions: ["U-13 Boys Singles", "U-13 Girls Singles", "U-17 Boys Singles", "U-17 Girls Singles", "Men's Singles", "Women's Singles", "Open Doubles"],
@@ -666,11 +797,11 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
 
   await db.insert(s.announcements).values([
     {
-      title: "Academy closed on 2 October", body: "The academy will be closed on Friday, 2 October (Gandhi Jayanti) for scheduled electrical maintenance. All batches resume on 3 October. Court bookings for that day are disabled.",
+      title: "Closed on 2 October", body: "SmashPoint will be closed on Friday, 2 October (Gandhi Jayanti) for scheduled electrical maintenance. All batches resume on 3 October. Court bookings for that day are disabled.",
       audience: "EVERYONE", isPinned: true, showOnWebsite: true, publishedAt: new Date(Date.now() - 2 * 3600_000), createdById: admin!.id,
     },
     {
-      title: "Court 2 floor resurfacing", body: `Court 2 will be under maintenance from ${maintenanceStart} to ${maintenanceEnd} while we replace the PU mat. Batches normally on Court 2 move to Court 5 during this window.`,
+      title: "Badminton Court 2 resurfacing", body: `Badminton Court 2 will be under maintenance from ${maintenanceStart} to ${maintenanceEnd} while we replace the PU mat. Batches normally on Court 2 move to Court 1 during this window.`,
       audience: "EVERYONE", showOnWebsite: true, publishedAt: new Date(Date.now() - 26 * 3600_000), createdById: manager!.id,
     },
     {
@@ -686,33 +817,42 @@ export async function seedDemo(database: NodePgDatabase<typeof schema>) {
   const note = (userId: string, type: typeof s.notificationType.enumValues[number], title: string, body: string, hoursAgo: number, read = false, link: string | null = null) => ({
     userId, type, title, body, link, createdAt: new Date(Date.now() - hoursAgo * 3600_000), readAt: read ? new Date() : null,
   });
-  const demoFirst = bookingsInserted[0]!;
+  const demoFirst = bookingsInserted[ishaanFirst]!;
+  const nikhilNext = bookingsInserted[customerNext]!;
+  const nikhilSeries = seriesInserted[0]!;
   await db.insert(s.notifications).values([
-    note(studentUser!.id, "ANNOUNCEMENT", "Academy closed on 2 October", "The academy will be closed on Friday, 2 October for scheduled electrical maintenance.", 2),
-    note(studentUser!.id, "BOOKING_CONFIRMED", `Booking confirmed · ${demoFirst.code}`, "Court 2 on Saturday, 5:00 – 6:00 PM. See you on court!", 30, false, "/dashboard/bookings"),
-    note(studentUser!.id, "CLASS_REMINDER", "Advanced Morning Batch tomorrow", "6:00 – 8:00 AM on Court 1 with Vikram Joshi. Bring a spare grip.", 8, true),
+    note(customerUser!.id, "BOOKING_CONFIRMED", `Booking confirmed · ${nikhilNext.code}`, "Badminton Court 1 · 7:00 – 8:00 PM, with 2 rackets and a tube of feather shuttles.", 20, false, "/dashboard/bookings"),
+    note(customerUser!.id, "BOOKING_CONFIRMED", `Monthly booking confirmed · ${nikhilSeries.code}`, `Pickleball Court 1 every Tuesday and Thursday, 7:00 – 8:00 PM (${nikhilSeries.sessionCount} sessions).`, 13 * 24, true, "/dashboard/bookings"),
+    note(customerUser!.id, "ANNOUNCEMENT", "Next month's slots open soon", "Bookings for next month open 3 days before it starts. Monthly players get first pick of their regular slot.", 6),
+    note(customerUser!.id, "PAYMENT_RECEIVED", "Payment received", "Your payment for the pickleball monthly booking was received.", 13 * 24, true, "/dashboard/payments"),
+    note(studentUser!.id, "ANNOUNCEMENT", "Closed on 2 October", "SmashPoint will be closed on Friday, 2 October for scheduled electrical maintenance.", 2),
+    note(studentUser!.id, "BOOKING_CONFIRMED", `Booking confirmed · ${demoFirst.code}`, "Badminton Court 2 on Saturday, 5:00 – 6:00 PM. See you on court!", 30, false, "/dashboard/bookings"),
+    note(studentUser!.id, "CLASS_REMINDER", "Advanced Morning Batch tomorrow", "6:00 – 8:00 AM on Badminton Court 1 with Vikram Joshi. Bring a spare grip.", 8, true),
     note(studentUser!.id, "EVENT", "You're registered · SmashPoint Monsoon Open 2026", "U-17 Boys Singles. Draws will be published 3 days before the event.", 72, true, "/events/smashpoint-monsoon-open-2026"),
-    note(studentUser!.id, "PAYMENT_RECEIVED", "Payment received", "₹6,900 received for your Quarterly membership.", 24 * 60, true, "/dashboard/membership"),
-    note(parentUser!.id, "ANNOUNCEMENT", "Academy closed on 2 October", "The academy will be closed on Friday, 2 October for scheduled electrical maintenance.", 2),
-    note(parentUser!.id, "CLASS_REMINDER", "Kids Weekend Batch on Saturday", "Siya's batch runs 8:00 – 10:00 AM on Court 3.", 5),
+    note(studentUser!.id, "PAYMENT_RECEIVED", "Payment received", "₹6,900 received for your Quarterly membership.", 24 * 60, true, "/dashboard/payments"),
+    note(parentUser!.id, "ANNOUNCEMENT", "Closed on 2 October", "SmashPoint will be closed on Friday, 2 October for scheduled electrical maintenance.", 2),
+    note(parentUser!.id, "CLASS_REMINDER", "Kids Weekend Batch on Saturday", "Siya's batch runs 8:00 – 10:00 AM on Badminton Court 2.", 5),
     note(admin!.id, "GENERAL", "3 memberships expire this week", "Send renewal reminders from Memberships → Expiring soon.", 4, false, "/dashboard/memberships?filter=expiring"),
-    note(admin!.id, "PAYMENT_RECEIVED", "New online booking", "₹600 received for Court 1 · today 5:00 PM.", 1, false, "/dashboard/bookings"),
+    note(admin!.id, "PAYMENT_RECEIVED", "New online booking", "₹700 received for Badminton Court 1 · today 5:00 PM.", 1, false, "/dashboard/bookings"),
+    note(admin!.id, "GENERAL", "Racket reported damaged", "A rental racket came back with a cracked frame. Mark it for repair in Equipment.", 30, false, "/dashboard/equipment"),
   ]);
 
   await db.insert(s.enquiries).values([
     { name: "Kiran Vartak", email: "kiran.vartak@gmail.com", phone: "+91 98191 22331", subject: "Kids Program", message: "Hi, my son is 7. Is there space in the weekend kids batch? We are free only on Saturdays.", createdAt: new Date(Date.now() - 3 * 3600_000) },
-    { name: "Ajinkya Bhoir", email: "ajinkya.b@outlook.com", subject: "Corporate booking", message: "We'd like to book 3 courts every Friday 5–7 PM for our office team (18 people). Do you offer monthly corporate packages?", createdAt: new Date(Date.now() - 27 * 3600_000), status: "IN_PROGRESS" },
+    { name: "Ajinkya Bhoir", email: "ajinkya.b@outlook.com", subject: "Corporate booking", message: "We'd like to book both pickleball courts every Friday 5–7 PM for our office team (14 people). Do you offer quarterly corporate packages?", createdAt: new Date(Date.now() - 27 * 3600_000), status: "IN_PROGRESS" },
     { name: "Shruti Naik", email: "shruti.naik@gmail.com", phone: "+91 90290 44112", subject: "Coaching", message: "I played at school level 10 years ago. Which program should I join to get back into shape?", createdAt: new Date(Date.now() - 50 * 3600_000) },
   ]);
 
-  console.log(`✅ Seeded ${studentsInserted.length} students, ${bookingsInserted.length} bookings, ${paymentRows.length} payments, ${recordRows.length} attendance records.`);
+  console.log(
+    `✅ Seeded ${courts.length} courts, ${bookingsInserted.length} bookings (${seriesInserted.length} monthly/quarterly), ${rentalRows.length} rentals, ${paymentRows.length} payments, ${studentsInserted.length} students.`,
+  );
   console.log(`
-Demo accounts (password: SmashPoint@123)
+Demo accounts (one-click sign-in on /login when DEMO_MODE=true or in development)
   Admin      admin@smashpoint.in
   Manager    manager@smashpoint.in
   Reception  reception@smashpoint.in
   Coach      coach@smashpoint.in
-  Student    student@smashpoint.in
+  Customer   customer@smashpoint.in
   Parent     parent@smashpoint.in`);
 }
 

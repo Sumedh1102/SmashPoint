@@ -17,34 +17,30 @@ export const optionalText = (max = 500) => z.string().trim().max(max).optional()
 export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date");
 export const uuid = z.uuid();
 
-export const passwordSchema = z
-  .string()
-  .min(8, "Use at least 8 characters")
-  .max(128)
-  .refine((v) => /[A-Za-z]/.test(v) && /\d/.test(v), "Use letters and at least one number");
+const equipmentSelection = z
+  .array(z.object({ itemId: uuid, quantity: z.coerce.number().int().min(0).max(20) }))
+  .max(20)
+  .optional()
+  .default([]);
 
-export const loginSchema = z.object({
-  email: emailSchema,
-  password: z.string().min(1, "Enter your password").max(128),
-  next: z.string().optional(),
-});
-
-export const registerSchema = z.object({
-  name: nameSchema,
-  email: emailSchema,
-  phone: phoneSchema,
-  password: passwordSchema,
-});
-
-export const bookingRequestSchema = z.object({
+/** What the booking review step prices: a single slot or a monthly/quarterly plan. */
+export const bookingPlanSchema = z.object({
+  type: z.enum(["SINGLE", "MONTHLY", "QUARTERLY"]).default("SINGLE"),
   courtId: uuid,
+  /** The slot date, or the first day of a monthly/quarterly plan. */
   date: isoDate,
   startMinute: z.coerce.number().int().min(0).max(1439),
   duration: z.coerce.number().int().min(30).max(240),
+  /** Monthly/quarterly only: 0 = Sunday … 6 = Saturday. */
+  daysOfWeek: z.array(z.coerce.number().int().min(0).max(6)).max(7).optional().default([]),
+  equipment: equipmentSelection,
+  couponCode: z.string().trim().max(30).optional(),
+});
+
+export const bookingRequestSchema = bookingPlanSchema.extend({
   name: nameSchema,
   phone: phoneSchema,
   email: emailSchema,
-  couponCode: z.string().trim().max(30).optional(),
   notes: optionalText(300),
 });
 

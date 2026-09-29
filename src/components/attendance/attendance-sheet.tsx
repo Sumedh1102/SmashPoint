@@ -58,10 +58,10 @@ export function AttendanceSheet({
   return (
     <form onSubmit={submitWithoutReset(formAction)} className="grid gap-5">
       <input type="hidden" name="records" value={records} />
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-3 border-ink bg-white p-3 shadow-brutal-sm">
-        <div className="flex flex-wrap gap-2 text-sm font-bold">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-white p-3 shadow-xs">
+        <div className="flex flex-wrap gap-2 text-sm font-medium">
           {OPTIONS.map((o) => (
-            <span key={o.value} className="inline-flex items-center gap-1.5 rounded-lg border-2 border-ink px-2 py-1">
+            <span key={o.value} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2 py-1">
               <span className={cn("grid size-5 place-items-center rounded text-[10px]", o.on)}>{o.short}</span>
               {o.label} <span className="tabular-nums">{counts[o.value]}</span>
             </span>
@@ -76,11 +76,11 @@ export function AttendanceSheet({
 
       <ul className="grid gap-2">
         {students.map((s) => (
-          <li key={s.id} className="grid gap-3 rounded-2xl border-2 border-ink bg-white p-3 sm:grid-cols-[1fr_auto] sm:items-center">
+          <li key={s.id} className="grid gap-3 rounded-2xl border border-line bg-white p-3 sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="flex min-w-0 items-center gap-3">
               <Avatar name={s.name} src={s.photoUrl} size={40} />
               <div className="min-w-0">
-                <p className="truncate font-extrabold">{s.name}</p>
+                <p className="truncate font-semibold">{s.name}</p>
                 <p className="font-mono text-xs text-muted">
                   {s.studentCode}
                   {s.source === "QR" ? " · checked in via QR" : ""}
@@ -88,7 +88,7 @@ export function AttendanceSheet({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <div role="radiogroup" aria-label={`Attendance for ${s.name}`} className="grid grid-cols-4 gap-1 rounded-xl border-2 border-ink bg-paper p-1">
+              <div role="radiogroup" aria-label={`Attendance for ${s.name}`} className="grid grid-cols-4 gap-1 rounded-xl border border-line bg-paper p-1">
                 {OPTIONS.map((o) => {
                   const active = statuses[s.id] === o.value;
                   return (
@@ -100,7 +100,7 @@ export function AttendanceSheet({
                       aria-label={o.label}
                       disabled={readOnly}
                       onClick={() => setStatuses((prev) => ({ ...prev, [s.id]: o.value }))}
-                      className={cn("h-10 min-w-12 rounded-lg px-2 text-sm font-extrabold transition", active ? `${o.on} shadow-brutal-xs` : "hover:bg-white")}
+                      className={cn("h-10 min-w-12 rounded-lg px-2 text-sm font-semibold transition", active ? `${o.on} shadow-xs` : "hover:bg-white")}
                     >
                       {o.short}
                     </button>
@@ -113,7 +113,7 @@ export function AttendanceSheet({
                 value={remarks[s.id]}
                 disabled={readOnly}
                 onChange={(e) => setRemarks((prev) => ({ ...prev, [s.id]: e.target.value }))}
-                className="h-10 w-full rounded-lg border-2 border-ink bg-white px-2 text-sm sm:w-40"
+                className="h-10 w-full rounded-lg border border-line bg-white px-2 text-sm sm:w-40"
                 maxLength={200}
               />
             </div>
@@ -122,7 +122,7 @@ export function AttendanceSheet({
       </ul>
 
       <div>
-        <label htmlFor="class-notes" className="mb-1.5 block text-sm font-bold">
+        <label htmlFor="class-notes" className="mb-1.5 block text-sm font-medium">
           Class notes
         </label>
         <Textarea id="class-notes" name="notes" rows={3} defaultValue={initialNotes ?? ""} placeholder="What did the batch work on today? Anything to follow up?" disabled={readOnly} />
@@ -130,8 +130,8 @@ export function AttendanceSheet({
 
       {state && !state.ok ? <FormMessage>{state.error}</FormMessage> : null}
       {!readOnly ? (
-        <div className="sticky bottom-20 z-10 flex items-center justify-between gap-3 rounded-2xl border-3 border-ink bg-ink p-3 text-white shadow-brutal lg:bottom-4">
-          <p className="text-sm font-bold">{unsaved ? `${unsaved} change${unsaved === 1 ? "" : "s"} not saved` : "All changes saved"}</p>
+        <div className="sticky bottom-20 z-10 flex items-center justify-between gap-3 rounded-2xl border border-line bg-ink p-3 text-white shadow-sm lg:bottom-4">
+          <p className="text-sm font-medium">{unsaved ? `${unsaved} change${unsaved === 1 ? "" : "s"} not saved` : "All changes saved"}</p>
           <Button type="submit" variant="primary" loading={pending} icon={<Save className="size-4" />}>
             Save attendance
           </Button>

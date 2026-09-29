@@ -5,13 +5,13 @@ import { cn, initials } from "@/lib/utils";
 import { ButtonLink } from "./button";
 
 /* ── Avatar ─────────────────────────────────────────────────────────────── */
-const AVATAR_TONES = ["bg-brand text-white", "bg-brand-100 text-brand-700", "bg-ink text-white", "bg-warning-soft text-ink", "bg-white text-ink"];
+const AVATAR_TONES = ["bg-brand-50 text-brand-700", "bg-paper-2 text-ink-soft", "bg-success-soft text-success", "bg-warning-soft text-warning", "bg-ink text-white"];
 
 export function Avatar({ name, src, size = 40, className }: { name: string; src?: string | null; size?: number; className?: string }) {
   const tone = AVATAR_TONES[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_TONES.length];
   return (
     <span
-      className={cn("relative inline-grid shrink-0 place-items-center overflow-hidden rounded-xl border-2 border-ink font-display font-extrabold", tone, className)}
+      className={cn("relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full font-semibold", tone, className)}
       style={{ width: size, height: size, fontSize: Math.max(11, size * 0.36) }}
       aria-hidden={!src}
     >
@@ -29,12 +29,12 @@ export function Avatar({ name, src, size = 40, className }: { name: string; src?
 export function Breadcrumbs({ items }: { items: { label: string; href?: string }[] }) {
   return (
     <nav aria-label="Breadcrumb" className="mb-2">
-      <ol className="flex flex-wrap items-center gap-1 text-sm font-semibold text-muted">
+      <ol className="flex flex-wrap items-center gap-1 text-sm text-muted">
         {items.map((item, i) => (
           <li key={i} className="flex items-center gap-1">
             {i > 0 ? <ChevronRight className="size-3.5" aria-hidden /> : null}
             {item.href ? (
-              <Link href={item.href} className="hover:text-ink hover:underline">
+              <Link href={item.href} className="hover:text-ink">
                 {item.label}
               </Link>
             ) : (
@@ -67,7 +67,7 @@ export function PageHeader({
       <div className="min-w-0">
         {breadcrumbs ? <Breadcrumbs items={breadcrumbs} /> : null}
         {eyebrow ? <div className="mb-2">{eyebrow}</div> : null}
-        <h1 className="text-3xl font-extrabold leading-[1.05] md:text-4xl">{title}</h1>
+        <h1 className="text-2xl font-semibold leading-tight md:text-3xl">{title}</h1>
         {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
@@ -90,11 +90,11 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center rounded-2xl border-2 border-dashed border-ink/40 bg-white/60 px-6 py-12 text-center", className)}>
-      <span className="mb-4 grid size-14 rotate-[-4deg] place-items-center rounded-2xl border-3 border-ink bg-brand-100 text-brand-700 shadow-brutal-sm">
-        {icon ?? <Inbox className="size-6" strokeWidth={2.5} />}
+    <div className={cn("flex flex-col items-center rounded-[var(--radius-card)] border border-dashed border-line-strong bg-white/60 px-6 py-12 text-center", className)}>
+      <span className="mb-4 grid size-12 place-items-center rounded-full bg-paper-2 text-muted">
+        {icon ?? <Inbox className="size-5" />}
       </span>
-      <h3 className="text-xl font-extrabold">{title}</h3>
+      <h3 className="text-base font-semibold">{title}</h3>
       {description ? <p className="mt-1.5 max-w-sm text-sm text-muted">{description}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
@@ -103,12 +103,12 @@ export function EmptyState({
 
 export function ErrorState({ title = "Something went wrong", description, action }: { title?: string; description?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border-3 border-ink bg-danger-soft px-6 py-12 text-center shadow-brutal">
-      <span className="mb-4 grid size-14 rotate-3 place-items-center rounded-2xl border-3 border-ink bg-white text-danger">
-        <AlertTriangle className="size-6" strokeWidth={2.5} />
+    <div className="flex flex-col items-center rounded-[var(--radius-card)] border border-danger/20 bg-danger-soft/60 px-6 py-12 text-center">
+      <span className="mb-4 grid size-12 place-items-center rounded-full bg-white text-danger">
+        <AlertTriangle className="size-5" />
       </span>
-      <h3 className="text-xl font-extrabold">{title}</h3>
-      {description ? <p className="mt-1.5 max-w-md text-sm">{description}</p> : null}
+      <h3 className="text-base font-semibold">{title}</h3>
+      {description ? <p className="mt-1.5 max-w-md text-sm text-muted">{description}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
@@ -116,7 +116,7 @@ export function ErrorState({ title = "Something went wrong", description, action
 
 export function Spinner({ className, label = "Loading" }: { className?: string; label?: string }) {
   return (
-    <span role="status" className={cn("inline-flex items-center gap-2 text-sm font-semibold text-muted", className)}>
+    <span role="status" className={cn("inline-flex items-center gap-2 text-sm text-muted", className)}>
       <LoaderCircle className="size-4 animate-spin" aria-hidden />
       {label}
     </span>
@@ -124,7 +124,7 @@ export function Spinner({ className, label = "Loading" }: { className?: string; 
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-xl bg-ink/8", className)} aria-hidden />;
+  return <div className={cn("animate-pulse rounded-lg bg-ink/[0.06]", className)} aria-hidden />;
 }
 
 export function LoadingState({ rows = 4 }: { rows?: number }) {
@@ -136,10 +136,10 @@ export function LoadingState({ rows = 4 }: { rows?: number }) {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-2xl" />
+          <Skeleton key={i} className="h-28 rounded-[var(--radius-card)]" />
         ))}
       </div>
-      <div className="space-y-3 rounded-2xl border-3 border-ink/10 bg-white/60 p-5">
+      <div className="space-y-3 rounded-[var(--radius-card)] border border-line bg-white/60 p-5">
         {Array.from({ length: rows }).map((_, i) => (
           <Skeleton key={i} className="h-10" />
         ))}
@@ -163,17 +163,17 @@ export function Pagination({
   label?: string;
 }) {
   if (pageCount <= 1) {
-    return <p className="mt-4 text-sm font-semibold text-muted">{total} {label}</p>;
+    return <p className="mt-4 text-sm text-muted">{total} {label}</p>;
   }
   const pages = pageWindow(page, pageCount);
   return (
     <nav aria-label="Pagination" className="mt-5 flex flex-col items-center justify-between gap-3 sm:flex-row">
-      <p className="text-sm font-semibold text-muted">
+      <p className="text-sm text-muted">
         Page {page} of {pageCount} · {total} {label}
       </p>
       <div className="flex items-center gap-1.5">
         <PageLink href={hrefFor(page - 1)} disabled={page <= 1} aria-label="Previous page">
-          <ChevronLeft className="size-4" strokeWidth={2.5} />
+          <ChevronLeft className="size-4" />
         </PageLink>
         {pages.map((p, i) =>
           p === "…" ? (
@@ -187,7 +187,7 @@ export function Pagination({
           ),
         )}
         <PageLink href={hrefFor(page + 1)} disabled={page >= pageCount} aria-label="Next page">
-          <ChevronRight className="size-4" strokeWidth={2.5} />
+          <ChevronRight className="size-4" />
         </PageLink>
       </div>
     </nav>
@@ -196,8 +196,8 @@ export function Pagination({
 
 function PageLink({ href, active, disabled, children, ...rest }: { href: string; active?: boolean; disabled?: boolean; children: ReactNode; "aria-label"?: string }) {
   const cls = cn(
-    "grid h-9 min-w-9 place-items-center rounded-lg border-2 border-ink px-2 text-sm font-bold transition",
-    active ? "bg-ink text-white" : "bg-white hover:-translate-y-0.5 hover:shadow-brutal-xs",
+    "grid h-8 min-w-8 place-items-center rounded-md border px-2 text-sm font-medium transition",
+    active ? "border-line bg-ink text-white" : "border-line bg-white hover:border-line-strong hover:bg-paper",
     disabled && "pointer-events-none opacity-40",
   );
   if (disabled) return <span className={cls} aria-disabled {...rest}>{children}</span>;
@@ -236,29 +236,29 @@ export function StatCard({
   href?: string;
 }) {
   const tones = {
-    white: "bg-white",
-    blue: "bg-brand text-white",
-    ink: "bg-ink text-white",
-    soft: "bg-brand-50",
+    white: "border-line bg-white",
+    blue: "border-brand bg-brand text-white",
+    ink: "border-line bg-ink text-white",
+    soft: "border-brand-100 bg-brand-50",
   };
   const body = (
-    <div className={cn("flex h-full flex-col justify-between gap-3 rounded-2xl border-3 border-ink p-4 shadow-brutal sm:p-5", tones[tone], href && "brutal-hover")}>
+    <div className={cn("flex h-full flex-col justify-between gap-3 rounded-[var(--radius-card)] border p-4 shadow-sm sm:p-5", tones[tone], href && "lift-hover")}>
       <div className="flex items-start justify-between gap-2">
-        <p className={cn("text-sm font-bold", tone === "white" || tone === "soft" ? "text-muted" : "text-white/80")}>{label}</p>
+        <p className={cn("text-sm font-medium", tone === "white" || tone === "soft" ? "text-muted" : "text-white/80")}>{label}</p>
         {icon ? (
-          <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg border-2", tone === "white" || tone === "soft" ? "border-ink bg-brand-100 text-brand-700" : "border-white/70 bg-white/10")}>
+          <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg", tone === "white" || tone === "soft" ? "bg-paper text-muted" : "bg-white/10")}>
             {icon}
           </span>
         ) : null}
       </div>
       <div>
-        <p className="font-display text-3xl font-extrabold leading-none tracking-tight sm:text-[2.1rem]">{value}</p>
-        {hint ? <p className={cn("mt-1.5 text-xs font-semibold", tone === "white" || tone === "soft" ? "text-muted" : "text-white/75")}>{hint}</p> : null}
+        <p className="font-display text-2xl font-semibold leading-none tracking-tight sm:text-[1.75rem]">{value}</p>
+        {hint ? <p className={cn("mt-1.5 text-xs", tone === "white" || tone === "soft" ? "text-muted" : "text-white/75")}>{hint}</p> : null}
       </div>
     </div>
   );
   return href ? (
-    <Link href={href} className="block h-full rounded-2xl">
+    <Link href={href} className="block h-full rounded-[var(--radius-card)]">
       {body}
     </Link>
   ) : (
@@ -269,7 +269,7 @@ export function StatCard({
 export function SectionTitle({ children, action, className }: { children: ReactNode; action?: ReactNode; className?: string }) {
   return (
     <div className={cn("mb-3 flex items-center justify-between gap-3", className)}>
-      <h2 className="text-xl font-extrabold">{children}</h2>
+      <h2 className="text-lg font-semibold">{children}</h2>
       {action}
     </div>
   );
@@ -277,11 +277,11 @@ export function SectionTitle({ children, action, className }: { children: ReactN
 
 export function KeyValue({ items, className }: { items: { label: string; value: ReactNode }[]; className?: string }) {
   return (
-    <dl className={cn("divide-y-2 divide-ink/10", className)}>
+    <dl className={cn("divide-y divide-line", className)}>
       {items.map((item) => (
         <div key={item.label} className="flex items-start justify-between gap-4 py-2.5 text-sm">
-          <dt className="font-semibold text-muted">{item.label}</dt>
-          <dd className="text-right font-bold">{item.value}</dd>
+          <dt className="text-muted">{item.label}</dt>
+          <dd className="text-right font-medium">{item.value}</dd>
         </div>
       ))}
     </dl>

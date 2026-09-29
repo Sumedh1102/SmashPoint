@@ -7,28 +7,25 @@ export type ButtonVariant = "primary" | "dark" | "outline" | "ghost" | "danger" 
 export type ButtonSize = "sm" | "md" | "lg" | "xl" | "icon";
 
 const base =
-  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-display font-bold tracking-tight " +
-  "border-ink rounded-[var(--radius-control)] transition-[transform,box-shadow,background-color] duration-150 " +
-  "disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand";
-
-const lift =
-  "shadow-brutal-sm hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-brutal active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
+  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-medium tracking-[-0.005em] " +
+  "rounded-[var(--radius-control)] border transition-[background-color,border-color,color,box-shadow] duration-150 " +
+  "disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: `border-[2.5px] bg-brand text-white ${lift} hover:bg-brand-600`,
-  dark: `border-[2.5px] bg-ink text-white ${lift}`,
-  outline: `border-[2.5px] bg-white text-ink ${lift} hover:bg-paper`,
-  soft: `border-[2.5px] bg-brand-50 text-brand-700 ${lift} hover:bg-brand-100`,
-  danger: `border-[2.5px] bg-danger text-white ${lift}`,
-  ghost: "border-2 border-transparent bg-transparent text-ink hover:bg-ink/5 hover:border-ink/10",
+  primary: "border-brand bg-brand text-white shadow-xs hover:border-brand-600 hover:bg-brand-600 active:bg-brand-700",
+  dark: "border-line bg-ink text-white shadow-xs hover:bg-ink-soft hover:border-line-strong-soft",
+  outline: "border-line-strong bg-white text-ink shadow-xs hover:border-subtle hover:bg-paper",
+  soft: "border-transparent bg-brand-50 text-brand-700 hover:bg-brand-100",
+  danger: "border-danger bg-danger text-white shadow-xs hover:brightness-95",
+  ghost: "border-transparent bg-transparent text-ink hover:bg-ink/5",
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-9 px-3.5 text-sm",
-  md: "h-11 px-5 text-[15px]",
-  lg: "h-13 px-6 text-base",
-  xl: "h-16 px-8 text-lg rounded-2xl",
-  icon: "h-10 w-10 p-0",
+  sm: "h-8 px-3 text-sm",
+  md: "h-10 px-4 text-sm",
+  lg: "h-11 px-5 text-[15px]",
+  xl: "h-12 px-6 text-base",
+  icon: "h-9 w-9 p-0",
 };
 
 export function buttonStyles({ variant = "primary", size = "md", className }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {

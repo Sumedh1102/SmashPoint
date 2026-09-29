@@ -48,7 +48,7 @@ export default async function AnnouncementsPage() {
                         ) : null}
                         {expired ? <Badge tone="neutral">Expired</Badge> : null}
                       </div>
-                      <h2 className="text-xl font-extrabold">{a.title}</h2>
+                      <h2 className="text-xl font-semibold">{a.title}</h2>
                       <p className="mt-1 whitespace-pre-line text-ink-soft">{a.body}</p>
                       <p className="mt-2 text-xs font-semibold text-muted">
                         {formatDateTime(a.publishedAt)} · {author ?? "Academy"}

@@ -43,18 +43,18 @@ export default async function NotificationsPage() {
         <div className="xl:col-span-2">
           {items.length ? (
             <Card className="overflow-hidden">
-              <ul className="divide-y-2 divide-ink/10">
+              <ul className="divide-y divide-line">
                 {items.map((n) => {
                   const Icon = ICONS[n.type] ?? Bell;
                   const body = (
                     <div className={cn("flex gap-4 px-5 py-4", !n.readAt && "bg-brand-50")}>
-                      <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl border-2 border-ink", !n.readAt ? "bg-brand text-white" : "bg-white")}>
+                      <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl border border-line", !n.readAt ? "bg-brand text-white" : "bg-white")}>
                         <Icon className="size-5" strokeWidth={2.4} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="flex items-center gap-2 font-extrabold">
+                        <p className="flex items-center gap-2 font-semibold">
                           {n.title}
-                          {!n.readAt ? <span className="rounded bg-brand px-1.5 text-[10px] font-extrabold uppercase text-white">New</span> : null}
+                          {!n.readAt ? <span className="rounded bg-brand px-1.5 text-[10px] font-semibold uppercase text-white">New</span> : null}
                         </p>
                         <p className="text-sm text-ink-soft">{n.body}</p>
                         <p className="mt-1 text-xs font-semibold text-muted">{formatRelative(n.createdAt)}</p>
@@ -70,10 +70,10 @@ export default async function NotificationsPage() {
           )}
         </div>
         <div className="grid content-start gap-3">
-          <h2 className="text-lg font-extrabold">Announcements</h2>
+          <h2 className="text-lg font-semibold">Announcements</h2>
           {announcements.map((a) => (
             <Card key={a.id} tone={a.isPinned ? "ink" : "white"} className="p-4">
-              <p className="flex items-center gap-2 font-extrabold">
+              <p className="flex items-center gap-2 font-semibold">
                 <Megaphone className="size-4" /> {a.title}
               </p>
               <p className={cn("mt-1 text-sm", a.isPinned ? "text-white/80" : "text-ink-soft")}>{a.body}</p>

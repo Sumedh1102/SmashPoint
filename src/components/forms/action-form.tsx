@@ -169,12 +169,12 @@ export function DaysField({ name = "days", label, defaultValue = [] }: { name?: 
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return (
     <fieldset>
-      <legend className="mb-1.5 text-sm font-bold">{label}</legend>
+      <legend className="mb-1.5 text-sm font-medium">{label}</legend>
       <div className="flex flex-wrap gap-1.5">
         {[1, 2, 3, 4, 5, 6, 0].map((d) => (
           <label key={d} className="cursor-pointer">
             <input type="checkbox" name={name} value={d} defaultChecked={defaultValue.includes(d)} className="peer sr-only" />
-            <span className="inline-grid h-10 min-w-12 place-items-center rounded-lg border-2 border-ink bg-white px-2 text-sm font-bold transition peer-checked:bg-brand peer-checked:text-white peer-focus-visible:outline-3 peer-focus-visible:outline-brand">
+            <span className="inline-grid h-10 min-w-12 place-items-center rounded-lg border border-line bg-white px-2 text-sm font-medium transition peer-checked:bg-brand peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-brand">
               {days[d]}
             </span>
           </label>

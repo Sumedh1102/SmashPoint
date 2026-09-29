@@ -38,7 +38,7 @@ export function SiteHeader() {
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
-    <header className="sticky top-0 z-40 border-b-3 border-ink bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/85" data-print-hide>
+    <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/85" data-print-hide>
       <div className="mx-auto flex h-18 max-w-[88rem] items-center justify-between gap-4 px-4 sm:px-6">
         <Logo />
         <nav aria-label="Main" className="hidden items-center xl:flex">
@@ -48,7 +48,7 @@ export function SiteHeader() {
               href={item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
               className={cn(
-                "rounded-lg px-2.5 py-1.5 text-[14.5px] font-bold transition hover:bg-ink/5",
+                "rounded-lg px-2.5 py-1.5 text-[14.5px] font-medium transition hover:bg-ink/5",
                 isActive(item.href) && "bg-ink text-white hover:bg-ink",
               )}
             >
@@ -62,29 +62,29 @@ export function SiteHeader() {
               Dashboard
             </ButtonLink>
           ) : (
-            <Link href="/login" className="hidden rounded-lg px-3 py-2 text-sm font-bold hover:bg-ink/5 sm:inline-flex">
+            <Link href="/login" className="hidden rounded-lg px-3 py-2 text-sm font-medium hover:bg-ink/5 sm:inline-flex">
               Login
             </Link>
           )}
           <ButtonLink href="/book" size="sm" className="hidden sm:inline-flex">
             Book a Court
-            <ArrowUpRight className="size-4" strokeWidth={2.75} />
+            <ArrowUpRight className="size-4" />
           </ButtonLink>
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="grid size-11 place-items-center rounded-xl border-[2.5px] border-ink bg-white shadow-brutal-xs xl:hidden"
+            className="grid size-11 place-items-center rounded-xl border border-line bg-white shadow-xs xl:hidden"
             aria-expanded={open}
             aria-controls="mobile-nav"
             aria-label={open ? "Close menu" : "Open menu"}
           >
-            {open ? <X className="size-5" strokeWidth={3} /> : <Menu className="size-5" strokeWidth={3} />}
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
         </div>
       </div>
 
       {open ? (
-        <div id="mobile-nav" className="fixed inset-x-0 bottom-0 top-[4.7rem] z-40 overflow-y-auto border-t-3 border-ink bg-paper xl:hidden">
+        <div id="mobile-nav" className="fixed inset-x-0 bottom-0 top-[4.7rem] z-40 overflow-y-auto border-t border-line bg-paper xl:hidden">
           <nav aria-label="Mobile" className="mx-auto grid max-w-lg gap-2 p-4">
             {PUBLIC_NAV.map((item, i) => (
               <Link
@@ -92,7 +92,7 @@ export function SiteHeader() {
                 href={item.href}
                 aria-current={isActive(item.href) ? "page" : undefined}
                 className={cn(
-                  "flex items-center justify-between rounded-2xl border-[2.5px] border-ink bg-white px-5 py-3.5 font-display text-xl font-extrabold shadow-brutal-xs",
+                  "flex items-center justify-between rounded-2xl border border-line bg-white px-5 py-3.5 font-display text-xl font-semibold shadow-xs",
                   isActive(item.href) && "bg-brand text-white",
                 )}
               >

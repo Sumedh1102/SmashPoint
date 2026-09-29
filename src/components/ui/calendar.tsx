@@ -40,17 +40,17 @@ export function Calendar({
   return (
     <div className={cn("w-72 select-none", className)}>
       <div className="mb-2 flex items-center justify-between">
-        <button type="button" disabled={!canPrev} onClick={() => setMonth(addMonths(first, -1))} className="grid size-8 place-items-center rounded-lg border-2 border-ink bg-white disabled:opacity-30" aria-label="Previous month">
-          <ChevronLeft className="size-4" strokeWidth={3} />
+        <button type="button" disabled={!canPrev} onClick={() => setMonth(addMonths(first, -1))} className="grid size-8 place-items-center rounded-md text-muted hover:bg-paper hover:text-ink disabled:opacity-30" aria-label="Previous month">
+          <ChevronLeft className="size-4" />
         </button>
-        <p className="font-display font-extrabold">{MONTHS[Number(first.slice(5, 7)) - 1]} {first.slice(0, 4)}</p>
-        <button type="button" disabled={!canNext} onClick={() => setMonth(addMonths(first, 1))} className="grid size-8 place-items-center rounded-lg border-2 border-ink bg-white disabled:opacity-30" aria-label="Next month">
-          <ChevronRight className="size-4" strokeWidth={3} />
+        <p className="text-sm font-semibold">{MONTHS[Number(first.slice(5, 7)) - 1]} {first.slice(0, 4)}</p>
+        <button type="button" disabled={!canNext} onClick={() => setMonth(addMonths(first, 1))} className="grid size-8 place-items-center rounded-md text-muted hover:bg-paper hover:text-ink disabled:opacity-30" aria-label="Next month">
+          <ChevronRight className="size-4" />
         </button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center" role="grid">
         {WEEK.map((w) => (
-          <span key={w} className="py-1 text-[11px] font-extrabold uppercase text-muted">
+          <span key={w} className="py-1 text-[11px] font-medium text-subtle">
             {w}
           </span>
         ))}
@@ -64,9 +64,9 @@ export function Calendar({
               aria-pressed={d === value}
               aria-label={formatDate(d, "long")}
               className={cn(
-                "grid h-9 place-items-center rounded-lg border-2 text-sm font-bold transition",
-                d === value ? "border-ink bg-brand text-white shadow-brutal-xs" : "border-transparent hover:border-ink hover:bg-brand-50",
-                "disabled:cursor-not-allowed disabled:text-subtle disabled:line-through disabled:hover:border-transparent disabled:hover:bg-transparent",
+                "grid h-9 place-items-center rounded-md text-sm tabular-nums transition",
+                d === value ? "bg-brand font-medium text-white" : "hover:bg-paper-2",
+                "disabled:cursor-not-allowed disabled:text-subtle/60 disabled:hover:bg-transparent",
               )}
             >
               {Number(d.slice(8))}
@@ -123,13 +123,13 @@ export function DatePicker({
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex h-11 w-full items-center gap-2 rounded-[var(--radius-control)] border-2 border-ink bg-white px-3.5 text-left text-[15px] font-semibold"
+        className="flex h-10 w-full items-center gap-2 rounded-[var(--radius-control)] border border-line-strong bg-white px-3 text-left text-sm shadow-xs"
       >
-        <CalendarDays className="size-4 shrink-0" strokeWidth={2.5} />
+        <CalendarDays className="size-4 shrink-0 text-muted" />
         <span className={cn(!current && "text-subtle")}>{current ? formatDate(current, "long") : placeholder}</span>
       </button>
       {open ? (
-        <div role="dialog" aria-label="Choose date" className="animate-pop absolute left-0 z-50 mt-2 rounded-2xl border-3 border-ink bg-white p-3 shadow-brutal">
+        <div role="dialog" aria-label="Choose date" className="animate-pop absolute left-0 z-50 mt-2 rounded-xl border border-line bg-white p-3 shadow-lg">
           <Calendar
             value={current}
             min={min}

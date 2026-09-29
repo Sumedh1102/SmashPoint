@@ -13,5 +13,5 @@ const MAP: Record<string, LucideIcon> = {
 
 export function FacilityIcon({ name, className }: { name: string; className?: string }) {
   const Icon = MAP[name] ?? LayoutGrid;
-  return <Icon className={className} strokeWidth={2.5} aria-hidden />;
+  return <Icon className={className} aria-hidden />;
 }

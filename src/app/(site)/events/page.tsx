@@ -41,17 +41,17 @@ export default async function EventsPage() {
         )}
       </Section>
       {past.length ? (
-        <Section className="border-t-3 border-ink">
+        <Section className="border-t border-line">
           <SectionHeading index="02" eyebrow="Past events" title="Recent results." />
           <ul className="grid gap-4 md:grid-cols-2">
             {past.map((e) => (
-              <li key={e.id} className="flex items-start gap-4 rounded-2xl border-3 border-ink bg-white p-5 shadow-brutal-sm">
-                <span className="grid size-12 shrink-0 place-items-center rounded-xl border-2 border-ink bg-warning-soft">
-                  <Trophy className="size-6" strokeWidth={2.5} />
+              <li key={e.id} className="flex items-start gap-4 rounded-2xl border border-line bg-white p-5 shadow-xs">
+                <span className="grid size-12 shrink-0 place-items-center rounded-xl border border-line bg-warning-soft">
+                  <Trophy className="size-6" />
                 </span>
                 <div>
-                  <p className="font-mono text-xs font-bold text-muted">{formatDate(e.date)}</p>
-                  <h3 className="text-lg font-extrabold">{e.name}</h3>
+                  <p className="font-mono text-xs font-medium text-muted">{formatDate(e.date)}</p>
+                  <h3 className="text-lg font-semibold">{e.name}</h3>
                   <p className="text-sm text-muted">{e.summary}</p>
                 </div>
               </li>

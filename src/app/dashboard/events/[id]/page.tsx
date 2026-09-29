@@ -43,7 +43,7 @@ export default async function EventAdminPage({ params, searchParams }: PageProps
               Registrations CSV
             </ButtonLink>
             {event.status !== "DRAFT" ? (
-              <Link href={`/events/${event.slug}`} target="_blank" className="inline-flex items-center gap-1 px-2 text-sm font-bold text-brand">
+              <Link href={`/events/${event.slug}`} target="_blank" className="inline-flex items-center gap-1 px-2 text-sm font-medium text-brand">
                 View public page <ExternalLink className="size-4" />
               </Link>
             ) : null}
@@ -76,7 +76,7 @@ export default async function EventAdminPage({ params, searchParams }: PageProps
                       {regs.map((r) => (
                         <TR key={r.id} className={r.status === "CANCELLED" ? "opacity-50" : ""}>
                           <TD className="text-sm">
-                            <span className="font-bold">{r.participantName}</span>
+                            <span className="font-medium">{r.participantName}</span>
                             <span className="block text-muted">
                               {r.email} · {r.phone}
                             </span>

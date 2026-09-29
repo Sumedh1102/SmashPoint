@@ -39,16 +39,16 @@ export default function FacilitiesPage() {
           {facilities.map((f, i) => {
             const dark = TONES[i]!.includes("text-white");
             return (
-              <article key={f.title} className={cn("flex flex-col rounded-[var(--radius-card)] border-3 border-ink p-6 shadow-brutal brutal-hover", SPANS[i], TONES[i])}>
-                <span className={cn("grid size-12 place-items-center rounded-xl border-2", dark ? "border-white bg-white/10" : "border-ink bg-white")}>
+              <article key={f.title} className={cn("flex flex-col rounded-[var(--radius-card)] border border-line p-6 shadow-sm lift-hover", SPANS[i], TONES[i])}>
+                <span className={cn("grid size-12 place-items-center rounded-xl border", dark ? "border-white bg-white/10" : "border-line bg-white")}>
                   <FacilityIcon name={f.icon} className="size-6" />
                 </span>
-                <h2 className={cn("mt-5 font-extrabold leading-tight", i === 0 ? "text-4xl md:text-5xl" : "text-2xl")}>{f.title}</h2>
-                <p className={cn("mt-1 font-mono text-xs font-bold uppercase tracking-wider", dark ? "text-brand-200" : "text-brand")}>{f.spec}</p>
+                <h2 className={cn("mt-5 font-semibold leading-tight", i === 0 ? "text-4xl md:text-5xl" : "text-2xl")}>{f.title}</h2>
+                <p className={cn("mt-1 font-mono text-xs font-medium uppercase tracking-wider", dark ? "text-brand-200" : "text-brand")}>{f.spec}</p>
                 <p className={cn("mt-3", dark ? "text-white/80" : "text-muted")}>{f.body}</p>
                 {i === 0 ? (
                   <div className="mt-auto pt-6">
-                    <div className="rounded-2xl border-3 border-white bg-brand p-4">
+                    <div className="rounded-2xl border border-white bg-brand p-4">
                       <CourtDiagram />
                     </div>
                   </div>
@@ -60,15 +60,15 @@ export default function FacilitiesPage() {
       </Section>
 
       <Container>
-        <div className="grid gap-6 rounded-[2rem] border-3 border-ink bg-white p-8 shadow-brutal-lg md:grid-cols-3 md:p-12">
+        <div className="grid gap-6 rounded-[2rem] border border-line bg-white p-8 shadow-md md:grid-cols-3 md:p-12">
           {[
             ["13.4 × 6.1 m", "Regulation court size"],
             ["9 m", "Clear ceiling height"],
             ["800+ lux", "Glare-free LED lighting"],
           ].map(([v, l]) => (
             <div key={l}>
-              <p className="font-display text-5xl font-extrabold leading-none">{v}</p>
-              <p className="mt-2 font-bold text-muted">{l}</p>
+              <p className="font-display text-5xl font-semibold leading-none">{v}</p>
+              <p className="mt-2 font-medium text-muted">{l}</p>
             </div>
           ))}
         </div>

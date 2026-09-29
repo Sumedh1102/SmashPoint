@@ -54,7 +54,7 @@ export function HoldCountdown({ expiresAt }: { expiresAt: string }) {
   const m = Math.floor(left / 60000);
   const s = Math.floor((left % 60000) / 1000);
   return (
-    <span className="font-mono font-bold tabular-nums" aria-live="polite">
+    <span className="font-mono font-medium tabular-nums" aria-live="polite">
       {String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
     </span>
   );
@@ -67,7 +67,7 @@ export function ReceiptToolbar({ icsHref, cancel }: { icsHref: string; cancel?: 
   const router = useRouter();
   return (
     <div className="flex flex-wrap gap-2" data-print-hide>
-      <a href={icsHref} className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-control)] border-[2.5px] border-ink bg-white px-4 text-sm font-bold shadow-brutal-sm hover:-translate-y-0.5">
+      <a href={icsHref} className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-control)] border border-line bg-white px-4 text-sm font-medium shadow-xs">
         <CalendarPlus className="size-4" /> Add to calendar
       </a>
       <Button variant="outline" icon={<Printer className="size-4" />} onClick={() => window.print()}>

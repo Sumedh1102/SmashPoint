@@ -49,13 +49,13 @@ export default async function HomePage() {
       <AnnouncementStrip />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b-3 border-ink">
+      <section className="relative overflow-hidden border-b border-line">
         <Container className="grid items-center gap-12 pb-16 pt-12 md:pt-16 lg:grid-cols-[1.1fr_1fr] lg:gap-8 lg:pb-24">
           <div>
-            <p className="inline-flex -rotate-1 items-center gap-2 rounded-xl border-[2.5px] border-ink bg-white px-3 py-1.5 text-sm font-bold shadow-brutal-xs">
-              <MapPin className="size-4 text-brand" strokeWidth={2.75} /> Palghar&apos;s badminton HQ · Est. {site.founded}
+            <p className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-1.5 text-sm font-medium shadow-xs">
+              <MapPin className="size-4 text-brand" /> Palghar&apos;s badminton HQ · Est. {site.founded}
             </p>
-            <h1 className="mt-7 text-[3.4rem] font-extrabold leading-[0.9] tracking-[-0.045em] sm:text-7xl lg:text-[5.6rem] xl:text-8xl">
+            <h1 className="mt-7 text-[3.4rem] font-semibold leading-[0.9] tracking-[-0.045em] sm:text-7xl lg:text-[5.6rem] xl:text-8xl">
               Where Palghar learns to <Mark>smash.</Mark>
             </h1>
             <p className="mt-7 max-w-xl text-lg text-ink-soft md:text-xl">
@@ -63,7 +63,7 @@ export default async function HomePage() {
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <ButtonLink href="/book" size="xl">
-                Book a Court <ArrowUpRight className="size-5" strokeWidth={2.75} />
+                Book a Court <ArrowUpRight className="size-5" />
               </ButtonLink>
               <ButtonLink href="/membership" size="xl" variant="outline">
                 Join Academy
@@ -81,14 +81,14 @@ export default async function HomePage() {
                 key={stat.label}
                 className={
                   i === 1
-                    ? "rounded-2xl border-3 border-ink bg-brand p-5 text-white shadow-brutal"
+                    ? "rounded-2xl border border-line bg-brand p-5 text-white shadow-sm"
                     : i === 3
-                      ? "rounded-2xl border-3 border-ink bg-ink p-5 text-white shadow-brutal"
-                      : "rounded-2xl border-3 border-ink bg-white p-5 shadow-brutal"
+                      ? "rounded-2xl border border-line bg-ink p-5 text-white shadow-sm"
+                      : "rounded-2xl border border-line bg-white p-5 shadow-sm"
                 }
               >
-                <dd className="font-display text-5xl font-extrabold leading-none tracking-tight md:text-6xl">{stat.value}</dd>
-                <dt className="mt-2 font-bold">{stat.label}</dt>
+                <dd className="font-display text-5xl font-semibold leading-none tracking-tight md:text-6xl">{stat.value}</dd>
+                <dt className="mt-2 font-medium">{stat.label}</dt>
                 <p className="text-sm opacity-70">{stat.note}</p>
               </div>
             ))}
@@ -101,7 +101,7 @@ export default async function HomePage() {
         <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:items-center">
           <div>
             <Eyebrow index="01">The academy</Eyebrow>
-            <h2 className="mt-4 text-4xl font-extrabold leading-[0.95] sm:text-5xl lg:text-6xl">Built by players. Run like a pro setup.</h2>
+            <h2 className="mt-4 text-4xl font-semibold leading-[0.95] sm:text-5xl lg:text-6xl">Built by players. Run like a pro setup.</h2>
             <div className="mt-6 space-y-4 text-lg text-ink-soft">
               {about.story.map((p) => (
                 <p key={p.slice(0, 20)}>{p}</p>
@@ -112,20 +112,20 @@ export default async function HomePage() {
             </ButtonLink>
           </div>
           <div className="grid gap-4">
-            <div className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal">
-              <p className="font-mono text-xs font-bold uppercase tracking-widest text-brand">Mission</p>
-              <p className="mt-2 font-display text-2xl font-extrabold leading-tight">{about.mission}</p>
+            <div className="rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-sm">
+              <p className="font-mono text-xs font-medium uppercase tracking-widest text-brand">Mission</p>
+              <p className="mt-2 font-display text-2xl font-semibold leading-tight">{about.mission}</p>
             </div>
-            <div className="ml-0 rounded-[var(--radius-card)] border-3 border-ink bg-brand p-6 text-white shadow-brutal sm:ml-10">
-              <p className="font-mono text-xs font-bold uppercase tracking-widest text-white/80">Vision</p>
-              <p className="mt-2 font-display text-2xl font-extrabold leading-tight">{about.vision}</p>
+            <div className="ml-0 rounded-[var(--radius-card)] border border-line bg-brand p-6 text-white shadow-sm sm:ml-10">
+              <p className="font-mono text-xs font-medium uppercase tracking-widest text-white/80">Vision</p>
+              <p className="mt-2 font-display text-2xl font-semibold leading-tight">{about.vision}</p>
             </div>
           </div>
         </div>
       </Section>
 
       {/* ── Programs ─────────────────────────────────────────────────────── */}
-      <Section id="programs" className="border-y-3 border-ink bg-white/70">
+      <Section id="programs" className="border-y border-line bg-white/70">
         <SectionHeading
           index="02"
           eyebrow="Coaching programs"
@@ -168,29 +168,29 @@ export default async function HomePage() {
         />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {facilities.slice(0, 5).map((f, i) => (
-            <div key={f.title} className={i === 0 ? "rounded-[var(--radius-card)] border-3 border-ink bg-ink p-6 text-white shadow-brutal sm:col-span-2 lg:col-span-2 lg:row-span-2" : "rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal"}>
-              <span className={i === 0 ? "grid size-12 place-items-center rounded-xl border-2 border-white bg-brand" : "grid size-12 place-items-center rounded-xl border-2 border-ink bg-brand-100 text-brand-700"}>
+            <div key={f.title} className={i === 0 ? "rounded-[var(--radius-card)] border border-line bg-ink p-6 text-white shadow-sm sm:col-span-2 lg:col-span-2 lg:row-span-2" : "rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-sm"}>
+              <span className={i === 0 ? "grid size-12 place-items-center rounded-xl border border-white bg-brand" : "grid size-12 place-items-center rounded-xl border border-line bg-brand-100 text-brand-700"}>
                 <FacilityIcon name={f.icon} className="size-6" />
               </span>
-              <h3 className={i === 0 ? "mt-6 text-4xl font-extrabold leading-none" : "mt-4 text-xl font-extrabold"}>{f.title}</h3>
-              <p className={i === 0 ? "mt-2 font-mono text-sm font-bold uppercase tracking-wider text-brand-200" : "mt-1 text-xs font-bold uppercase tracking-wider text-brand"}>{f.spec}</p>
+              <h3 className={i === 0 ? "mt-6 text-4xl font-semibold leading-none" : "mt-4 text-xl font-semibold"}>{f.title}</h3>
+              <p className={i === 0 ? "mt-2 font-mono text-sm font-medium uppercase tracking-wider text-brand-200" : "mt-1 text-xs font-medium uppercase tracking-wider text-brand"}>{f.spec}</p>
               <p className={i === 0 ? "mt-4 max-w-md text-white/80" : "mt-2 text-sm text-muted"}>{f.body}</p>
-              {i === 0 ? <GalleryArt variant="court" className="mt-6 rounded-2xl border-3 border-white" /> : null}
+              {i === 0 ? <GalleryArt variant="court" className="mt-6 rounded-2xl border border-white" /> : null}
             </div>
           ))}
         </div>
       </Section>
 
       {/* ── Why choose us ────────────────────────────────────────────────── */}
-      <section className="grid-paper-blue border-y-3 border-ink py-16 text-white md:py-24">
+      <section className="bg-brand border-y border-line py-16 text-white md:py-24">
         <Container>
           <SectionHeading index="04" eyebrow="Why SmashPoint" inverted title="Less admin. More badminton." description="Everything around the game is designed to get out of your way." />
           <ol className="grid gap-5 md:grid-cols-2">
             {whyChooseUs.map((w, i) => (
-              <li key={w.title} className="flex gap-5 rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 text-ink shadow-brutal-lg">
-                <span className="font-display text-5xl font-extrabold leading-none text-brand">{String(i + 1).padStart(2, "0")}</span>
+              <li key={w.title} className="flex gap-5 rounded-[var(--radius-card)] border border-line bg-white p-6 text-ink shadow-md">
+                <span className="font-display text-5xl font-semibold leading-none text-brand">{String(i + 1).padStart(2, "0")}</span>
                 <div>
-                  <h3 className="text-2xl font-extrabold">{w.title}</h3>
+                  <h3 className="text-2xl font-semibold">{w.title}</h3>
                   <p className="mt-2 text-muted">{w.body}</p>
                 </div>
               </li>
@@ -223,19 +223,19 @@ export default async function HomePage() {
 
       {/* ── Booking CTA ──────────────────────────────────────────────────── */}
       <Section className="pt-0 md:pt-0">
-        <div className="grid-paper-ink relative overflow-hidden rounded-[2rem] border-3 border-ink p-8 text-white shadow-brutal-xl md:p-14">
+        <div className="bg-ink relative overflow-hidden rounded-[2rem] border border-line p-8 text-white shadow-lg md:p-14">
           <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr] lg:items-center">
             <div>
               <Eyebrow inverted index="06">
                 Court booking
               </Eyebrow>
-              <h2 className="mt-4 text-5xl font-extrabold leading-[0.92] md:text-7xl">
+              <h2 className="mt-4 text-5xl font-semibold leading-[0.92] md:text-7xl">
                 Pick a slot. <br />
                 Pay. <span className="text-brand-200">Play.</span>
               </h2>
               <p className="mt-5 max-w-lg text-lg text-white/80">Live availability for all courts, transparent peak pricing and instant confirmation with a digital receipt.</p>
               <ButtonLink href="/book" size="xl" className="mt-8">
-                Check availability <ArrowUpRight className="size-5" strokeWidth={2.75} />
+                Check availability <ArrowUpRight className="size-5" />
               </ButtonLink>
             </div>
             <ol className="grid gap-3">
@@ -244,12 +244,12 @@ export default async function HomePage() {
                 { icon: CreditCard, title: "Pay securely online", body: "UPI, cards & netbanking." },
                 { icon: Timer, title: "Show up & play", body: "Confirmation + reminder on WhatsApp." },
               ].map((step, i) => (
-                <li key={step.title} className="flex items-center gap-4 rounded-2xl border-3 border-white bg-white p-4 text-ink" style={{ marginLeft: `${i * 1.25}rem` }}>
-                  <span className="grid size-12 shrink-0 place-items-center rounded-xl border-2 border-ink bg-brand text-white">
-                    <step.icon className="size-6" strokeWidth={2.5} />
+                <li key={step.title} className="flex items-center gap-4 rounded-2xl border border-white bg-white p-4 text-ink" style={{ marginLeft: `${i * 1.25}rem` }}>
+                  <span className="grid size-12 shrink-0 place-items-center rounded-xl border border-line bg-brand text-white">
+                    <step.icon className="size-6" />
                   </span>
                   <span>
-                    <span className="block font-display text-lg font-extrabold">{step.title}</span>
+                    <span className="block font-display text-lg font-semibold">{step.title}</span>
                     <span className="text-sm text-muted">{step.body}</span>
                   </span>
                 </li>
@@ -260,7 +260,7 @@ export default async function HomePage() {
       </Section>
 
       {/* ── Membership ───────────────────────────────────────────────────── */}
-      <Section id="membership" className="border-y-3 border-ink bg-white/70">
+      <Section id="membership" className="border-y border-line bg-white/70">
         <SectionHeading
           index="07"
           eyebrow="Membership plans"
@@ -299,7 +299,7 @@ export default async function HomePage() {
       </Section>
 
       {/* ── Testimonials ─────────────────────────────────────────────────── */}
-      <Section className="border-y-3 border-ink bg-white/70">
+      <Section className="border-y border-line bg-white/70">
         <SectionHeading index="09" eyebrow="Testimonials" title="Heard on court." />
         <div className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 md:mx-0 md:grid md:grid-cols-2 md:gap-5 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
           {testimonials.map((t, i) => (
@@ -315,18 +315,18 @@ export default async function HomePage() {
         <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr]">
           <div>
             <Eyebrow index="10">FAQ</Eyebrow>
-            <h2 className="mt-4 text-4xl font-extrabold leading-[0.95] sm:text-5xl lg:text-6xl">Questions, answered.</h2>
-            <div className="mt-8 rounded-[var(--radius-card)] border-3 border-ink bg-brand p-6 text-white shadow-brutal-lg">
-              <p className="font-display text-2xl font-extrabold leading-tight">Still curious? Talk to a human.</p>
+            <h2 className="mt-4 text-4xl font-semibold leading-[0.95] sm:text-5xl lg:text-6xl">Questions, answered.</h2>
+            <div className="mt-8 rounded-[var(--radius-card)] border border-line bg-brand p-6 text-white shadow-md">
+              <p className="font-display text-2xl font-semibold leading-tight">Still curious? Talk to a human.</p>
               <p className="mt-2 text-white/80">Our front desk replies within an hour, 6 AM – 7 PM.</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <ButtonLink href="/contact" variant="outline" size="sm">
                   Contact us
                 </ButtonLink>
-                <a href={site.contact.whatsappHref} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-control)] border-[2.5px] border-white px-3.5 text-sm font-bold hover:bg-white/10">
+                <a href={site.contact.whatsappHref} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-control)] border border-white px-3.5 text-sm font-medium hover:bg-white/10">
                   <MessageCircle className="size-4" /> WhatsApp
                 </a>
-                <a href={site.contact.phoneHref} className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-control)] border-[2.5px] border-white px-3.5 text-sm font-bold hover:bg-white/10">
+                <a href={site.contact.phoneHref} className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-control)] border border-white px-3.5 text-sm font-medium hover:bg-white/10">
                   <Phone className="size-4" /> Call
                 </a>
               </div>
@@ -337,10 +337,10 @@ export default async function HomePage() {
       </Section>
 
       <Container>
-        <Link href="/book" className="group flex items-center justify-between gap-6 rounded-[2rem] border-3 border-ink bg-warning px-6 py-8 shadow-brutal-lg transition hover:-translate-y-1 md:px-12">
-          <p className="font-display text-3xl font-extrabold leading-none md:text-5xl">Ready when you are. Courts open at 4 AM.</p>
-          <span className="grid size-16 shrink-0 place-items-center rounded-2xl border-3 border-ink bg-ink text-white transition group-hover:rotate-12 md:size-20">
-            <ArrowUpRight className="size-8" strokeWidth={2.75} />
+        <Link href="/book" className="group flex items-center justify-between gap-6 rounded-[2rem] border border-line bg-warning px-6 py-8 shadow-md transition md:px-12">
+          <p className="font-display text-3xl font-semibold leading-none md:text-5xl">Ready when you are. Courts open at 4 AM.</p>
+          <span className="grid size-16 shrink-0 place-items-center rounded-2xl border border-line bg-ink text-white transition group-hover:rotate-12 md:size-20">
+            <ArrowUpRight className="size-8" />
           </span>
         </Link>
       </Container>

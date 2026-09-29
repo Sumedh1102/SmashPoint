@@ -34,25 +34,25 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
 
   return (
     <>
-      <section className="border-b-3 border-ink">
+      <section className="border-b border-line">
         <Container className="flex flex-col gap-6 py-10 md:flex-row md:items-end md:justify-between md:py-12">
           <div>
             <Eyebrow>Court booking</Eyebrow>
-            <h1 className="mt-3 text-5xl font-extrabold leading-[0.92] md:text-7xl">Book a court.</h1>
+            <h1 className="mt-3 text-5xl font-semibold leading-[0.92] md:text-7xl">Book a court.</h1>
             <p className="mt-3 max-w-xl text-lg text-muted">
               {summary.count} courts · open {formatMinutes(settings.openMinute)} – {formatMinutes(settings.closeMinute)} · pay online, play instantly.
             </p>
           </div>
-          <ul className="grid gap-2 text-sm font-bold sm:grid-cols-3 md:max-w-xl">
-            <li className="flex items-center gap-2 rounded-xl border-2 border-ink bg-white px-3 py-2">
-              <span className="font-display text-lg font-extrabold">{formatMoney(summary.fromRate)}</span>/hr non-peak
+          <ul className="grid gap-2 text-sm font-medium sm:grid-cols-3 md:max-w-xl">
+            <li className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
+              <span className="font-display text-lg font-semibold">{formatMoney(summary.fromRate)}</span>/hr non-peak
             </li>
-            <li className="flex items-center gap-2 rounded-xl border-2 border-ink bg-white px-3 py-2">
-              <Flame className="size-4 text-brand" strokeWidth={2.75} />
+            <li className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
+              <Flame className="size-4 text-brand" />
               {peak ? `${formatMinutes(peak.startMinute)}–${formatMinutes(peak.endMinute)}` : "Peak"} peak
             </li>
-            <li className="flex items-center gap-2 rounded-xl border-2 border-ink bg-white px-3 py-2">
-              <Timer className="size-4 text-brand" strokeWidth={2.75} /> {settings.holdMinutes}-min slot hold
+            <li className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
+              <Timer className="size-4 text-brand" /> {settings.holdMinutes}-min slot hold
             </li>
           </ul>
         </Container>

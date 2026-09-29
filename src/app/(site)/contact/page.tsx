@@ -54,28 +54,28 @@ export default async function ContactPage({ searchParams }: PageProps<"/contact"
       <Container className="grid gap-8 py-14 lg:grid-cols-[1fr_1.15fr]">
         <div className="grid content-start gap-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <a href={site.contact.phoneHref} className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-5 shadow-brutal brutal-hover">
-              <Phone className="size-6 text-brand" strokeWidth={2.5} />
-              <p className="mt-3 text-sm font-bold text-muted">Call us</p>
-              <p className="font-display text-xl font-extrabold">{site.contact.phone}</p>
+            <a href={site.contact.phoneHref} className="rounded-[var(--radius-card)] border border-line bg-white p-5 shadow-sm lift-hover">
+              <Phone className="size-6 text-brand" />
+              <p className="mt-3 text-sm font-medium text-muted">Call us</p>
+              <p className="font-display text-xl font-semibold">{site.contact.phone}</p>
             </a>
-            <a href={site.contact.whatsappHref} target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-card)] border-3 border-ink bg-brand p-5 text-white shadow-brutal brutal-hover">
-              <MessageCircle className="size-6" strokeWidth={2.5} />
-              <p className="mt-3 text-sm font-bold text-white/80">WhatsApp</p>
-              <p className="font-display text-xl font-extrabold">{site.contact.whatsapp}</p>
+            <a href={site.contact.whatsappHref} target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-card)] border border-line bg-brand p-5 text-white shadow-sm lift-hover">
+              <MessageCircle className="size-6" />
+              <p className="mt-3 text-sm font-medium text-white/80">WhatsApp</p>
+              <p className="font-display text-xl font-semibold">{site.contact.whatsapp}</p>
             </a>
-            <a href={`mailto:${site.contact.email}`} className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-5 shadow-brutal brutal-hover sm:col-span-2">
-              <Mail className="size-6 text-brand" strokeWidth={2.5} />
-              <p className="mt-3 text-sm font-bold text-muted">Email</p>
-              <p className="font-display text-xl font-extrabold">{site.contact.email}</p>
+            <a href={`mailto:${site.contact.email}`} className="rounded-[var(--radius-card)] border border-line bg-white p-5 shadow-sm lift-hover sm:col-span-2">
+              <Mail className="size-6 text-brand" />
+              <p className="mt-3 text-sm font-medium text-muted">Email</p>
+              <p className="font-display text-xl font-semibold">{site.contact.email}</p>
             </a>
           </div>
 
-          <div className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal">
+          <div className="rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-sm">
             <div className="flex gap-3">
-              <MapPin className="mt-1 size-5 shrink-0 text-brand" strokeWidth={2.5} />
+              <MapPin className="mt-1 size-5 shrink-0 text-brand" />
               <address className="not-italic">
-                <p className="font-display text-lg font-extrabold">{site.name}</p>
+                <p className="font-display text-lg font-semibold">{site.name}</p>
                 {site.contact.addressLines.map((l) => (
                   <p key={l} className="text-ink-soft">
                     {l}
@@ -83,22 +83,22 @@ export default async function ContactPage({ searchParams }: PageProps<"/contact"
                 ))}
               </address>
             </div>
-            <div className="mt-5 flex gap-3 border-t-2 border-ink/10 pt-5">
-              <Clock className="mt-1 size-5 shrink-0 text-brand" strokeWidth={2.5} />
+            <div className="mt-5 flex gap-3 border-t border-line pt-5">
+              <Clock className="mt-1 size-5 shrink-0 text-brand" />
               <dl className="grid w-full gap-1.5 text-sm">
                 {site.contact.openingHours.map((h) => (
                   <div key={h.days} className="flex justify-between gap-4">
                     <dt className="font-semibold text-muted">{h.days}</dt>
-                    <dd className="font-bold">{h.hours}</dd>
+                    <dd className="font-medium">{h.hours}</dd>
                   </div>
                 ))}
               </dl>
             </div>
-            <div className="mt-5 flex flex-wrap gap-2 border-t-2 border-ink/10 pt-5">
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-5">
               {site.socials.map((s) => {
                 const Icon = SOCIAL_ICONS[s.label];
                 return (
-                  <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border-2 border-ink bg-paper px-3 py-2 text-sm font-bold hover:bg-brand hover:text-white">
+                  <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-line bg-paper px-3 py-2 text-sm font-medium hover:bg-brand hover:text-white">
                     {Icon ? <Icon className="size-4" /> : null} {s.handle}
                   </a>
                 );
@@ -106,7 +106,7 @@ export default async function ContactPage({ searchParams }: PageProps<"/contact"
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[var(--radius-card)] border-3 border-ink bg-white shadow-brutal">
+          <div className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-white shadow-sm">
             <iframe
               title={`Map showing ${site.name}`}
               src={mapSrc}
@@ -117,8 +117,8 @@ export default async function ContactPage({ searchParams }: PageProps<"/contact"
           </div>
         </div>
 
-        <div className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal-lg md:p-8 lg:self-start">
-          <h2 className="text-3xl font-extrabold">Send us a message</h2>
+        <div className="rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-md md:p-8 lg:self-start">
+          <h2 className="text-3xl font-semibold">Send us a message</h2>
           <p className="mb-6 mt-1 text-muted">We usually reply within a few hours.</p>
           <ContactForm defaultTopic={defaultTopic} />
         </div>

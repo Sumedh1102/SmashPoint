@@ -27,9 +27,9 @@ export default async function CoachesPage() {
         }
         description="Our coaching team combines national-circuit experience with modern sports science. Every coach owns a specialty — and a whistle."
         aside={
-          <div className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal-lg">
-            <p className="font-display text-6xl font-extrabold leading-none">{totalYears}+</p>
-            <p className="mt-2 font-bold">combined years of coaching experience</p>
+          <div className="rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-md">
+            <p className="font-display text-6xl font-semibold leading-none">{totalYears}+</p>
+            <p className="mt-2 font-medium">combined years of coaching experience</p>
             <p className="mt-4 text-sm text-muted">Plus assistant coaches and visiting specialists for camps and workshops.</p>
           </div>
         }

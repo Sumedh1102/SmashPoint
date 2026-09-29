@@ -73,9 +73,9 @@ export default async function StudentPerformancePage({ params }: PageProps<"/das
                     <tbody>
                       {[...history].reverse().map(({ record: r }) => (
                         <TR key={r.id}>
-                          <TD className="whitespace-nowrap text-sm font-bold">{formatDate(r.assessedOn, "short")}</TD>
+                          <TD className="whitespace-nowrap text-sm font-medium">{formatDate(r.assessedOn, "short")}</TD>
                           {SKILLS.map((k) => (
-                            <TD key={k.key} className="text-center font-display font-extrabold tabular-nums">
+                            <TD key={k.key} className="text-center font-display font-semibold tabular-nums">
                               {r[k.key]}
                             </TD>
                           ))}

@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function TableWrap({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("overflow-x-auto rounded-2xl border-3 border-ink bg-white shadow-brutal", className)} {...props} />;
+  return <div className={cn("overflow-x-auto rounded-[var(--radius-card)] border border-line bg-white shadow-sm", className)} {...props} />;
 }
 
 export function Table({ className, ...props }: ComponentProps<"table">) {
@@ -12,15 +12,15 @@ export function Table({ className, ...props }: ComponentProps<"table">) {
 }
 
 export function THead({ className, ...props }: ComponentProps<"thead">) {
-  return <thead className={cn("border-b-3 border-ink bg-paper-2", className)} {...props} />;
+  return <thead className={cn("border-b border-line bg-paper/70", className)} {...props} />;
 }
 
 export function TH({ className, ...props }: ComponentProps<"th">) {
-  return <th scope="col" className={cn("whitespace-nowrap px-4 py-3 text-xs font-extrabold uppercase tracking-wider text-ink", className)} {...props} />;
+  return <th scope="col" className={cn("whitespace-nowrap px-4 py-2.5 text-xs font-medium text-muted", className)} {...props} />;
 }
 
 export function TR({ className, ...props }: ComponentProps<"tr">) {
-  return <tr className={cn("border-b-2 border-ink/10 last:border-b-0 transition-colors hover:bg-brand-50/60", className)} {...props} />;
+  return <tr className={cn("border-b border-line last:border-b-0 transition-colors hover:bg-paper/60", className)} {...props} />;
 }
 
 export function TD({ className, ...props }: ComponentProps<"td">) {
@@ -48,9 +48,9 @@ export function SortableTH({
   const Icon = !active ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
   return (
     <TH className={className} aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}>
-      <Link href={hrefFor(field, nextDir)} className="inline-flex items-center gap-1 hover:text-brand">
+      <Link href={hrefFor(field, nextDir)} className="inline-flex items-center gap-1 hover:text-ink">
         {label}
-        <Icon className={cn("size-3.5", !active && "opacity-40")} strokeWidth={2.75} aria-hidden />
+        <Icon className={cn("size-3.5", !active && "opacity-40")} aria-hidden />
       </Link>
     </TH>
   );

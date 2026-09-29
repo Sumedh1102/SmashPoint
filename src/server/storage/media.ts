@@ -67,7 +67,31 @@ export async function deleteAssets(ids: (string | null | undefined)[]) {
 /** Resolves an asset id submitted with a form to its public URL (and checks it exists). */
 export async function assetUrl(id: string | null | undefined): Promise<{ id: string; url: string } | null> {
   if (!id) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new DomainError("Invalid image reference.");
   const [row] = await db.select({ id: mediaAssets.id, url: mediaAssets.url }).from(mediaAssets).where(eq(mediaAssets.id, id)).limit(1);
   if (!row) throw new DomainError("That image upload has expired. Please upload it again.");
   return row;
+}
+
+/**
+ * Reads an <ImageUpload name=…> field from a submitted form. The field carries a new asset
+ * id, "remove", or nothing (unchanged). Returns the columns to write plus the assets that
+ * become unused once the row is saved (pass them to deleteAssets after the update).
+ */
+export async function imageFromForm(
+  formData: FormData,
+  field: string,
+  current: { url: string | null; assetId?: string | null } = { url: null },
+): Promise<{ changed: boolean; url: string | null; assetId: string | null; stale: string[] }> {
+  const raw = String(formData.get(field) ?? "").trim();
+  const previous = current.assetId ?? (current.url ? await assetIdForUrl(current.url) : null);
+  if (!raw) return { changed: false, url: current.url, assetId: current.assetId ?? null, stale: [] };
+  if (raw === "remove") return { changed: true, url: null, assetId: null, stale: previous ? [previous] : [] };
+  const asset = await assetUrl(raw);
+  return { changed: true, url: asset!.url, assetId: asset!.id, stale: previous && previous !== asset!.id ? [previous] : [] };
+}
+
+async function assetIdForUrl(url: string) {
+  const [row] = await db.select({ id: mediaAssets.id }).from(mediaAssets).where(eq(mediaAssets.url, url)).limit(1);
+  return row?.id ?? null;
 }

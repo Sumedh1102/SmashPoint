@@ -30,7 +30,7 @@ export default async function CoachingPage() {
       >
         <div className="flex flex-wrap gap-2">
           {programs.map((p) => (
-            <a key={p.slug} href={`#${p.slug}`} className="rounded-xl border-[2.5px] border-ink bg-white px-4 py-2 font-display font-extrabold shadow-brutal-xs transition hover:-translate-y-0.5 hover:bg-brand hover:text-white">
+            <a key={p.slug} href={`#${p.slug}`} className="rounded-xl border border-line bg-white px-4 py-2 font-display font-semibold shadow-xs transition hover:bg-brand hover:text-white">
               {p.name.replace(" Program", "")}
             </a>
           ))}
@@ -49,7 +49,7 @@ export default async function CoachingPage() {
         )}
       </Section>
 
-      <Section className="border-y-3 border-ink bg-white/70">
+      <Section className="border-y border-line bg-white/70">
         <SectionHeading index="01" eyebrow="How it works" title="From trial to tournament." />
         <ol className="grid gap-5 md:grid-cols-3">
           {[
@@ -57,14 +57,14 @@ export default async function CoachingPage() {
             { icon: ClipboardCheck, title: "Placement & batch", body: "We place you in a batch by level and timing. Batches are capped so every player gets real coach attention." },
             { icon: Gauge, title: "Monthly skill scores", body: "Footwork, smash, drop, serve, defence, agility, stamina and match play — scored monthly in your dashboard." },
           ].map((s, i) => (
-            <li key={s.title} className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal">
+            <li key={s.title} className="rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="grid size-12 place-items-center rounded-xl border-2 border-ink bg-brand text-white">
-                  <s.icon className="size-6" strokeWidth={2.5} />
+                <span className="grid size-12 place-items-center rounded-xl border border-line bg-brand text-white">
+                  <s.icon className="size-6" />
                 </span>
-                <span className="font-display text-4xl font-extrabold text-brand-200">0{i + 1}</span>
+                <span className="font-display text-4xl font-semibold text-brand-200">0{i + 1}</span>
               </div>
-              <h3 className="mt-5 text-2xl font-extrabold">{s.title}</h3>
+              <h3 className="mt-5 text-2xl font-semibold">{s.title}</h3>
               <p className="mt-2 text-muted">{s.body}</p>
             </li>
           ))}

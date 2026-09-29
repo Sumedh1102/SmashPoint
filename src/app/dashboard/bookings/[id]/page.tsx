@@ -38,7 +38,7 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
         description={`${b.court.name} · ${formatDate(b.date, "long")} · ${formatTimeRange(b.startMinute, b.endMinute)}`}
         eyebrow={<StatusBadge status={b.status} />}
         actions={
-          <Link href={bookingReceiptPath(b.code)} target="_blank" className="inline-flex items-center gap-1 text-sm font-bold text-brand">
+          <Link href={bookingReceiptPath(b.code)} target="_blank" className="inline-flex items-center gap-1 text-sm font-medium text-brand">
             Customer receipt <ExternalLink className="size-4" />
           </Link>
         }
@@ -88,18 +88,18 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
             <CardHeader title="Payments" description={`Court fee ${formatMoney(b.subtotal)}${b.discount ? ` · discount ${formatMoney(b.discount)}${b.coupon ? ` (${b.coupon.code})` : ""}` : ""} · total ${formatMoney(b.total)}`} />
             <CardBody className="p-0">
               {b.payments.length ? (
-                <ul className="divide-y-2 divide-ink/10">
+                <ul className="divide-y divide-line">
                   {b.payments.map((p) => (
                     <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
                       <div>
-                        <p className="font-mono font-bold">{p.receiptNumber}</p>
+                        <p className="font-mono font-medium">{p.receiptNumber}</p>
                         <p className="text-muted">
                           {p.provider === "offline" ? titleCase(p.method) : `Online · ${p.provider}`} · {formatDateTime(p.paidAt ?? p.createdAt)}
                           {p.failureReason ? ` · ${p.failureReason}` : ""}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-display text-lg font-extrabold">{formatMoney(p.amount)}</span>
+                        <span className="font-display text-lg font-semibold">{formatMoney(p.amount)}</span>
                         <StatusBadge status={p.status} />
                       </div>
                     </li>
@@ -114,10 +114,10 @@ export default async function BookingDetailPage({ params, searchParams }: PagePr
           <Card>
             <CardHeader title="Lifecycle" />
             <CardBody>
-              <ol className="relative grid gap-3 border-l-3 border-ink pl-5">
+              <ol className="relative grid gap-3 border-l border-line pl-5">
                 {b.events.map((e) => (
                   <li key={e.id} className="relative">
-                    <span className="absolute -left-[1.72rem] top-1 size-3.5 rounded-full border-2 border-ink bg-brand" aria-hidden />
+                    <span className="absolute -left-[1.72rem] top-1 size-3.5 rounded-full border border-line bg-brand" aria-hidden />
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={e.status} />
                       <span className="text-xs font-semibold text-muted">{formatDateTime(e.createdAt)}</span>

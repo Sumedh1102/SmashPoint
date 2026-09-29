@@ -59,16 +59,16 @@ export default async function MyMembershipPage({ searchParams }: PageProps<"/das
 
       <div className="grid gap-6 xl:grid-cols-3">
         <Card tone={current?.status === "ACTIVE" && current.endDate >= today ? "blue" : "white"} className="p-6">
-          <p className="text-sm font-bold opacity-80">Current membership</p>
+          <p className="text-sm font-medium opacity-80">Current membership</p>
           {current ? (
             <>
-              <p className="mt-1 font-display text-4xl font-extrabold leading-none">{current.planName}</p>
-              <p className="mt-3 font-bold">{current.endDate >= today ? (current.startDate > today ? `Starts ${formatDate(current.startDate)}` : "Active") : "Expired"} — expires {formatDate(current.endDate)}</p>
+              <p className="mt-1 font-display text-4xl font-semibold leading-none">{current.planName}</p>
+              <p className="mt-3 font-medium">{current.endDate >= today ? (current.startDate > today ? `Starts ${formatDate(current.startDate)}` : "Active") : "Expired"} — expires {formatDate(current.endDate)}</p>
               {daysLeft !== null && daysLeft >= 0 ? <p className="mt-1 text-sm font-semibold opacity-85">{daysLeft} days remaining</p> : null}
-              <div className="mt-4 rounded-xl border-2 border-current/40 px-3 py-2 text-sm font-bold">{current.trainingAccess}</div>
+              <div className="mt-4 rounded-xl border border-current/40 px-3 py-2 text-sm font-medium">{current.trainingAccess}</div>
             </>
           ) : (
-            <p className="mt-1 font-display text-3xl font-extrabold">No active plan</p>
+            <p className="mt-1 font-display text-3xl font-semibold">No active plan</p>
           )}
         </Card>
         <Card className="xl:col-span-2">
@@ -91,22 +91,22 @@ export default async function MyMembershipPage({ searchParams }: PageProps<"/das
         </Card>
       </div>
 
-      <h2 className="mb-4 mt-10 text-2xl font-extrabold">{current ? "Renew or change plan" : "Choose a plan"}</h2>
+      <h2 className="mb-4 mt-10 text-2xl font-semibold">{current ? "Renew or change plan" : "Choose a plan"}</h2>
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {plans.map((p) => (
-          <Card key={p.id} className={cn("flex flex-col p-5", (highlighted === p.slug || (!highlighted && p.isFeatured)) && "border-brand shadow-brutal-blue")}>
+          <Card key={p.id} className={cn("flex flex-col p-5", (highlighted === p.slug || (!highlighted && p.isFeatured)) && "border-brand shadow-lg")}>
             <div className="flex items-start justify-between gap-2">
-              <h3 className="text-2xl font-extrabold">{p.name}</h3>
+              <h3 className="text-2xl font-semibold">{p.name}</h3>
               {p.isFeatured ? <Badge tone="yellow">Popular</Badge> : null}
             </div>
-            <p className="mt-2 font-display text-4xl font-extrabold">{formatMoney(p.price)}</p>
+            <p className="mt-2 font-display text-4xl font-semibold">{formatMoney(p.price)}</p>
             <p className="text-sm font-semibold text-muted">
               {p.durationMonths} month{p.durationMonths > 1 ? "s" : ""} · {p.trainingAccess}
             </p>
             <ul className="mt-4 grid flex-1 gap-1.5 text-sm">
               {p.benefits.map((b) => (
                 <li key={b} className="flex gap-2">
-                  <Check className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={3} /> {b}
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand" /> {b}
                 </li>
               ))}
             </ul>
@@ -122,7 +122,7 @@ export default async function MyMembershipPage({ searchParams }: PageProps<"/das
 
       {history.length ? (
         <>
-          <h2 className="mb-4 mt-10 text-2xl font-extrabold">History</h2>
+          <h2 className="mb-4 mt-10 text-2xl font-semibold">History</h2>
           <TableWrap>
             <Table>
               <THead>
@@ -138,7 +138,7 @@ export default async function MyMembershipPage({ searchParams }: PageProps<"/das
               <tbody>
                 {history.map((m) => (
                   <TR key={m.id}>
-                    <TD className="font-bold">{m.planName}</TD>
+                    <TD className="font-medium">{m.planName}</TD>
                     <TD className="text-sm">{formatDate(m.startDate)}</TD>
                     <TD className="text-sm">{formatDate(m.endDate)}</TD>
                     <TD>
@@ -147,7 +147,7 @@ export default async function MyMembershipPage({ searchParams }: PageProps<"/das
                     <TD>
                       <StatusBadge status={m.paymentStatus} />
                     </TD>
-                    <TD className="font-bold">{formatMoney(m.price)}</TD>
+                    <TD className="font-medium">{formatMoney(m.price)}</TD>
                   </TR>
                 ))}
               </tbody>

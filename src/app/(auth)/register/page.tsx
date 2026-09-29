@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { RegisterForm } from "@/components/auth/auth-forms";
 import { getCurrentUser } from "@/server/auth/guards";
-import { RegisterForm } from "@/components/forms/register-form";
 
 export const metadata: Metadata = { title: "Create account", robots: { index: false } };
 
@@ -9,9 +9,9 @@ export default async function RegisterPage({ searchParams }: PageProps<"/registe
   const { next } = await searchParams;
   if (await getCurrentUser()) redirect("/dashboard");
   return (
-    <div className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal-lg sm:p-8">
-      <h1 className="text-4xl font-extrabold leading-none">Join the academy.</h1>
-      <p className="mb-7 mt-2 text-muted">One account for bookings, training, attendance and membership.</p>
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+      <p className="mb-8 mt-1.5 text-sm text-muted">One account for court bookings, equipment rentals and receipts.</p>
       <RegisterForm next={typeof next === "string" ? next : undefined} />
     </div>
   );

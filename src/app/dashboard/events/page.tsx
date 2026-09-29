@@ -58,7 +58,7 @@ export default async function EventsAdminPage() {
               {rows.map((e) => (
                 <TR key={e.id}>
                   <TD>
-                    <Link href={`/dashboard/events/${e.id}`} className="font-bold hover:text-brand">
+                    <Link href={`/dashboard/events/${e.id}`} className="font-medium hover:text-brand">
                       {e.name}
                     </Link>
                     <span className="block font-mono text-xs text-muted">/events/{e.slug}</span>
@@ -71,8 +71,8 @@ export default async function EventsAdminPage() {
                   <TD>
                     <Badge tone="outline">{titleCase(e.category)}</Badge>
                   </TD>
-                  <TD className="font-bold">{e.fee ? formatMoney(e.fee) : "Free"}</TD>
-                  <TD className="font-bold">
+                  <TD className="font-medium">{e.fee ? formatMoney(e.fee) : "Free"}</TD>
+                  <TD className="font-medium">
                     {e.registered}
                     {e.registrationLimit ? ` / ${e.registrationLimit}` : ""}
                   </TD>

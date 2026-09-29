@@ -25,29 +25,29 @@ export function AttendanceCalendar({ month, records, hrefFor, today }: { month: 
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <Link href={hrefFor(addMonths(first, -1).slice(0, 7))} className="grid size-9 place-items-center rounded-lg border-2 border-ink bg-white hover:bg-paper" aria-label="Previous month">
-          <ChevronLeft className="size-4" strokeWidth={3} />
+        <Link href={hrefFor(addMonths(first, -1).slice(0, 7))} className="grid size-9 place-items-center rounded-lg border border-line bg-white hover:bg-paper" aria-label="Previous month">
+          <ChevronLeft className="size-4" />
         </Link>
-        <p className="font-display text-lg font-extrabold">
+        <p className="font-display text-lg font-semibold">
           {MONTHS[Number(first.slice(5, 7)) - 1]} {first.slice(0, 4)}
         </p>
-        <Link href={hrefFor(addMonths(first, 1).slice(0, 7))} className="grid size-9 place-items-center rounded-lg border-2 border-ink bg-white hover:bg-paper" aria-label="Next month">
-          <ChevronRight className="size-4" strokeWidth={3} />
+        <Link href={hrefFor(addMonths(first, 1).slice(0, 7))} className="grid size-9 place-items-center rounded-lg border border-line bg-white hover:bg-paper" aria-label="Next month">
+          <ChevronRight className="size-4" />
         </Link>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">
         {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
-          <span key={d} className="py-1 text-[11px] font-extrabold uppercase text-muted">
+          <span key={d} className="py-1 text-[11px] font-semibold uppercase text-muted">
             {d}
           </span>
         ))}
         {days.map((d, i) =>
           d ? (
-            <div key={d} className={cn("min-h-14 rounded-lg border-2 p-1 text-left", d === today ? "border-brand" : "border-ink/15", d > today && "opacity-50")}>
-              <p className="text-xs font-bold">{Number(d.slice(8))}</p>
+            <div key={d} className={cn("min-h-14 rounded-lg border p-1 text-left", d === today ? "border-brand" : "border-line", d > today && "opacity-50")}>
+              <p className="text-xs font-medium">{Number(d.slice(8))}</p>
               <div className="mt-0.5 flex flex-wrap gap-0.5">
                 {(byDate.get(d) ?? []).map((r, k) => (
-                  <span key={k} title={`${r.batchName}: ${r.status}`} className={cn("rounded px-1 text-[10px] font-extrabold", TONE[r.status])}>
+                  <span key={k} title={`${r.batchName}: ${r.status}`} className={cn("rounded px-1 text-[10px] font-semibold", TONE[r.status])}>
                     {SHORT[r.status]}
                   </span>
                 ))}

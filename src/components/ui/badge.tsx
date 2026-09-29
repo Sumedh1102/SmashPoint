@@ -4,24 +4,20 @@ import { cn } from "@/lib/utils";
 export type BadgeTone = "neutral" | "blue" | "green" | "yellow" | "red" | "ink" | "outline" | "brand";
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "bg-paper-2 text-ink",
-  blue: "bg-brand-100 text-brand-700",
+  neutral: "bg-paper-2 text-ink-soft",
+  blue: "bg-brand-50 text-brand-700",
   brand: "bg-brand text-white",
-  green: "bg-success-soft text-[#0b6b35]",
-  yellow: "bg-warning-soft text-[#7a5200]",
-  red: "bg-danger-soft text-[#a4161a]",
+  green: "bg-success-soft text-success",
+  yellow: "bg-warning-soft text-warning",
+  red: "bg-danger-soft text-danger",
   ink: "bg-ink text-white",
-  outline: "bg-white text-ink",
+  outline: "bg-white text-ink-soft ring-1 ring-inset ring-line",
 };
 
 export function Badge({ tone = "neutral", dot, className, children, ...props }: ComponentProps<"span"> & { tone?: BadgeTone; dot?: boolean }) {
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border-2 border-ink px-2 py-0.5 text-xs font-bold uppercase tracking-wide",
-        tones[tone],
-        className,
-      )}
+      className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium", tones[tone], className)}
       {...props}
     >
       {dot ? <span className="size-1.5 rounded-full bg-current" aria-hidden /> : null}
@@ -43,7 +39,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   CREATED: "neutral",
   INITIATED: "yellow",
   FAILED: "red",
-  // memberships / students
+  // memberships / students / catalogue
   ACTIVE: "green",
   INACTIVE: "neutral",
   SUSPENDED: "red",
@@ -55,7 +51,7 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   // events
   DRAFT: "neutral",
   PUBLISHED: "green",
-  COMPLETED: "ink",
+  COMPLETED: "neutral",
   WAITLISTED: "yellow",
   // courts
   MAINTENANCE: "yellow",
@@ -63,18 +59,29 @@ const STATUS_TONES: Record<string, BadgeTone> = {
   NEW: "blue",
   IN_PROGRESS: "yellow",
   CLOSED: "neutral",
+  // equipment rentals
+  RESERVED: "blue",
+  ISSUED: "yellow",
+  RETURNED: "green",
+  DAMAGED: "red",
+  LOST: "red",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   PAYMENT_INITIATED: "Payment initiated",
   IN_PROGRESS: "In progress",
+  INITIATED: "Payment initiated",
+  CREATED: "Pending",
 };
 
+export function statusLabel(status: string) {
+  return STATUS_LABELS[status] ?? status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
+}
+
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
-  const label = STATUS_LABELS[status] ?? status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, " ");
   return (
     <Badge tone={STATUS_TONES[status] ?? "neutral"} dot className={className}>
-      {label}
+      {statusLabel(status)}
     </Badge>
   );
 }

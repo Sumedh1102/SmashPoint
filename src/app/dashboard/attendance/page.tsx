@@ -52,15 +52,15 @@ async function StaffAttendance({ user, date: requested }: { user: SessionUser; d
           ) : null
         }
       />
-      <form className="mb-5 flex flex-wrap items-end gap-2 rounded-2xl border-3 border-ink bg-white p-3 shadow-brutal-sm" action="/dashboard/attendance">
+      <form className="mb-5 flex flex-wrap items-end gap-2 rounded-2xl border border-line bg-white p-3 shadow-xs" action="/dashboard/attendance">
         <label>
-          <span className="mb-1 block text-xs font-extrabold uppercase tracking-wider text-muted">Date</span>
-          <input type="date" name="date" defaultValue={date} max={today} className="h-11 rounded-[var(--radius-control)] border-2 border-ink bg-white px-3" />
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted">Date</span>
+          <input type="date" name="date" defaultValue={date} max={today} className="h-11 rounded-[var(--radius-control)] border border-line bg-white px-3" />
         </label>
-        <button type="submit" className="h-11 rounded-[var(--radius-control)] border-[2.5px] border-ink bg-ink px-4 font-bold text-white">
+        <button type="submit" className="h-11 rounded-[var(--radius-control)] border border-line bg-ink px-4 font-medium text-white">
           Show
         </button>
-        <Link href="/dashboard/attendance" className="h-11 px-3 py-2.5 text-sm font-bold">
+        <Link href="/dashboard/attendance" className="h-11 px-3 py-2.5 text-sm font-medium">
           Today
         </Link>
       </form>
@@ -73,8 +73,8 @@ async function StaffAttendance({ user, date: requested }: { user: SessionUser; d
               <Card key={b.id} className={live ? "border-brand p-5" : "p-5"}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-mono text-sm font-bold text-muted">{formatTimeRange(b.startMinute, b.endMinute)}</p>
-                    <p className="font-display text-xl font-extrabold leading-tight">{b.name}</p>
+                    <p className="font-mono text-sm font-medium text-muted">{formatTimeRange(b.startMinute, b.endMinute)}</p>
+                    <p className="font-display text-xl font-semibold leading-tight">{b.name}</p>
                     <p className="text-sm text-muted">
                       {b.courtName} · {b.coachName}
                     </p>
@@ -130,7 +130,7 @@ async function MyAttendance({ user, studentParam, month: monthParam }: { user: S
       <StudentSwitcher students={viewer} activeId={student.id} basePath="/dashboard/attendance" />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <div className="col-span-2 flex items-center gap-4 rounded-2xl border-3 border-ink bg-white p-4 shadow-brutal lg:col-span-1">
+        <div className="col-span-2 flex items-center gap-4 rounded-2xl border border-line bg-white p-4 shadow-sm lg:col-span-1">
           <ProgressRing value={attendancePercent(counts)} size={92} label="overall" />
         </div>
         <StatCard label="Present days" value={counts.PRESENT} tone="soft" />
@@ -151,8 +151,8 @@ async function MyAttendance({ user, studentParam, month: monthParam }: { user: S
         <Card id="qr">
           <CardHeader title="My check-in QR" icon={<QrCode className="size-5" />} />
           <CardBody className="text-center">
-            {qr ? <div className="mx-auto w-56 rounded-2xl border-3 border-ink bg-white p-2" dangerouslySetInnerHTML={{ __html: qr }} /> : null}
-            <p className="mt-3 font-mono text-sm font-bold">{row?.studentCode}</p>
+            {qr ? <div className="mx-auto w-56 rounded-2xl border border-line bg-white p-2" dangerouslySetInnerHTML={{ __html: qr }} /> : null}
+            <p className="mt-3 font-mono text-sm font-medium">{row?.studentCode}</p>
             <p className="mt-1 text-sm text-muted">Show this at the desk or to your coach when you arrive. It marks you present automatically.</p>
           </CardBody>
         </Card>

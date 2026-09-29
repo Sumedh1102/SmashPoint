@@ -40,7 +40,7 @@ export function Dropdown({
     };
   }, [open]);
 
-  const itemCls = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-brand-50";
+  const itemCls = "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm text-ink-soft hover:bg-paper hover:text-ink";
 
   return (
     <div ref={ref} className={cn("relative inline-block", className)}>
@@ -52,12 +52,12 @@ export function Dropdown({
           id={id}
           role="menu"
           className={cn(
-            "animate-pop absolute z-50 mt-2 min-w-52 rounded-xl border-3 border-ink bg-white p-1.5 shadow-brutal",
+            "animate-pop absolute z-50 mt-2 min-w-52 rounded-lg border border-line bg-white p-1 shadow-lg",
             align === "end" ? "right-0" : "left-0",
           )}
         >
           {items.map((item, i) => {
-            if (item.type === "separator") return <div key={i} className="my-1 h-0.5 bg-ink/10" role="separator" />;
+            if (item.type === "separator") return <div key={i} className="my-1 h-px bg-line" role="separator" />;
             if (item.type === "button") {
               return (
                 <button

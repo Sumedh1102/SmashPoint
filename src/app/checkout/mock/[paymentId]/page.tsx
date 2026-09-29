@@ -24,19 +24,19 @@ export default async function MockCheckoutPage({ params }: PageProps<"/checkout/
   return (
     <main id="main" className="grid min-h-dvh place-items-center bg-ink/5 px-4 py-10">
       <div className="w-full max-w-md">
-        <p className="mb-3 text-center font-mono text-xs font-bold uppercase tracking-widest text-muted">
+        <p className="mb-3 text-center font-mono text-xs font-medium uppercase tracking-widest text-muted">
           <LockKeyhole className="mr-1 inline size-3.5" /> SmashPay sandbox · no real money moves
         </p>
-        <div className="overflow-hidden rounded-3xl border-3 border-ink bg-white shadow-brutal-lg">
-          <div className="grid-paper-ink px-6 py-5 text-white">
-            <p className="text-sm font-bold text-white/70">Paying</p>
-            <p className="font-display text-xl font-extrabold">{site.name}</p>
+        <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-md">
+          <div className="bg-ink px-6 py-5 text-white">
+            <p className="text-sm font-medium text-white/70">Paying</p>
+            <p className="font-display text-xl font-semibold">{site.name}</p>
             <div className="mt-4 flex items-end justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-white/60">{PURPOSE_LABEL[payment.purpose]}</p>
-                <p className="font-mono text-sm font-bold">{payment.receiptNumber}</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-white/60">{PURPOSE_LABEL[payment.purpose]}</p>
+                <p className="font-mono text-sm font-medium">{payment.receiptNumber}</p>
               </div>
-              <p className="font-display text-4xl font-extrabold">{formatMoney(payment.amount)}</p>
+              <p className="font-display text-4xl font-semibold">{formatMoney(payment.amount)}</p>
             </div>
           </div>
           <div className="p-6">

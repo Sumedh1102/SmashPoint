@@ -38,7 +38,7 @@ export function StudentForm({
   return (
     <ActionForm action={action} className="grid gap-6">
       <fieldset className="grid gap-4 md:grid-cols-2">
-        <legend className="mb-3 font-display text-lg font-extrabold">Student</legend>
+        <legend className="mb-3 font-display text-lg font-semibold">Student</legend>
         <TextField name="name" label="Full name" required defaultValue={defaults.name} className="md:col-span-2" />
         <TextField name="dateOfBirth" label="Date of birth" type="date" defaultValue={defaults.dateOfBirth} />
         <SelectField name="gender" label="Gender" defaultValue={defaults.gender} placeholder="Select" options={[{ value: "MALE", label: "Male" }, { value: "FEMALE", label: "Female" }, { value: "OTHER", label: "Other" }]} />
@@ -47,8 +47,8 @@ export function StudentForm({
         <TextareaField name="address" label="Address" rows={2} defaultValue={defaults.address} className="md:col-span-2" />
       </fieldset>
 
-      <fieldset className="grid gap-4 border-t-2 border-ink/10 pt-5 md:grid-cols-2">
-        <legend className="mb-3 font-display text-lg font-extrabold">Parent / guardian</legend>
+      <fieldset className="grid gap-4 border-t border-line pt-5 md:grid-cols-2">
+        <legend className="mb-3 font-display text-lg font-semibold">Parent / guardian</legend>
         <TextField name="parentName" label="Parent name" defaultValue={defaults.parentName} />
         <SelectField name="parentRelation" label="Relation" defaultValue={defaults.parentRelation ?? "Mother"} options={["Mother", "Father", "Guardian", "Other"].map((v) => ({ value: v, label: v }))} />
         <TextField name="parentPhone" label="Parent phone" type="tel" defaultValue={defaults.parentPhone} />
@@ -57,8 +57,8 @@ export function StudentForm({
         <TextField name="emergencyContactPhone" label="Emergency phone" type="tel" defaultValue={defaults.emergencyContactPhone} />
       </fieldset>
 
-      <fieldset className="grid gap-4 border-t-2 border-ink/10 pt-5 md:grid-cols-2">
-        <legend className="mb-3 font-display text-lg font-extrabold">Training</legend>
+      <fieldset className="grid gap-4 border-t border-line pt-5 md:grid-cols-2">
+        <legend className="mb-3 font-display text-lg font-semibold">Training</legend>
         <TextField name="joiningDate" label="Joining date" type="date" required defaultValue={defaults.joiningDate} />
         <SelectField name="level" label="Level" defaultValue={defaults.level ?? "BEGINNER"} options={[{ value: "BEGINNER", label: "Beginner" }, { value: "INTERMEDIATE", label: "Intermediate" }, { value: "ADVANCED", label: "Advanced" }]} />
         <SelectField name="coachId" label="Primary coach" defaultValue={defaults.coachId} placeholder="Unassigned" options={coaches.map((c) => ({ value: c.id, label: c.name }))} />
@@ -68,7 +68,7 @@ export function StudentForm({
         <TextareaField name="notes" label="Internal notes" rows={2} defaultValue={defaults.notes} className="md:col-span-2" />
       </fieldset>
 
-      <div className="flex justify-end border-t-2 border-ink/10 pt-5">
+      <div className="flex justify-end border-t border-line pt-5">
         <SubmitButton size="lg">{submitLabel}</SubmitButton>
       </div>
     </ActionForm>

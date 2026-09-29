@@ -1,5 +1,13 @@
 import {
   Bell,
+  Box,
+  CalendarPlus,
+  Coffee,
+  Dumbbell,
+  Images,
+  Presentation,
+  CalendarRange,
+  Warehouse,
   BookOpenCheck,
   CalendarCheck2,
   ChartColumnBig,
@@ -14,6 +22,7 @@ import {
   ScanLine,
   Settings,
   Trophy,
+  UserCog,
   UserRound,
   Users,
   UsersRound,
@@ -34,17 +43,26 @@ const ICONS: Record<IconKey, LucideIcon> = {
   memberships: IdCard,
   membership: IdCard,
   payments: CreditCard,
-  events: Trophy,
-  announcements: Megaphone,
+  events: CalendarRange,
+  announcements: Bell,
   reports: ChartColumnBig,
   settings: Settings,
   profile: UserRound,
   notifications: Bell,
   scan: ScanLine,
   enquiries: Inbox,
+  sports: Trophy,
+  book: CalendarPlus,
+  rentals: Box,
+  equipment: Dumbbell,
+  users: UserCog,
+  coaching: Presentation,
+  facilities: Warehouse,
+  food: Coffee,
+  gallery: Images,
 };
 
 export function NavIcon({ name, className }: { name: IconKey; className?: string }) {
   const Icon = ICONS[name] ?? BookOpenCheck;
-  return <Icon className={className} strokeWidth={2.4} aria-hidden />;
+  return <Icon className={className} strokeWidth={1.75} aria-hidden />;
 }

@@ -6,8 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Accessible modal built on the native <dialog> element (focus trapping, Esc to close,
- * inert background) with neo-brutalist styling. On small screens it docks to the bottom.
- */
+ * inert background). On small screens it docks to the bottom. */
 export function Modal({
   open,
   onClose,
@@ -44,28 +43,28 @@ export function Modal({
         if (e.target === ref.current) onClose();
       }}
       className={cn(
-        "m-0 mt-auto w-full max-w-none bg-transparent p-0 backdrop:bg-ink/50 backdrop:backdrop-blur-[1px] sm:m-auto",
+        "m-0 mt-auto w-full max-w-none bg-transparent p-0 backdrop:bg-ink/40 backdrop:backdrop-blur-[2px] sm:m-auto",
         widths[size],
       )}
     >
       {open ? (
-        <div className="animate-pop max-h-[90dvh] overflow-y-auto rounded-t-3xl border-3 border-ink bg-white shadow-brutal-lg sm:rounded-3xl">
-          <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b-3 border-ink bg-white px-5 py-4">
+        <div className="animate-pop max-h-[90dvh] overflow-y-auto rounded-t-2xl border border-line bg-white shadow-xl sm:rounded-2xl">
+          <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-line bg-white px-5 py-4">
             <div>
-              <h2 className="text-xl font-extrabold leading-tight">{title}</h2>
+              <h2 className="text-lg font-semibold leading-tight">{title}</h2>
               {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="grid size-9 shrink-0 place-items-center rounded-lg border-2 border-ink bg-white hover:bg-paper"
+              className="grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-paper hover:text-ink"
               aria-label="Close dialog"
             >
-              <X className="size-4" strokeWidth={3} />
+              <X className="size-4" />
             </button>
           </div>
           <div className="px-5 py-5">{children}</div>
-          {footer ? <div className="flex flex-wrap justify-end gap-2 border-t-3 border-ink bg-paper px-5 py-4">{footer}</div> : null}
+          {footer ? <div className="flex flex-wrap justify-end gap-2 border-t border-line bg-paper/60 px-5 py-4">{footer}</div> : null}
         </div>
       ) : null}
     </dialog>

@@ -71,7 +71,7 @@ export default async function CoachDetailPage({ params, searchParams }: PageProp
             {manage ? (
               <CardBody>
                 <ActionForm action={uploadCoachPhoto.bind(null, id)} className="grid gap-3">
-                  <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-2 file:border-ink file:bg-white file:px-3 file:py-1.5 file:font-bold" />
+                  <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:font-medium" />
                   <SubmitButton size="sm" variant="dark">
                     Upload photograph
                   </SubmitButton>

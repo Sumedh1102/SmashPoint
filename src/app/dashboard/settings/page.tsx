@@ -52,7 +52,7 @@ export default async function SettingsPage() {
                     {staff.map((u) => (
                       <TR key={u.id} className={u.isActive ? "" : "opacity-60"}>
                         <TD className="text-sm">
-                          <span className="font-bold">{u.name}</span>
+                          <span className="font-medium">{u.name}</span>
                           <span className="block text-muted">{u.email}</span>
                         </TD>
                         <TD>
@@ -61,7 +61,7 @@ export default async function SettingsPage() {
                         <TD className="text-sm">{u.lastLoginAt ? formatRelative(u.lastLoginAt) : "Never"}</TD>
                         <TD className="text-right">
                           {u.id === me.id ? (
-                            <span className="text-xs font-bold text-muted">You</span>
+                            <span className="text-xs font-medium text-muted">You</span>
                           ) : (
                             <ActionButton action={setUserActive.bind(null, u.id, !u.isActive)} variant={u.isActive ? "ghost" : "outline"} confirm={u.isActive ? { title: `Deactivate ${u.name}?`, description: "They are signed out immediately.", danger: true, confirmLabel: "Deactivate" } : undefined}>
                               {u.isActive ? "Deactivate" : "Reactivate"}
@@ -73,8 +73,8 @@ export default async function SettingsPage() {
                   </tbody>
                 </Table>
               </TableWrap>
-              <details className="border-t-3 border-ink">
-                <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-sm font-bold text-brand hover:bg-brand-50 [&::-webkit-details-marker]:hidden">
+              <details className="border-t border-line">
+                <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-sm font-medium text-brand hover:bg-brand-50 [&::-webkit-details-marker]:hidden">
                   <UserPlus className="size-4" /> Add staff account
                 </summary>
                 <div className="px-5 pb-5">
@@ -112,10 +112,10 @@ export default async function SettingsPage() {
                     {couponRows.map((c) => (
                       <TR key={c.id}>
                         <TD>
-                          <span className="font-mono font-bold">{c.code}</span>
+                          <span className="font-mono font-medium">{c.code}</span>
                           {c.description ? <span className="block text-xs text-muted">{c.description}</span> : null}
                         </TD>
-                        <TD className="text-sm font-bold">
+                        <TD className="text-sm font-medium">
                           {c.type === "PERCENT" ? `${c.value}%` : formatMoney(c.value)}
                           {c.maxDiscount ? <span className="block text-xs font-semibold text-muted">max {formatMoney(c.maxDiscount)}</span> : null}
                         </TD>
@@ -135,8 +135,8 @@ export default async function SettingsPage() {
                   </tbody>
                 </Table>
               </TableWrap>
-              <div className="border-t-3 border-ink p-5">
-                <p className="mb-3 font-extrabold">New coupon</p>
+              <div className="border-t border-line p-5">
+                <p className="mb-3 font-semibold">New coupon</p>
                 <ActionForm action={createCoupon} className="grid gap-3 md:grid-cols-4" resetOnSuccess>
                   <TextField name="code" label="Code" required placeholder="SMASH10" />
                   <SelectField name="type" label="Type" options={[{ value: "PERCENT", label: "Percent" }, { value: "FLAT", label: "Flat ₹" }]} />
@@ -160,11 +160,11 @@ export default async function SettingsPage() {
           <Card>
             <CardHeader title="Audit log" icon={<History className="size-5" />} description="Recent sensitive changes" />
             <CardBody className="p-0">
-              <ul className="divide-y-2 divide-ink/10 text-sm">
+              <ul className="divide-y divide-line text-sm">
                 {logs.map(({ log, actor }) => (
                   <li key={log.id} className="flex flex-wrap justify-between gap-2 px-5 py-2.5">
                     <span>
-                      <span className="font-mono font-bold">{log.action}</span> <span className="text-muted">by {actor ?? "system"}</span>
+                      <span className="font-mono font-medium">{log.action}</span> <span className="text-muted">by {actor ?? "system"}</span>
                     </span>
                     <span className="text-xs font-semibold text-muted">{formatDateTime(log.createdAt)}</span>
                   </li>
@@ -176,7 +176,7 @@ export default async function SettingsPage() {
         </div>
 
         <div className="grid content-start gap-6">
-          <Link href="/dashboard/courts" className="flex items-center justify-between rounded-2xl border-3 border-ink bg-brand p-5 font-display text-lg font-extrabold text-white shadow-brutal hover:-translate-y-0.5">
+          <Link href="/dashboard/courts" className="flex items-center justify-between rounded-2xl border border-line bg-brand p-5 font-display text-lg font-semibold text-white shadow-sm">
             Court hours, pricing & maintenance <ArrowRight className="size-5" />
           </Link>
           <Card>

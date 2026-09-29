@@ -94,14 +94,14 @@ export default async function BatchDetailPage({ params, searchParams }: PageProp
                       {roster.map((s) => (
                         <TR key={s.id}>
                           <TD>
-                            <Link href={`/dashboard/students/${s.id}`} className="flex items-center gap-2 font-bold hover:text-brand">
+                            <Link href={`/dashboard/students/${s.id}`} className="flex items-center gap-2 font-medium hover:text-brand">
                               <Avatar name={s.name} src={s.photoUrl} size={30} className="rounded-lg" />
                               {s.name}
                             </Link>
                           </TD>
                           <TD className="text-sm">{titleCase(s.level)}</TD>
                           <TD className="text-sm">{formatDate(s.joinedOn, "short")}</TD>
-                          <TD className="text-sm font-bold">{s.counted ? `${Math.round((s.attended / s.counted) * 100)}%` : "—"}</TD>
+                          <TD className="text-sm font-medium">{s.counted ? `${Math.round((s.attended / s.counted) * 100)}%` : "—"}</TD>
                           {manage ? (
                             <TD className="text-right">
                               <ActionButton action={removeFromBatch.bind(null, s.id, b.id)} variant="ghost" icon={<UserMinus className="size-4" />} confirm={{ title: `Remove ${s.name}?`, confirmLabel: "Remove", danger: true }}>
@@ -153,8 +153,8 @@ export default async function BatchDetailPage({ params, searchParams }: PageProp
             <CardBody className="grid gap-2">
               {sessions.length ? (
                 sessions.map((s) => (
-                  <Link key={s.id} href={`/dashboard/attendance/${b.id}?date=${s.date}`} className="rounded-xl border-2 border-ink px-3 py-2 text-sm hover:bg-brand-50">
-                    <span className="flex justify-between font-bold">
+                  <Link key={s.id} href={`/dashboard/attendance/${b.id}?date=${s.date}`} className="rounded-xl border border-line px-3 py-2 text-sm hover:bg-brand-50">
+                    <span className="flex justify-between font-medium">
                       {formatDate(s.date, "weekday")}
                       <span>
                         {s.present}/{s.total} present

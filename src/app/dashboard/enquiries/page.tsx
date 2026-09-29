@@ -24,19 +24,19 @@ export default async function EnquiriesPage() {
             <Card key={e.id} className={e.status === "CLOSED" ? "p-5 opacity-60" : "p-5"}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-extrabold uppercase text-brand">{e.subject}</p>
-                  <p className="text-lg font-extrabold">{e.name}</p>
+                  <p className="text-xs font-semibold uppercase text-brand">{e.subject}</p>
+                  <p className="text-lg font-semibold">{e.name}</p>
                   <p className="text-xs font-semibold text-muted">{formatDateTime(e.createdAt)}</p>
                 </div>
                 <StatusBadge status={e.status} />
               </div>
               <p className="mt-3 whitespace-pre-line text-sm">{e.message}</p>
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t-2 border-ink/10 pt-3 text-sm font-bold">
-                <a href={`mailto:${e.email}?subject=${encodeURIComponent(`Re: ${e.subject}`)}`} className="inline-flex items-center gap-1 rounded-lg border-2 border-ink px-2 py-1 hover:bg-brand-50">
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3 text-sm font-medium">
+                <a href={`mailto:${e.email}?subject=${encodeURIComponent(`Re: ${e.subject}`)}`} className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 hover:bg-brand-50">
                   <Mail className="size-4" /> {e.email}
                 </a>
                 {e.phone ? (
-                  <a href={`tel:${e.phone}`} className="inline-flex items-center gap-1 rounded-lg border-2 border-ink px-2 py-1 hover:bg-brand-50">
+                  <a href={`tel:${e.phone}`} className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 hover:bg-brand-50">
                     <Phone className="size-4" /> {e.phone}
                   </a>
                 ) : null}

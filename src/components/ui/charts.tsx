@@ -110,7 +110,7 @@ export function BarChart({
                 </text>
               ) : null}
               {i === peak && d.value > 0 && hover === null ? (
-                <text x={x + barW / 2} y={y - 6} textAnchor="middle" className="fill-ink text-[11px] font-bold tabular-nums">
+                <text x={x + barW / 2} y={y - 6} textAnchor="middle" className="fill-ink text-[11px] font-medium tabular-nums">
                   {compact(d.value, format)}
                 </text>
               ) : null}
@@ -120,10 +120,10 @@ export function BarChart({
       </svg>
       {hover !== null && data[hover] ? (
         <div
-          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lg border-2 border-ink bg-white px-2.5 py-1.5 text-xs shadow-brutal-xs"
+          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-md border border-line bg-white px-2.5 py-1.5 text-xs shadow-md"
           style={{ left: `${((padLeft + band * hover + band / 2) / width) * 100}%` }}
         >
-          <p className="font-display text-sm font-extrabold tabular-nums">{fmt(data[hover].value, format)}</p>
+          <p className="font-display text-sm font-semibold tabular-nums">{fmt(data[hover].value, format)}</p>
           <p className="font-semibold text-muted">{data[hover].detail ?? data[hover].label}</p>
         </div>
       ) : null}
@@ -161,11 +161,11 @@ export function HBarList({
       <ul className="space-y-3" aria-label={caption}>
         {data.map((d) => (
           <li key={d.label} className="grid grid-cols-[6.5rem_1fr_auto] items-center gap-3 text-sm" title={d.detail}>
-            <span className="truncate font-bold">{d.label}</span>
-            <span className="h-3 rounded-full bg-brand-50">
+            <span className="truncate font-medium">{d.label}</span>
+            <span className="h-2 rounded-full bg-paper-2">
               <span className="block h-full rounded-full bg-brand" style={{ width: `${(d.value / max) * 100}%` }} />
             </span>
-            <span className="min-w-12 text-right font-bold tabular-nums">{fmt(d.value, format)}</span>
+            <span className="min-w-12 text-right font-medium tabular-nums">{fmt(d.value, format)}</span>
           </li>
         ))}
       </ul>
@@ -199,7 +199,7 @@ export function AttendanceBar({ counts, className }: { counts: Record<keyof type
           <li key={e.key} className="flex items-center gap-2">
             <span className={cn("size-2.5 shrink-0 rounded-sm", STATUS_COLORS[e.key].bar)} aria-hidden />
             <span className="font-semibold text-muted">{STATUS_COLORS[e.key].label}</span>
-            <span className="ml-auto font-bold tabular-nums">{e.count}</span>
+            <span className="ml-auto font-medium tabular-nums">{e.count}</span>
           </li>
         ))}
       </ul>

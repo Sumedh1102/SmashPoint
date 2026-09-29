@@ -26,7 +26,7 @@ export default async function NewBookingPage() {
         breadcrumbs={[{ label: "Bookings", href: "/dashboard/bookings" }, { label: "New" }]}
         description="For walk-ins and phone bookings. Availability is checked on save — double bookings are rejected."
         actions={
-          <Link href={`/book?date=${today}`} target="_blank" className="inline-flex items-center gap-1 text-sm font-bold text-brand">
+          <Link href={`/book?date=${today}`} target="_blank" className="inline-flex items-center gap-1 text-sm font-medium text-brand">
             Open availability grid <ExternalLink className="size-4" />
           </Link>
         }

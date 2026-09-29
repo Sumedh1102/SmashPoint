@@ -65,11 +65,11 @@ export async function CoachDashboard({ user }: { user: SessionUser }) {
                   const live = now >= b.startMinute && now < b.endMinute;
                   const done = now >= b.endMinute;
                   return (
-                    <li key={b.id} className={live ? "rounded-2xl border-3 border-ink bg-brand p-4 text-white shadow-brutal-sm" : "rounded-2xl border-2 border-ink bg-white p-4"}>
+                    <li key={b.id} className={live ? "rounded-2xl border border-line bg-brand p-4 text-white shadow-xs" : "rounded-2xl border border-line bg-white p-4"}>
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <p className="font-mono text-sm font-bold opacity-80">{formatTimeRange(b.startMinute, b.endMinute)}</p>
-                          <p className="font-display text-xl font-extrabold">{b.name}</p>
+                          <p className="font-mono text-sm font-medium opacity-80">{formatTimeRange(b.startMinute, b.endMinute)}</p>
+                          <p className="font-display text-xl font-semibold">{b.name}</p>
                           <p className="text-sm font-semibold opacity-80">
                             {b.courtName} · {b.enrolled} students {live ? "· In session now" : ""}
                           </p>
@@ -96,9 +96,9 @@ export async function CoachDashboard({ user }: { user: SessionUser }) {
           <CardBody>
             <ul className="grid gap-2">
               {upcoming.map((s) => (
-                <li key={`${s.date}-${s.batch.id}`} className="flex items-center justify-between gap-2 rounded-xl border-2 border-ink px-3 py-2 text-sm">
+                <li key={`${s.date}-${s.batch.id}`} className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-sm">
                   <div className="min-w-0">
-                    <p className="truncate font-extrabold">{s.batch.name}</p>
+                    <p className="truncate font-semibold">{s.batch.name}</p>
                     <p className="text-xs font-semibold text-muted">{formatTimeRange(s.batch.startMinute, s.batch.endMinute)} · {s.batch.courtName}</p>
                   </div>
                   <Badge tone="outline">{formatDate(s.date, "weekday")}</Badge>
@@ -109,17 +109,17 @@ export async function CoachDashboard({ user }: { user: SessionUser }) {
         </Card>
 
         <Card className="xl:col-span-2">
-          <CardHeader title="Assigned students" description={`${dueForAssessment.length} due for a skill assessment`} icon={<Gauge className="size-5" />} action={<Link href="/dashboard/performance" className="text-sm font-bold text-brand">Performance</Link>} />
+          <CardHeader title="Assigned students" description={`${dueForAssessment.length} due for a skill assessment`} icon={<Gauge className="size-5" />} action={<Link href="/dashboard/performance" className="text-sm font-medium text-brand">Performance</Link>} />
           <CardBody className="p-0">
-            <ul className="grid divide-y-2 divide-ink/10 sm:grid-cols-2 sm:divide-y-0">
+            <ul className="grid divide-y divide-line sm:grid-cols-2 sm:divide-y-0">
               {students.slice(0, 12).map((s) => {
                 const due = !s.lastAssessed || diffDays(s.lastAssessed, today) > 30;
                 return (
-                  <li key={s.id} className="border-ink/10 sm:border-b-2 sm:odd:border-r-2">
+                  <li key={s.id} className="border-line sm:border-b sm:odd:border-r">
                     <Link href={`/dashboard/performance/${s.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/60">
                       <Avatar name={s.name} src={s.photoUrl} size={36} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-extrabold">{s.name}</p>
+                        <p className="truncate text-sm font-semibold">{s.name}</p>
                         <p className="text-xs font-semibold text-muted">
                           {titleCase(s.level)} · {s.lastAssessed ? `assessed ${formatDate(s.lastAssessed, "dayMonth")}` : "never assessed"}
                         </p>
@@ -137,8 +137,8 @@ export async function CoachDashboard({ user }: { user: SessionUser }) {
           <CardHeader title="My batches" />
           <CardBody className="grid gap-3">
             {batches.map((b) => (
-              <Link key={b.id} href={`/dashboard/batches/${b.id}`} className="rounded-xl border-2 border-ink p-3 hover:bg-brand-50">
-                <p className="font-extrabold">{b.name}</p>
+              <Link key={b.id} href={`/dashboard/batches/${b.id}`} className="rounded-xl border border-line p-3 hover:bg-brand-50">
+                <p className="font-semibold">{b.name}</p>
                 <div className="mt-1 flex items-center justify-between text-xs font-semibold text-muted">
                   <span>{formatTimeRange(b.startMinute, b.endMinute)} · {b.courtName}</span>
                   <CapacityBar used={b.enrolled} total={b.capacity} />
@@ -154,8 +154,8 @@ export async function CoachDashboard({ user }: { user: SessionUser }) {
             {notes.length ? (
               <ul className="grid gap-3 md:grid-cols-2">
                 {notes.map((n) => (
-                  <li key={n.id} className="rounded-xl border-2 border-ink bg-paper p-3">
-                    <p className="text-xs font-extrabold uppercase text-brand">
+                  <li key={n.id} className="rounded-xl border border-line bg-paper p-3">
+                    <p className="text-xs font-semibold uppercase text-brand">
                       {n.batchName} · {formatDate(n.date, "weekday")}
                     </p>
                     <p className="mt-1 text-sm font-semibold">{n.notes}</p>

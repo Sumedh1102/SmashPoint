@@ -76,9 +76,9 @@ export async function AdminDashboard({ user }: { user: SessionUser }) {
       <section className="mt-6" aria-label="Quick actions">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 min-[1400px]:grid-cols-6">
           {QUICK_ACTIONS.filter((a) => can(user.role, a.permission)).map((a) => (
-            <Link key={a.label} href={a.href} className="flex items-center gap-3 rounded-2xl border-[2.5px] border-ink bg-white px-4 py-3 font-display font-extrabold shadow-brutal-xs transition hover:-translate-y-0.5 hover:bg-brand-50 hover:shadow-brutal-sm">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg border-2 border-ink bg-brand text-white">
-                <a.icon className="size-4" strokeWidth={2.5} />
+            <Link key={a.label} href={a.href} className="flex items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3 font-display font-semibold shadow-xs transition hover:bg-brand-50 hover:shadow-xs">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-brand text-white">
+                <a.icon className="size-4" />
               </span>
               {a.label}
             </Link>
@@ -88,23 +88,23 @@ export async function AdminDashboard({ user }: { user: SessionUser }) {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Today's court schedule" description={`${schedule.reduce((a, l) => a + l.items.length, 0)} bookings & sessions across ${schedule.length} courts`} action={<Link href="/dashboard/bookings" className="text-sm font-bold text-brand">Manage</Link>} />
+          <CardHeader title="Today's court schedule" description={`${schedule.reduce((a, l) => a + l.items.length, 0)} bookings & sessions across ${schedule.length} courts`} action={<Link href="/dashboard/bookings" className="text-sm font-medium text-brand">Manage</Link>} />
           <CardBody>
             <CourtTimeline lanes={schedule} openMinute={settings.openMinute} closeMinute={settings.closeMinute} nowMinute={now} />
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Today's classes" action={<Link href="/dashboard/attendance" className="text-sm font-bold text-brand">Attendance</Link>} />
+          <CardHeader title="Today's classes" action={<Link href="/dashboard/attendance" className="text-sm font-medium text-brand">Attendance</Link>} />
           <CardBody>
             {classes.length ? (
               <ul className="grid gap-2">
                 {classes.map((c) => {
                   const done = c.endMinute <= now;
                   return (
-                    <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border-2 border-ink px-3 py-2.5">
+                    <li key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2.5">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-extrabold">{c.name}</p>
+                        <p className="truncate text-sm font-semibold">{c.name}</p>
                         <p className="text-xs font-semibold text-muted">
                           {formatTimeRange(c.startMinute, c.endMinute)} · {c.courtName} · {c.coachName}
                         </p>
@@ -122,7 +122,7 @@ export async function AdminDashboard({ user }: { user: SessionUser }) {
 
         {showMoney ? (
           <Card className="xl:col-span-2">
-            <CardHeader title="Revenue overview" description={`Last 14 days · ${formatMoney(revenue.reduce((a, r) => a + r.value, 0))} collected`} action={<Link href="/dashboard/reports" className="text-sm font-bold text-brand">Reports</Link>} />
+            <CardHeader title="Revenue overview" description={`Last 14 days · ${formatMoney(revenue.reduce((a, r) => a + r.value, 0))} collected`} action={<Link href="/dashboard/reports" className="text-sm font-medium text-brand">Reports</Link>} />
             <CardBody>
               <BarChart
                 format="money"
@@ -137,24 +137,24 @@ export async function AdminDashboard({ user }: { user: SessionUser }) {
         <Card>
           <CardHeader title="Attendance overview" description="Last 30 days, all batches" />
           <CardBody>
-            <p className="mb-4 font-display text-4xl font-extrabold">
+            <p className="mb-4 font-display text-4xl font-semibold">
               {(() => {
                 const denom = attendance.PRESENT + attendance.LATE + attendance.ABSENT;
                 return denom ? `${Math.round(((attendance.PRESENT + attendance.LATE) / denom) * 100)}%` : "—";
               })()}
-              <span className="ml-2 text-sm font-bold text-muted">attended</span>
+              <span className="ml-2 text-sm font-medium text-muted">attended</span>
             </p>
             <AttendanceBar counts={attendance} />
             {expiring.length ? (
               <div className="mt-6">
-                <p className="mb-2 text-sm font-extrabold">Memberships expiring soon</p>
+                <p className="mb-2 text-sm font-semibold">Memberships expiring soon</p>
                 <ul className="grid gap-1.5 text-sm">
                   {expiring.slice(0, 5).map((m) => (
                     <li key={m.id} className="flex justify-between gap-2">
                       <Link href={`/dashboard/students/${m.studentId}`} className="truncate font-semibold hover:underline">
                         {m.studentName}
                       </Link>
-                      <span className="shrink-0 font-bold text-[#7a5200]">{formatDate(m.endDate, "dayMonth")}</span>
+                      <span className="shrink-0 font-medium text-[#7a5200]">{formatDate(m.endDate, "dayMonth")}</span>
                     </li>
                   ))}
                 </ul>
@@ -164,14 +164,14 @@ export async function AdminDashboard({ user }: { user: SessionUser }) {
         </Card>
 
         <Card className={showMoney ? "xl:col-span-2" : "xl:col-span-3"}>
-          <CardHeader title="Recent bookings" action={<Link href="/dashboard/bookings" className="text-sm font-bold text-brand">All bookings</Link>} />
+          <CardHeader title="Recent bookings" action={<Link href="/dashboard/bookings" className="text-sm font-medium text-brand">All bookings</Link>} />
           <CardBody className="p-0">
-            <ul className="divide-y-2 divide-ink/10">
+            <ul className="divide-y divide-line">
               {recentBookings.map((b) => (
                 <li key={b.id}>
                   <Link href={`/dashboard/bookings/${b.id}`} className="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-brand-50/60">
                     <div className="min-w-0">
-                      <p className="truncate font-bold">
+                      <p className="truncate font-medium">
                         {b.customerName} <span className="font-mono text-xs text-muted">{b.code}</span>
                       </p>
                       <p className="text-muted">
@@ -179,7 +179,7 @@ export async function AdminDashboard({ user }: { user: SessionUser }) {
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
-                      <span className="hidden font-bold sm:inline">{formatMoney(b.total)}</span>
+                      <span className="hidden font-medium sm:inline">{formatMoney(b.total)}</span>
                       <StatusBadge status={b.status} />
                     </div>
                   </Link>
@@ -191,18 +191,18 @@ export async function AdminDashboard({ user }: { user: SessionUser }) {
 
         {showMoney ? (
           <Card>
-            <CardHeader title="Recent payments" action={<Link href="/dashboard/payments" className="text-sm font-bold text-brand">All</Link>} />
+            <CardHeader title="Recent payments" action={<Link href="/dashboard/payments" className="text-sm font-medium text-brand">All</Link>} />
             <CardBody className="p-0">
-              <ul className="divide-y-2 divide-ink/10">
+              <ul className="divide-y divide-line">
                 {recentPayments.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
                     <div className="min-w-0">
-                      <p className="truncate font-bold">{p.payerName}</p>
+                      <p className="truncate font-medium">{p.payerName}</p>
                       <p className="text-muted">
                         {titleCase(p.purpose)} · {p.paidAt ? formatRelative(p.paidAt) : "—"}
                       </p>
                     </div>
-                    <span className="shrink-0 font-display text-lg font-extrabold">{formatMoney(p.amount)}</span>
+                    <span className="shrink-0 font-display text-lg font-semibold">{formatMoney(p.amount)}</span>
                   </li>
                 ))}
               </ul>
@@ -212,7 +212,7 @@ export async function AdminDashboard({ user }: { user: SessionUser }) {
       </div>
 
       {stats.newEnquiries && can(user.role, "enquiries:view") ? (
-        <Link href="/dashboard/enquiries" className="mt-6 flex items-center justify-between rounded-2xl border-3 border-ink bg-warning-soft px-5 py-4 font-bold shadow-brutal-sm hover:-translate-y-0.5">
+        <Link href="/dashboard/enquiries" className="mt-6 flex items-center justify-between rounded-2xl border border-line bg-warning-soft px-5 py-4 font-medium shadow-xs">
           <span className="flex items-center gap-2">
             <Inbox className="size-5" /> {stats.newEnquiries} new website enquir{stats.newEnquiries === 1 ? "y" : "ies"} waiting for a reply
           </span>

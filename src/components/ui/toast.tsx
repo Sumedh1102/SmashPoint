@@ -19,16 +19,16 @@ const ToastContext = createContext<ToastApi | null>(null);
 
 const ICONS = { success: CircleCheck, error: TriangleAlert, info: Info, warning: TriangleAlert };
 const TONES = {
-  success: "bg-success-soft",
-  error: "bg-danger-soft",
-  info: "bg-white",
-  warning: "bg-warning-soft",
+  success: "",
+  error: "",
+  info: "",
+  warning: "",
 };
 const ICON_TONES = {
-  success: "bg-success text-white",
-  error: "bg-danger text-white",
-  info: "bg-brand text-white",
-  warning: "bg-warning text-ink",
+  success: "text-success",
+  error: "text-danger",
+  info: "text-brand",
+  warning: "text-warning",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -75,17 +75,17 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
   return (
     <div
       role={toast.tone === "error" ? "alert" : "status"}
-      className={cn("animate-toast-in pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border-3 border-ink p-3.5 shadow-brutal", TONES[toast.tone])}
+      className={cn("animate-toast-in pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-line bg-white p-3.5 shadow-lg", TONES[toast.tone])}
     >
-      <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg border-2 border-ink", ICON_TONES[toast.tone])}>
-        <Icon className="size-4" strokeWidth={2.75} />
+      <span className={cn("mt-0.5 shrink-0", ICON_TONES[toast.tone])}>
+        <Icon className="size-5" />
       </span>
-      <div className="min-w-0 flex-1 pt-0.5">
-        <p className="font-display font-extrabold leading-tight">{toast.title}</p>
-        {toast.description ? <p className="mt-0.5 text-sm text-ink-soft">{toast.description}</p> : null}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold leading-snug">{toast.title}</p>
+        {toast.description ? <p className="mt-0.5 text-sm text-muted">{toast.description}</p> : null}
       </div>
-      <button type="button" onClick={onDismiss} className="rounded-md p-1 hover:bg-ink/10" aria-label="Dismiss notification">
-        <X className="size-4" strokeWidth={2.75} />
+      <button type="button" onClick={onDismiss} className="rounded-md p-1 text-subtle hover:bg-paper hover:text-ink" aria-label="Dismiss notification">
+        <X className="size-4" />
       </button>
     </div>
   );

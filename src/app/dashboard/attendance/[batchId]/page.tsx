@@ -74,14 +74,14 @@ export default async function MarkAttendancePage({ params, searchParams }: PageP
         actions={
           <div className="flex items-center gap-2">
             {prev ? (
-              <Link href={`/dashboard/attendance/${batchId}?date=${prev}`} className="grid size-10 place-items-center rounded-xl border-2 border-ink bg-white" aria-label="Previous session">
-                <ChevronLeft className="size-4" strokeWidth={3} />
+              <Link href={`/dashboard/attendance/${batchId}?date=${prev}`} className="grid size-10 place-items-center rounded-xl border border-line bg-white" aria-label="Previous session">
+                <ChevronLeft className="size-4" />
               </Link>
             ) : null}
-            <span className="rounded-xl border-2 border-ink bg-white px-3 py-2 text-sm font-extrabold">{formatDate(date, "weekday")}</span>
+            <span className="rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold">{formatDate(date, "weekday")}</span>
             {next ? (
-              <Link href={`/dashboard/attendance/${batchId}?date=${next}`} className="grid size-10 place-items-center rounded-xl border-2 border-ink bg-white" aria-label="Next session">
-                <ChevronRight className="size-4" strokeWidth={3} />
+              <Link href={`/dashboard/attendance/${batchId}?date=${next}`} className="grid size-10 place-items-center rounded-xl border border-line bg-white" aria-label="Next session">
+                <ChevronRight className="size-4" />
               </Link>
             ) : null}
           </div>

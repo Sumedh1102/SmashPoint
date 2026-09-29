@@ -1,16 +1,15 @@
 "use server";
 
-import { and, eq, ne, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { students, users } from "@/server/db/schema";
 import { assertUser } from "@/server/auth/guards";
-import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { getSession, revokeOtherSessions } from "@/server/auth/session";
 import { audit } from "@/server/audit";
-import { storeImage } from "@/server/media";
-import { emailSchema, nameSchema, passwordSchema, phoneSchema } from "@/lib/validation";
+import { deleteAssets, imageFromForm } from "@/server/storage/media";
+import { nameSchema, phoneSchema } from "@/lib/validation";
 import { formObject, toActionError, type ActionResult } from "./result";
 
 const optionalPhone = z.union([z.literal(""), phoneSchema]).optional().transform((v) => v || null);
@@ -21,14 +20,12 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
     const input = z
       .object({
         name: nameSchema,
-        email: emailSchema,
         phone: optionalPhone,
         emergencyContactName: z.string().trim().max(120).optional().transform((v) => v || null),
         emergencyContactPhone: optionalPhone,
       })
       .parse(formObject(formData));
-    const [clash] = await db.select({ id: users.id }).from(users).where(and(eq(sql`lower(${users.email})`, input.email), ne(users.id, user.id))).limit(1);
-    if (clash) return { ok: false, error: "That email is used by another account.", fieldErrors: { email: ["Already in use"] } };
+    // The email address belongs to the sign-in account (Firebase) and isn't edited here.
     await db.update(users).set(input).where(eq(users.id, user.id));
     // Keep the linked student record's emergency contact in sync.
     if (input.emergencyContactName || input.emergencyContactPhone) {
@@ -47,30 +44,27 @@ export async function updateProfile(_prev: ActionResult | null, formData: FormDa
 export async function updateAvatar(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   try {
     const user = await assertUser();
-    const url = await storeImage(formData.get("avatar") as File | null, user.id);
-    await db.update(users).set({ avatarUrl: url }).where(eq(users.id, user.id));
-    await db.update(students).set({ photoUrl: url }).where(eq(students.userId, user.id));
+    const [current] = await db.select({ avatarUrl: users.avatarUrl }).from(users).where(eq(users.id, user.id));
+    const image = await imageFromForm(formData, "avatar", { url: current?.avatarUrl ?? null });
+    if (!image.changed) return { ok: true, message: "No changes" };
+    await db.update(users).set({ avatarUrl: image.url }).where(eq(users.id, user.id));
+    await db.update(students).set({ photoUrl: image.url }).where(eq(students.userId, user.id));
+    await deleteAssets(image.stale);
     revalidatePath("/dashboard", "layout");
-    return { ok: true, message: "Profile photo updated" };
+    return { ok: true, message: image.url ? "Profile photo updated" : "Profile photo removed" };
   } catch (err) {
     return toActionError(err);
   }
 }
 
-export async function changePassword(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+/** Signs out every other device (e.g. after changing the password in Firebase). */
+export async function signOutOtherDevices(): Promise<ActionResult> {
   try {
     const user = await assertUser();
-    const input = z
-      .object({ current: z.string().min(1, "Enter your current password"), next: passwordSchema, confirm: z.string() })
-      .refine((v) => v.next === v.confirm, { path: ["confirm"], message: "Passwords don't match" })
-      .parse(formObject(formData));
-    const [row] = await db.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, user.id));
-    if (!row || !(await verifyPassword(input.current, row.passwordHash))) return { ok: false, error: "Current password is incorrect.", fieldErrors: { current: ["Incorrect password"] } };
-    await db.update(users).set({ passwordHash: await hashPassword(input.next) }).where(eq(users.id, user.id));
     const session = await getSession();
     await revokeOtherSessions(user.id, session?.sessionId);
-    await audit(user.id, "user.password_change", "user", user.id);
-    return { ok: true, message: "Password changed — other devices were signed out" };
+    await audit(user.id, "user.revoke_sessions", "user", user.id);
+    return { ok: true, message: "Other devices were signed out" };
   } catch (err) {
     return toActionError(err);
   }

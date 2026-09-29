@@ -48,9 +48,9 @@ export default async function ProfilePage() {
           <Card>
             <CardHeader title="Profile photo" />
             <CardBody className="grid justify-items-center gap-4">
-              <Avatar name={user.name} src={user.avatarUrl} size={112} className="rounded-3xl border-3" />
+              <Avatar name={user.name} src={user.avatarUrl} size={112} className="rounded-2xl border" />
               <ActionForm action={updateAvatar} className="grid w-full gap-3">
-                <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-2 file:border-ink file:bg-white file:px-3 file:py-1.5 file:font-bold" aria-label="Choose a profile photo" />
+                <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:font-medium" aria-label="Choose a profile photo" />
                 <SubmitButton variant="outline" size="sm">
                   Upload photo
                 </SubmitButton>

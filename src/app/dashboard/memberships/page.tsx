@@ -65,7 +65,7 @@ async function Members({ sp, filter, today, manage }: { sp: Record<string, strin
     <>
       <div className="mb-3 flex flex-wrap gap-2">
         {filters.map((f) => (
-          <Link key={f.id} href={hrefWith("/dashboard/memberships", {}, { filter: f.id, q: param(sp.q) })} className={f.id === filter ? "rounded-lg border-2 border-ink bg-ink px-3 py-1.5 text-sm font-bold text-white" : "rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold hover:bg-brand-50"}>
+          <Link key={f.id} href={hrefWith("/dashboard/memberships", {}, { filter: f.id, q: param(sp.q) })} className={f.id === filter ? "rounded-lg border border-line bg-ink px-3 py-1.5 text-sm font-medium text-white" : "rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-brand-50"}>
             {f.label}
           </Link>
         ))}
@@ -96,7 +96,7 @@ async function Members({ sp, filter, today, manage }: { sp: Record<string, strin
                   return (
                     <TR key={m.id}>
                       <TD>
-                        <Link href={`/dashboard/students/${m.studentId}`} className="font-bold hover:text-brand">
+                        <Link href={`/dashboard/students/${m.studentId}`} className="font-medium hover:text-brand">
                           {m.studentName}
                         </Link>
                         <span className="block font-mono text-xs text-muted">{m.studentCode}</span>
@@ -113,10 +113,10 @@ async function Members({ sp, filter, today, manage }: { sp: Record<string, strin
                       <TD>
                         <StatusBadge status={m.paymentStatus} />
                       </TD>
-                      <TD className="font-bold">{formatMoney(m.price)}</TD>
+                      <TD className="font-medium">{formatMoney(m.price)}</TD>
                       {manage ? (
                         <TD className="text-right">
-                          <Link href={`/dashboard/memberships/assign?student=${m.studentId}`} className="text-sm font-bold text-brand">
+                          <Link href={`/dashboard/memberships/assign?student=${m.studentId}`} className="text-sm font-medium text-brand">
                             Renew
                           </Link>
                         </TD>

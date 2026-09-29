@@ -7,13 +7,12 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { coaches, users } from "@/server/db/schema";
 import { assertPermission } from "@/server/auth/guards";
-import { hashPassword } from "@/server/auth/password";
 import { audit } from "@/server/audit";
 import { invalidate, TAGS } from "@/server/cache";
 import { DomainError } from "@/server/errors";
-import { storeImage } from "@/server/media";
+import { deleteAssets, imageFromForm } from "@/server/storage/media";
 import { slugify } from "@/lib/utils";
-import { emailSchema, nameSchema, passwordSchema, phoneSchema } from "@/lib/validation";
+import { emailSchema, nameSchema, phoneSchema } from "@/lib/validation";
 import { formObject, toActionError, type ActionResult } from "./result";
 
 const lines = z
@@ -32,7 +31,7 @@ const profileSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).max(99).default(0),
 });
 
-const createSchema = profileSchema.extend({ name: nameSchema, email: emailSchema, phone: phoneSchema, password: passwordSchema });
+const createSchema = profileSchema.extend({ name: nameSchema, email: emailSchema, phone: phoneSchema });
 
 function refresh(id?: string) {
   revalidatePath("/dashboard/coaches");
@@ -47,9 +46,10 @@ export async function createCoach(_prev: ActionResult | null, formData: FormData
     const input = createSchema.parse(formObject(formData));
     const [existing] = await db.select({ id: users.id }).from(users).where(eq(sql`lower(${users.email})`, input.email)).limit(1);
     if (existing) return { ok: false, error: "That email is already in use.", fieldErrors: { email: ["Already in use"] } };
-    const passwordHash = await hashPassword(input.password);
+    // No password: the coach signs in with Firebase (Google, or email + password) using this
+    // address, and the account links once their email is verified.
     id = await db.transaction(async (tx) => {
-      const [user] = await tx.insert(users).values({ name: input.name, email: input.email, phone: input.phone, passwordHash, role: "COACH" }).returning({ id: users.id });
+      const [user] = await tx.insert(users).values({ name: input.name, email: input.email, phone: input.phone, role: "COACH" }).returning({ id: users.id });
       let slug = slugify(input.name);
       const [clash] = await tx.select({ id: coaches.id }).from(coaches).where(eq(coaches.slug, slug));
       if (clash) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
@@ -110,9 +110,13 @@ export async function updateCoach(coachId: string, _prev: ActionResult | null, f
 
 export async function uploadCoachPhoto(coachId: string, _prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   try {
-    const actor = await assertPermission("coaches:manage");
-    const url = await storeImage(formData.get("photo") as File | null, actor.id);
-    await db.update(coaches).set({ photoUrl: url }).where(eq(coaches.id, coachId));
+    await assertPermission("coaches:manage");
+    const [current] = await db.select({ photoUrl: coaches.photoUrl }).from(coaches).where(eq(coaches.id, coachId));
+    if (!current) throw new DomainError("Coach not found.", "NOT_FOUND", 404);
+    const image = await imageFromForm(formData, "photo", { url: current.photoUrl });
+    if (!image.changed) return { ok: true, message: "No changes" };
+    await db.update(coaches).set({ photoUrl: image.url }).where(eq(coaches.id, coachId));
+    await deleteAssets(image.stale);
     refresh(coachId);
     return { ok: true, message: "Photo updated" };
   } catch (err) {

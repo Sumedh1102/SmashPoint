@@ -37,9 +37,9 @@ export default async function CourtsPage() {
         <div className="grid content-start gap-4 xl:col-span-2">
           {courtRows.map((c) => (
             <Card key={c.id} className="overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b-3 border-ink px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
                 <div>
-                  <h2 className="text-xl font-extrabold">{c.name}</h2>
+                  <h2 className="text-xl font-semibold">{c.name}</h2>
                   <p className="text-sm text-muted">{c.description ?? c.surface}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -52,8 +52,8 @@ export default async function CourtsPage() {
               </div>
               {manage ? (
                 <details className="group">
-                  <summary className="cursor-pointer list-none px-5 py-3 text-sm font-bold text-brand hover:bg-brand-50 [&::-webkit-details-marker]:hidden">Edit court, pricing & status</summary>
-                  <div className="border-t-2 border-ink/10 p-5">
+                  <summary className="cursor-pointer list-none px-5 py-3 text-sm font-medium text-brand hover:bg-brand-50 [&::-webkit-details-marker]:hidden">Edit court, pricing & status</summary>
+                  <div className="border-t border-line p-5">
                     <CourtForm action={updateCourt.bind(null, c.id)} defaults={c} submitLabel="Save court" />
                   </div>
                 </details>
@@ -82,7 +82,7 @@ export default async function CourtsPage() {
                     <TextField name="closeTime" label="Closes" type="time" defaultValue={minutesToHHMM(settings.closeMinute)} />
                   </div>
                   <fieldset>
-                    <legend className="mb-1.5 text-sm font-bold">Slot durations</legend>
+                    <legend className="mb-1.5 text-sm font-medium">Slot durations</legend>
                     <div className="flex flex-wrap gap-3">
                       {[30, 60, 90, 120].map((d) => (
                         <Checkbox key={d} name="durations" value={d} label={`${d} min`} defaultChecked={settings.durations.includes(d)} />
@@ -90,15 +90,15 @@ export default async function CourtsPage() {
                     </div>
                   </fieldset>
                   <SelectField name="defaultDuration" label="Default duration" defaultValue={String(settings.defaultDuration)} options={[30, 60, 90, 120].map((d) => ({ value: String(d), label: `${d} minutes` }))} />
-                  <div className="rounded-xl border-2 border-ink bg-paper p-3">
-                    <p className="mb-2 flex items-center gap-1.5 text-sm font-extrabold">
+                  <div className="rounded-xl border border-line bg-paper p-3">
+                    <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
                       <Flame className="size-4 text-brand" /> Peak windows
                     </p>
                     <p className="mb-3 text-xs text-muted">Peak rates apply inside these windows; everything else is non-peak. Leave a row empty to remove it.</p>
                     {[0, 1, 2].map((i) => {
                       const w = settings.peakWindows[i];
                       return (
-                        <div key={i} className="mb-3 grid gap-2 border-b-2 border-ink/10 pb-3 last:mb-0 last:border-0 last:pb-0">
+                        <div key={i} className="mb-3 grid gap-2 border-b border-line pb-3 last:mb-0 last:border-0 last:pb-0">
                           <div className="grid grid-cols-[1fr_auto_auto] gap-2">
                             <TextField name={`peak_label_${i}`} label="Label" defaultValue={w?.label ?? ""} placeholder="e.g. Evening peak" />
                             <TextField name={`peak_start_${i}`} label="From" type="time" defaultValue={w ? minutesToHHMM(w.startMinute) : ""} />
@@ -136,7 +136,7 @@ export default async function CourtsPage() {
 
       <section className="mt-8">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold">Maintenance & blocked slots</h2>
+          <h2 className="text-2xl font-semibold">Maintenance & blocked slots</h2>
         </div>
         <div className="grid gap-6 xl:grid-cols-3">
           <div className="xl:col-span-2">
@@ -156,7 +156,7 @@ export default async function CourtsPage() {
                   <tbody>
                     {blocks.map((b) => (
                       <TR key={b.id}>
-                        <TD className="font-bold">{b.court.name}</TD>
+                        <TD className="font-medium">{b.court.name}</TD>
                         <TD>
                           {b.type === "MAINTENANCE" ? (
                             <Badge tone="yellow">

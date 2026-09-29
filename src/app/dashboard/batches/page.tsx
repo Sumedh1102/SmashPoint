@@ -47,7 +47,7 @@ export default async function BatchesPage() {
               {rows.map((b) => (
                 <TR key={b.id} className={b.isActive ? "" : "opacity-60"}>
                   <TD>
-                    <Link href={`/dashboard/batches/${b.id}`} className="font-bold hover:text-brand">
+                    <Link href={`/dashboard/batches/${b.id}`} className="font-medium hover:text-brand">
                       {b.name}
                     </Link>
                     <span className="mt-0.5 flex gap-1.5">
@@ -56,7 +56,7 @@ export default async function BatchesPage() {
                     </span>
                   </TD>
                   <TD className="whitespace-nowrap text-sm">
-                    <span className="font-bold">{formatDays(b.daysOfWeek)}</span>
+                    <span className="font-medium">{formatDays(b.daysOfWeek)}</span>
                     <span className="block text-muted">{formatTimeRange(b.startMinute, b.endMinute)}</span>
                   </TD>
                   <TD className="text-sm">{b.courtName ?? "—"}</TD>
@@ -64,7 +64,7 @@ export default async function BatchesPage() {
                   <TD>
                     <CapacityBar used={b.enrolled} total={b.capacity} />
                   </TD>
-                  <TD className="font-bold">{formatMoney(b.monthlyFee)}/mo</TD>
+                  <TD className="font-medium">{formatMoney(b.monthlyFee)}/mo</TD>
                 </TR>
               ))}
             </tbody>

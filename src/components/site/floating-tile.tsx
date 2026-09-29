@@ -24,10 +24,10 @@ export function FloatingTile({
     yellow: "bg-warning text-ink",
     soft: "bg-brand-100 text-brand-700",
   };
-  const sizes = { sm: "size-11 rounded-xl [&_svg]:size-5", md: "size-14 rounded-2xl [&_svg]:size-6", lg: "size-20 rounded-3xl [&_svg]:size-9" };
+  const sizes = { sm: "size-11 rounded-xl [&_svg]:size-5", md: "size-14 rounded-2xl [&_svg]:size-6", lg: "size-20 rounded-2xl [&_svg]:size-9" };
   return (
     <span
-      className={cn("inline-grid place-items-center border-3 border-ink shadow-brutal", tones[tone], sizes[size], float && "animate-float", className)}
+      className={cn("inline-grid place-items-center border border-line shadow-sm", tones[tone], sizes[size], float && "", className)}
       style={{ rotate: `${rotate}deg`, ["--tw-rotate" as string]: `${rotate}deg` }}
       aria-hidden
     >

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { batchStudents, batches, parents, students } from "@/server/db/schema";
-import { storeImage } from "@/server/media";
+import { deleteAssets, imageFromForm } from "@/server/storage/media";
 import { assertPermission, assertUser } from "@/server/auth/guards";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
@@ -206,9 +206,13 @@ export async function deleteStudent(studentId: string): Promise<ActionResult> {
 
 export async function uploadStudentPhoto(studentId: string, _prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   try {
-    const actor = await assertPermission("students:manage");
-    const url = await storeImage(formData.get("photo") as File, actor.id);
-    await db.update(students).set({ photoUrl: url }).where(eq(students.id, studentId));
+    await assertPermission("students:manage");
+    const [current] = await db.select({ photoUrl: students.photoUrl }).from(students).where(eq(students.id, studentId));
+    if (!current) throw new DomainError("Student not found.", "NOT_FOUND", 404);
+    const image = await imageFromForm(formData, "photo", { url: current.photoUrl });
+    if (!image.changed) return { ok: true, message: "No changes" };
+    await db.update(students).set({ photoUrl: image.url }).where(eq(students.id, studentId));
+    await deleteAssets(image.stale);
     revalidatePath(`/dashboard/students/${studentId}`);
     return { ok: true, message: "Photo updated" };
   } catch (err) {

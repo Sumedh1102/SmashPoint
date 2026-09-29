@@ -56,7 +56,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <section className="border-b-3 border-ink">
+      <section className="border-b border-line">
         <Container className="py-12 md:py-16">
           <Breadcrumbs items={[{ label: "Events", href: "/events" }, { label: event.name }]} />
           <div className="mt-4 flex flex-wrap gap-2">
@@ -64,7 +64,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
             {event.format ? <Badge tone="outline">{event.format.replace("_", " ")}</Badge> : null}
             {spotsLeft !== null && !closedReason ? <Badge tone={spotsLeft <= 10 ? "yellow" : "blue"}>{spotsLeft} spots left</Badge> : null}
           </div>
-          <h1 className="mt-5 max-w-4xl text-5xl font-extrabold leading-[0.92] md:text-7xl">{event.name}</h1>
+          <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-[0.92] md:text-7xl">{event.name}</h1>
           <p className="mt-5 max-w-2xl text-lg text-muted md:text-xl">{event.summary}</p>
         </Container>
       </section>
@@ -72,15 +72,15 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
         <div>
           {sp.payment === "success" ? <div className="mb-6"><FormMessage tone="success">Payment received — your registration is confirmed. Check your email for details.</FormMessage></div> : null}
           {sp.payment === "failed" ? <div className="mb-6"><FormMessage tone="error">Payment didn&apos;t go through. You can try registering again below.</FormMessage></div> : null}
-          <div className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal md:p-8">
-            <h2 className="text-2xl font-extrabold">About this event</h2>
+          <div className="rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-sm md:p-8">
+            <h2 className="text-2xl font-semibold">About this event</h2>
             <div className="mt-4 space-y-4 whitespace-pre-line leading-relaxed text-ink-soft">{event.description}</div>
             {event.divisions.length ? (
               <>
-                <h3 className="mt-8 text-lg font-extrabold">Categories</h3>
+                <h3 className="mt-8 text-lg font-semibold">Categories</h3>
                 <ul className="mt-3 flex flex-wrap gap-2">
                   {event.divisions.map((d) => (
-                    <li key={d} className="rounded-lg border-2 border-ink bg-brand-50 px-2.5 py-1 text-sm font-bold">
+                    <li key={d} className="rounded-lg border border-line bg-brand-50 px-2.5 py-1 text-sm font-medium">
                       {d}
                     </li>
                   ))}
@@ -90,10 +90,10 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
           </div>
         </div>
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-[var(--radius-card)] border-3 border-ink bg-white shadow-brutal-lg">
-            <div className="border-b-3 border-ink bg-brand p-6 text-white">
-              <p className="font-mono text-xs font-bold uppercase tracking-widest text-white/80">Entry fee</p>
-              <p className="font-display text-5xl font-extrabold leading-none">{event.fee ? formatMoney(event.fee) : "Free"}</p>
+          <div className="rounded-[var(--radius-card)] border border-line bg-white shadow-md">
+            <div className="border-b border-line bg-brand p-6 text-white">
+              <p className="font-mono text-xs font-medium uppercase tracking-widest text-white/80">Entry fee</p>
+              <p className="font-display text-5xl font-semibold leading-none">{event.fee ? formatMoney(event.fee) : "Free"}</p>
               {event.registrationDeadline ? <p className="mt-2 text-sm font-semibold text-white/85">Register by {formatDate(event.registrationDeadline, "long")}</p> : null}
             </div>
             <div className="p-6">
@@ -104,7 +104,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ev
                 </p>
               ) : null}
               <div className="my-6 h-[3px] bg-ink" />
-              <h2 className="mb-4 text-xl font-extrabold">Register</h2>
+              <h2 className="mb-4 text-xl font-semibold">Register</h2>
               <EventRegistrationForm
                 eventId={event.id}
                 divisions={event.divisions}

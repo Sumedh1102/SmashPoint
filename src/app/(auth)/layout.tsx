@@ -1,39 +1,51 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { CourtDiagram, Shuttlecock } from "@/components/brand/illustrations";
+import { ArrowLeft, CalendarCheck2, ShieldCheck, Trophy } from "lucide-react";
+import { CourtArt } from "@/components/brand/court-art";
 import { Logo } from "@/components/brand/logo";
 import { site } from "@/content/site";
 
+const POINTS = [
+  { icon: CalendarCheck2, text: "Book badminton, pickleball and basketball courts in real time" },
+  { icon: Trophy, text: "Monthly and quarterly slots for regular players" },
+  { icon: ShieldCheck, text: "Secure payments, instant receipts and reminders" },
+];
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main id="main" className="grid min-h-dvh lg:grid-cols-[1fr_1.1fr]">
-      <section className="grid-paper-blue relative hidden overflow-hidden border-r-3 border-ink p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <Logo inverted />
-        <div>
-          <p className="font-mono text-xs font-bold uppercase tracking-widest text-white/80">Member portal</p>
-          <p className="mt-4 font-display text-6xl font-extrabold leading-[0.92] tracking-tight xl:text-7xl">Your game, all in one place.</p>
-          <p className="mt-5 max-w-md text-lg text-white/85">Bookings, attendance, membership, skill scores and receipts — for players, parents and staff.</p>
+    <main id="main" className="grid min-h-dvh bg-white lg:grid-cols-[1fr_1fr]">
+      <section className="relative hidden overflow-hidden bg-ink p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute inset-0 opacity-25">
+          <CourtArt kind="badminton" />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/85 to-ink/40" />
+        <div className="relative">
+          <Logo inverted />
         </div>
         <div className="relative">
-          <div className="rotate-[-2deg] rounded-2xl border-3 border-ink bg-white p-3 shadow-brutal-lg">
-            <div className="rounded-xl border-3 border-ink bg-brand p-3">
-              <CourtDiagram />
-            </div>
-          </div>
-          <Shuttlecock className="absolute -right-2 -top-8 size-16 rotate-[18deg]" />
+          <h2 className="max-w-md font-display text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">Play. Train. Compete.</h2>
+          <ul className="mt-8 grid max-w-md gap-4">
+            {POINTS.map((p) => (
+              <li key={p.text} className="flex items-start gap-3 text-white/80">
+                <p.icon className="mt-0.5 size-5 shrink-0 text-brand-200" strokeWidth={1.75} />
+                {p.text}
+              </li>
+            ))}
+          </ul>
         </div>
-        <p className="text-sm text-white/70">© {new Date().getFullYear()} {site.name}</p>
+        <p className="relative text-sm text-white/50">
+          © {new Date().getFullYear()} {site.name}
+        </p>
       </section>
-      <section className="flex flex-col px-4 py-8 sm:px-8">
+      <section className="flex flex-col px-4 py-6 sm:px-10">
         <div className="flex items-center justify-between">
           <div className="lg:hidden">
             <Logo />
           </div>
-          <Link href="/" className="ml-auto inline-flex items-center gap-1 text-sm font-bold hover:text-brand">
+          <Link href="/" className="ml-auto inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
             <ArrowLeft className="size-4" /> Back to site
           </Link>
         </div>
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">{children}</div>
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">{children}</div>
       </section>
     </main>
   );

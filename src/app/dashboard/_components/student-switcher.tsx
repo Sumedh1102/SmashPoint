@@ -7,7 +7,7 @@ export function StudentSwitcher({ students, activeId, basePath }: { students: { 
   if (students.length < 2) return null;
   return (
     <div className="mb-6 flex flex-wrap items-center gap-2" role="tablist" aria-label="Choose child">
-      <span className="mr-1 text-sm font-bold text-muted">Viewing</span>
+      <span className="mr-1 text-sm font-medium text-muted">Viewing</span>
       {students.map((s) => (
         <Link
           key={s.id}
@@ -15,8 +15,8 @@ export function StudentSwitcher({ students, activeId, basePath }: { students: { 
           aria-selected={s.id === activeId}
           href={`${basePath}?student=${s.id}`}
           className={cn(
-            "inline-flex items-center gap-2 rounded-xl border-[2.5px] border-ink py-1 pl-1 pr-3 text-sm font-bold transition",
-            s.id === activeId ? "bg-ink text-white shadow-brutal-xs" : "bg-white hover:-translate-y-0.5",
+            "inline-flex items-center gap-2 rounded-xl border border-line py-1 pl-1 pr-3 text-sm font-medium transition",
+            s.id === activeId ? "bg-ink text-white shadow-xs" : "bg-white",
           )}
         >
           <Avatar name={s.name} src={s.photoUrl} size={28} className="rounded-lg" />

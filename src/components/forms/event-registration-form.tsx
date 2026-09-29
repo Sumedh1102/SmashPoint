@@ -41,9 +41,9 @@ export function EventRegistrationForm({
 
   if (state?.ok && !state.data?.checkout) {
     return (
-      <div className="rounded-2xl border-3 border-ink bg-success-soft p-6 text-center">
-        <CircleCheck className="mx-auto size-10 text-success" strokeWidth={2.5} />
-        <p className="mt-3 font-display text-2xl font-extrabold">You&apos;re registered!</p>
+      <div className="rounded-2xl border border-line bg-success-soft p-6 text-center">
+        <CircleCheck className="mx-auto size-10 text-success" />
+        <p className="mt-3 font-display text-2xl font-semibold">You&apos;re registered!</p>
         <p className="mt-1 text-sm">{state.message}</p>
       </div>
     );

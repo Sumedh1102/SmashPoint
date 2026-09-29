@@ -75,9 +75,9 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/dashboa
               <tbody>
                 {result.rows.map((p) => (
                   <TR key={p.id}>
-                    <TD className="font-mono text-sm font-bold">{p.receiptNumber}</TD>
+                    <TD className="font-mono text-sm font-medium">{p.receiptNumber}</TD>
                     <TD className="text-sm">
-                      <span className="font-bold">{p.payerName}</span>
+                      <span className="font-medium">{p.payerName}</span>
                       <span className="block text-muted">{p.payerPhone ?? p.payerEmail ?? ""}</span>
                     </TD>
                     <TD className="text-sm">
@@ -95,7 +95,7 @@ export default async function PaymentsPage({ searchParams }: PageProps<"/dashboa
                     </TD>
                     <TD className="text-sm">{p.provider === "offline" ? titleCase(p.method) : `Online · ${p.provider}`}</TD>
                     <TD className="whitespace-nowrap text-sm">{formatDateTime(p.paidAt ?? p.createdAt)}</TD>
-                    <TD className="font-display font-extrabold">{formatMoney(p.amount)}</TD>
+                    <TD className="font-display font-semibold">{formatMoney(p.amount)}</TD>
                     <TD>
                       <StatusBadge status={p.status} />
                       {p.failureReason && p.status !== "PAID" ? <span className="block max-w-40 truncate text-xs text-muted" title={p.failureReason}>{p.failureReason}</span> : null}

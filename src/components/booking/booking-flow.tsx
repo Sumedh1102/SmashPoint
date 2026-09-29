@@ -126,9 +126,9 @@ export function BookingFlow({
       <div className="min-w-0 space-y-6">
         <StepCard n={1} title="Pick a date & duration">
           <DateStrip today={today} firstDay={firstDay} advanceDays={advanceDays} value={date} onChange={setDate} />
-          <div className="mt-4 flex flex-wrap items-center gap-3 border-t-2 border-ink/10 pt-4">
-            <span className="text-sm font-extrabold">Duration</span>
-            <div role="radiogroup" aria-label="Slot duration" className="inline-flex gap-1 rounded-xl border-[2.5px] border-ink bg-white p-1">
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+            <span className="text-sm font-semibold">Duration</span>
+            <div role="radiogroup" aria-label="Slot duration" className="inline-flex gap-1 rounded-xl border border-line bg-white p-1">
               {durations.map((d) => (
                 <button
                   key={d}
@@ -136,7 +136,7 @@ export function BookingFlow({
                   role="radio"
                   aria-checked={duration === d}
                   onClick={() => setDuration(d)}
-                  className={cn("rounded-lg px-4 py-2 font-display text-sm font-extrabold transition", duration === d ? "bg-ink text-white" : "hover:bg-brand-50")}
+                  className={cn("rounded-lg px-4 py-2 font-display text-sm font-semibold transition", duration === d ? "bg-ink text-white" : "hover:bg-brand-50")}
                 >
                   {formatDuration(d)}
                 </button>
@@ -149,20 +149,20 @@ export function BookingFlow({
           n={2}
           title="Choose court & time"
           action={
-            <button type="button" onClick={() => refresh()} className="inline-flex items-center gap-1.5 rounded-lg border-2 border-ink bg-white px-2.5 py-1 text-xs font-bold hover:bg-paper" aria-label="Refresh availability">
-              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} strokeWidth={2.75} /> Refresh
+            <button type="button" onClick={() => refresh()} className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 py-1 text-xs font-medium hover:bg-paper" aria-label="Refresh availability">
+              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} /> Refresh
             </button>
           }
         >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-semibold text-muted">
-              <span className="font-extrabold text-ink">{formatDate(date, "long")}</span> · {totalFree} open slot{totalFree === 1 ? "" : "s"}
+              <span className="font-semibold text-ink">{formatDate(date, "long")}</span> · {totalFree} open slot{totalFree === 1 ? "" : "s"}
             </p>
             <Legend />
           </div>
           <div className={cn("transition-opacity", loading && "pointer-events-none opacity-50")} aria-busy={loading}>
             {availability.courts.length === 0 ? (
-              <p className="rounded-xl border-2 border-dashed border-ink/40 p-8 text-center font-semibold text-muted">No courts are open for booking right now.</p>
+              <p className="rounded-xl border border-dashed border-line-strong p-8 text-center font-semibold text-muted">No courts are open for booking right now.</p>
             ) : isDesktop ? (
               <SlotGrid availability={availability} selection={selection} onSelect={select} />
             ) : (
@@ -194,11 +194,11 @@ export function BookingFlow({
       </aside>
 
       {/* Mobile sticky bar */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t-3 border-ink bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" data-print-hide>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" data-print-hide>
         {selection && selectedSlot && selectedCourt ? (
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display font-extrabold">
+              <p className="truncate font-display font-semibold">
                 {selectedCourt.courtName} · {formatTimeRange(selectedSlot.startMinute, selectedSlot.endMinute)}
               </p>
               <p className="text-sm font-semibold text-muted">
@@ -210,7 +210,7 @@ export function BookingFlow({
             </Button>
           </div>
         ) : (
-          <p className="py-2 text-center text-sm font-bold text-muted">Tap an open slot to continue</p>
+          <p className="py-2 text-center text-sm font-medium text-muted">Tap an open slot to continue</p>
         )}
       </div>
 
@@ -234,10 +234,10 @@ export function BookingFlow({
 
 function StepCard({ n, title, action, children }: { n: number; title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-4 shadow-brutal sm:p-6" aria-labelledby={`step-${n}`}>
+    <section className="rounded-[var(--radius-card)] border border-line bg-white p-4 shadow-sm sm:p-6" aria-labelledby={`step-${n}`}>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 id={`step-${n}`} className="flex items-center gap-3 text-xl font-extrabold sm:text-2xl">
-          <span className="grid size-8 place-items-center rounded-lg border-2 border-ink bg-brand font-mono text-sm text-white">{n}</span>
+        <h2 id={`step-${n}`} className="flex items-center gap-3 text-xl font-semibold sm:text-2xl">
+          <span className="grid size-8 place-items-center rounded-lg border border-line bg-brand font-mono text-sm text-white">{n}</span>
           {title}
         </h2>
         {action}
@@ -278,25 +278,25 @@ function DateStrip({ today, firstDay, advanceDays, value, onChange }: { today: s
               aria-label={formatDate(d, "long")}
               onClick={() => onChange(d)}
               className={cn(
-                "flex w-[4.5rem] shrink-0 snap-start flex-col items-center rounded-xl border-[2.5px] border-ink py-2.5 transition",
-                active ? "bg-brand text-white shadow-brutal-sm" : "bg-white hover:-translate-y-0.5 hover:bg-brand-50",
+                "flex w-[4.5rem] shrink-0 snap-start flex-col items-center rounded-xl border border-line py-2.5 transition",
+                active ? "bg-brand text-white shadow-xs" : "bg-white hover:bg-brand-50",
               )}
             >
-              <span className={cn("text-[11px] font-extrabold uppercase", !active && weekend && "text-brand")}>
+              <span className={cn("text-[11px] font-semibold uppercase", !active && weekend && "text-brand")}>
                 {offset === 0 ? "Today" : offset === 1 ? "Tmrw" : WEEKDAYS_SHORT[dt.getUTCDay()]}
               </span>
-              <span className="font-display text-2xl font-extrabold leading-tight">{dt.getUTCDate()}</span>
-              <span className="text-[11px] font-bold opacity-70">{monthShort(dt.getUTCMonth())}</span>
+              <span className="font-display text-2xl font-semibold leading-tight">{dt.getUTCDate()}</span>
+              <span className="text-[11px] font-medium opacity-70">{monthShort(dt.getUTCMonth())}</span>
             </button>
           );
         })}
       </div>
       <div className="mt-2 hidden justify-end gap-2 sm:flex">
-        <button type="button" onClick={() => scroll(-1)} className="grid size-8 place-items-center rounded-lg border-2 border-ink bg-white hover:bg-paper" aria-label="Earlier dates">
-          <ChevronLeft className="size-4" strokeWidth={3} />
+        <button type="button" onClick={() => scroll(-1)} className="grid size-8 place-items-center rounded-lg border border-line bg-white hover:bg-paper" aria-label="Earlier dates">
+          <ChevronLeft className="size-4" />
         </button>
-        <button type="button" onClick={() => scroll(1)} className="grid size-8 place-items-center rounded-lg border-2 border-ink bg-white hover:bg-paper" aria-label="Later dates">
-          <ChevronRight className="size-4" strokeWidth={3} />
+        <button type="button" onClick={() => scroll(1)} className="grid size-8 place-items-center rounded-lg border border-line bg-white hover:bg-paper" aria-label="Later dates">
+          <ChevronRight className="size-4" />
         </button>
       </div>
     </div>
@@ -312,10 +312,10 @@ function Legend() {
     { label: "Maintenance", cls: "bg-warning-soft slot-stripes-warn" },
   ];
   return (
-    <ul className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-bold" aria-label="Legend">
+    <ul className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-medium" aria-label="Legend">
       {items.map((i) => (
         <li key={i.label} className="inline-flex items-center gap-1.5">
-          <span className={cn("size-3.5 rounded border-2 border-ink", i.cls)} aria-hidden />
+          <span className={cn("size-3.5 rounded border border-line", i.cls)} aria-hidden />
           {i.label}
         </li>
       ))}
@@ -325,7 +325,7 @@ function Legend() {
 
 function SlotButton({ slot, selected, onClick, compact, courtName }: { slot: Slot; selected: boolean; onClick: () => void; compact?: boolean; courtName: string }) {
   const time = formatTimeRange(slot.startMinute, slot.endMinute);
-  const base = "relative flex w-full flex-col items-center justify-center rounded-xl border-2 text-center transition focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-brand";
+  const base = "relative flex w-full flex-col items-center justify-center rounded-xl border text-center transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand";
   const size = compact ? "h-14 px-1" : "min-h-[4.25rem] px-2 py-2";
 
   if (slot.state === "AVAILABLE") {
@@ -338,12 +338,12 @@ function SlotButton({ slot, selected, onClick, compact, courtName }: { slot: Slo
         className={cn(
           base,
           size,
-          "border-ink",
-          selected ? "bg-brand text-white shadow-brutal-sm -translate-x-0.5 -translate-y-0.5" : "bg-white hover:-translate-y-0.5 hover:bg-brand-50 hover:shadow-brutal-xs",
+          "border-line",
+          selected ? "bg-brand text-white shadow-xs -translate-x-0.5 -translate-y-0.5" : "bg-white hover:bg-brand-50 hover:shadow-xs",
         )}
       >
-        {!compact ? <span className={cn("text-sm font-extrabold", selected ? "text-white" : "text-ink")}>{formatMinutes(slot.startMinute)}</span> : null}
-        <span className={cn("font-display font-extrabold leading-tight", compact ? "text-[15px]" : "text-xs", selected ? "text-white/90" : "text-muted")}>
+        {!compact ? <span className={cn("text-sm font-semibold", selected ? "text-white" : "text-ink")}>{formatMinutes(slot.startMinute)}</span> : null}
+        <span className={cn("font-display font-semibold leading-tight", compact ? "text-[15px]" : "text-xs", selected ? "text-white/90" : "text-muted")}>
           {selected ? (
             <span className="inline-flex items-center gap-1">
               <Check className="size-3.5" strokeWidth={4} /> {compact ? formatMoney(slot.price) : "Selected"}
@@ -353,7 +353,7 @@ function SlotButton({ slot, selected, onClick, compact, courtName }: { slot: Slo
           )}
         </span>
         {slot.isPeak ? (
-          <Flame className={cn("absolute right-1.5 top-1.5 size-3.5", selected ? "text-white" : "text-brand")} strokeWidth={2.75} aria-hidden />
+          <Flame className={cn("absolute right-1.5 top-1.5 size-3.5", selected ? "text-white" : "text-brand")} aria-hidden />
         ) : null}
       </button>
     );
@@ -369,15 +369,15 @@ function SlotButton({ slot, selected, onClick, compact, courtName }: { slot: Slo
       className={cn(
         base,
         size,
-        slot.state === "BOOKED" && "slot-stripes border-ink/30 bg-paper-2 text-muted",
-        slot.state === "MAINTENANCE" && "slot-stripes-warn border-ink/40 bg-warning-soft text-[#7a5200]",
-        (slot.state === "TRAINING" || slot.state === "BLOCKED") && "border-dashed border-ink/40 bg-ink/5 text-muted",
-        slot.state === "PAST" && "border-ink/10 bg-transparent text-subtle",
+        slot.state === "BOOKED" && "slot-stripes border-line-strong bg-paper-2 text-muted",
+        slot.state === "MAINTENANCE" && "slot-stripes-warn border-line-strong bg-warning-soft text-[#7a5200]",
+        (slot.state === "TRAINING" || slot.state === "BLOCKED") && "border-dashed border-line-strong bg-ink/5 text-muted",
+        slot.state === "PAST" && "border-line bg-transparent text-subtle",
       )}
     >
-      {!compact ? <span className="text-sm font-bold opacity-70">{formatMinutes(slot.startMinute)}</span> : null}
-      <span className="inline-flex items-center gap-1 text-xs font-extrabold uppercase tracking-wide">
-        {slot.state === "MAINTENANCE" ? <Wrench className="size-3" strokeWidth={3} /> : slot.state === "TRAINING" || slot.state === "BLOCKED" ? <LockKeyhole className="size-3" strokeWidth={3} /> : null}
+      {!compact ? <span className="text-sm font-medium opacity-70">{formatMinutes(slot.startMinute)}</span> : null}
+      <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide">
+        {slot.state === "MAINTENANCE" ? <Wrench className="size-3" /> : slot.state === "TRAINING" || slot.state === "BLOCKED" ? <LockKeyhole className="size-3" /> : null}
         {label}
       </span>
     </div>
@@ -398,15 +398,15 @@ function SlotGrid({ availability, selection, onSelect }: { availability: Availab
         {availability.courts.map((c) => {
           const maint = inMaintenance(c);
           return (
-            <div key={c.courtId} className={cn("rounded-xl border-2 border-ink px-2 py-2 text-center", maint ? "bg-warning-soft" : "bg-ink text-white")} role="columnheader">
-              <p className="font-display font-extrabold leading-tight">{c.courtName}</p>
-              <p className={cn("text-[11px] font-bold", maint ? "text-ink" : "text-white/70")}>{maint ? "Maintenance" : `${c.availableCount} open`}</p>
+            <div key={c.courtId} className={cn("rounded-xl border border-line px-2 py-2 text-center", maint ? "bg-warning-soft" : "bg-ink text-white")} role="columnheader">
+              <p className="font-display font-semibold leading-tight">{c.courtName}</p>
+              <p className={cn("text-[11px] font-medium", maint ? "text-ink" : "text-white/70")}>{maint ? "Maintenance" : `${c.availableCount} open`}</p>
             </div>
           );
         })}
         {availability.times.map((t, row) => (
           <div key={t.startMinute} className="contents" role="row">
-            <div className="flex flex-col justify-center pr-1 text-right font-mono text-xs font-bold text-muted" role="rowheader">
+            <div className="flex flex-col justify-center pr-1 text-right font-mono text-xs font-medium text-muted" role="rowheader">
               <span className="text-ink">{formatMinutes24(t.startMinute)}</span>
               <span>{formatMinutes24(t.endMinute)}</span>
             </div>
@@ -457,12 +457,12 @@ function SlotList({
             aria-selected={c.courtId === active.courtId}
             onClick={() => onCourt(c.courtId)}
             className={cn(
-              "shrink-0 rounded-xl border-[2.5px] border-ink px-3.5 py-2 text-left transition",
+              "shrink-0 rounded-xl border border-line px-3.5 py-2 text-left transition",
               c.courtId === active.courtId ? "bg-ink text-white" : inMaintenance(c) ? "bg-warning-soft" : "bg-white",
             )}
           >
-            <span className="block font-display font-extrabold leading-tight">{c.courtName}</span>
-            <span className="text-[11px] font-bold opacity-75">{inMaintenance(c) ? "Maintenance" : `${c.availableCount} open`}</span>
+            <span className="block font-display font-semibold leading-tight">{c.courtName}</span>
+            <span className="text-[11px] font-medium opacity-75">{inMaintenance(c) ? "Maintenance" : `${c.availableCount} open`}</span>
           </button>
         ))}
       </div>
@@ -503,10 +503,10 @@ function SummaryCard({
   holdMinutes: number;
 }) {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-card)] border-3 border-ink bg-white shadow-brutal-lg">
-      <div className="grid-paper-blue border-b-3 border-ink px-5 py-4 text-white">
-        <p className="font-mono text-xs font-bold uppercase tracking-widest text-white/80">Your booking</p>
-        <p className="font-display text-2xl font-extrabold">{slot && courtName ? courtName : "Select a slot"}</p>
+    <div className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-white shadow-md">
+      <div className="bg-brand border-b border-line px-5 py-4 text-white">
+        <p className="font-mono text-xs font-medium uppercase tracking-widest text-white/80">Your booking</p>
+        <p className="font-display text-2xl font-semibold">{slot && courtName ? courtName : "Select a slot"}</p>
       </div>
       {slot && courtName ? (
         <div className="p-5">
@@ -521,14 +521,14 @@ function SummaryCard({
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4">
                     <dt className="font-semibold text-muted">{k}</dt>
-                    <dd className="text-right font-bold">{v}</dd>
+                    <dd className="text-right font-medium">{v}</dd>
                   </div>
                 ))}
               </dl>
               <div className="my-4 h-[3px] bg-ink" />
               <div className="flex items-end justify-between">
-                <span className="font-bold">Total</span>
-                <span className="font-display text-4xl font-extrabold leading-none">{formatMoney(slot.price)}</span>
+                <span className="font-medium">Total</span>
+                <span className="font-display text-4xl font-semibold leading-none">{formatMoney(slot.price)}</span>
               </div>
               <Button size="lg" className="mt-5 w-full" onClick={onContinue}>
                 Continue <ArrowRight className="size-4" />
@@ -539,10 +539,10 @@ function SummaryCard({
             </>
           ) : (
             <>
-              <button type="button" onClick={onBack} className="mb-4 inline-flex items-center gap-1 text-sm font-bold hover:text-brand">
+              <button type="button" onClick={onBack} className="mb-4 inline-flex items-center gap-1 text-sm font-medium hover:text-brand">
                 <ArrowLeft className="size-4" /> Change slot
               </button>
-              <p className="mb-4 rounded-xl border-2 border-ink bg-brand-50 px-3 py-2 text-sm font-bold">
+              <p className="mb-4 rounded-xl border border-line bg-brand-50 px-3 py-2 text-sm font-medium">
                 {formatDate(date, "weekday")} · {formatTimeRange(slot.startMinute, slot.endMinute)}
               </p>
               {details}
@@ -551,8 +551,8 @@ function SummaryCard({
         </div>
       ) : (
         <div className="flex flex-col items-center px-6 py-10 text-center">
-          <Shuttlecock className="size-16 -rotate-12" />
-          <p className="mt-4 font-display text-lg font-extrabold">Tap an open slot</p>
+          <Shuttlecock className="size-16" />
+          <p className="mt-4 font-display text-lg font-semibold">Tap an open slot</p>
           <p className="mt-1 text-sm text-muted">Pick any white tile in the grid. Peak slots are marked with a flame.</p>
         </div>
       )}
@@ -681,8 +681,8 @@ function DetailsForm({
         <Input id="b-email" name="email" type="email" defaultValue={user?.email} autoComplete="email" required aria-invalid={!!errors.email} />
       </Field>
 
-      <details className="group rounded-xl border-2 border-ink bg-paper px-3 py-2 [&_summary::-webkit-details-marker]:hidden" open={!!appliedCoupon}>
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-bold">
+      <details className="group rounded-xl border border-line bg-paper px-3 py-2 [&_summary::-webkit-details-marker]:hidden" open={!!appliedCoupon}>
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium">
           <BadgePercent className="size-4 text-brand" /> Have a coupon code?
         </summary>
         <div className="mt-2 flex gap-2 pb-1">
@@ -693,26 +693,26 @@ function DetailsForm({
         </div>
       </details>
 
-      <div className="rounded-xl border-2 border-ink p-3 text-sm">
+      <div className="rounded-xl border border-line p-3 text-sm">
         <div className="flex justify-between">
           <span className="font-semibold text-muted">Court fee</span>
-          <span className="font-bold">{formatMoney(quote?.subtotal ?? slot.price)}</span>
+          <span className="font-medium">{formatMoney(quote?.subtotal ?? slot.price)}</span>
         </div>
         {quote?.memberDiscount ? (
           <div className="flex justify-between text-success">
             <span className="font-semibold">Member discount</span>
-            <span className="font-bold">−{formatMoney(quote.memberDiscount)}</span>
+            <span className="font-medium">−{formatMoney(quote.memberDiscount)}</span>
           </div>
         ) : null}
         {quote?.couponDiscount ? (
           <div className="flex justify-between text-success">
             <span className="font-semibold">Coupon {appliedCoupon}</span>
-            <span className="font-bold">−{formatMoney(quote.couponDiscount)}</span>
+            <span className="font-medium">−{formatMoney(quote.couponDiscount)}</span>
           </div>
         ) : null}
-        <div className="mt-2 flex items-end justify-between border-t-2 border-ink/15 pt-2">
-          <span className="font-extrabold">To pay</span>
-          <span className="font-display text-3xl font-extrabold leading-none">{formatMoney(total)}</span>
+        <div className="mt-2 flex items-end justify-between border-t border-line pt-2">
+          <span className="font-semibold">To pay</span>
+          <span className="font-display text-3xl font-semibold leading-none">{formatMoney(total)}</span>
         </div>
       </div>
 

@@ -49,7 +49,7 @@ export default async function MembershipPage() {
         <p className="mt-8 text-center text-sm font-semibold text-muted">Prices include taxes. Sign in or create an account to purchase — parents can buy for their children.</p>
       </Section>
 
-      <Section className="border-y-3 border-ink bg-white/70">
+      <Section className="border-y border-line bg-white/70">
         <SectionHeading index="01" eyebrow="Every membership includes" title="The admin handles itself." />
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[
@@ -58,11 +58,11 @@ export default async function MembershipPage() {
             { icon: RefreshCw, title: "One-tap renewal", body: "Renew online; the new term starts right after the current one ends." },
             { icon: BadgePercent, title: "Member pricing", body: "Up to 15% off court bookings and member rates on events." },
           ].map((f) => (
-            <div key={f.title} className="rounded-[var(--radius-card)] border-3 border-ink bg-white p-6 shadow-brutal">
-              <span className="grid size-12 place-items-center rounded-xl border-2 border-ink bg-brand text-white">
-                <f.icon className="size-6" strokeWidth={2.5} />
+            <div key={f.title} className="rounded-[var(--radius-card)] border border-line bg-white p-6 shadow-sm">
+              <span className="grid size-12 place-items-center rounded-xl border border-line bg-brand text-white">
+                <f.icon className="size-6" />
               </span>
-              <h3 className="mt-4 text-xl font-extrabold">{f.title}</h3>
+              <h3 className="mt-4 text-xl font-semibold">{f.title}</h3>
               <p className="mt-1.5 text-sm text-muted">{f.body}</p>
             </div>
           ))}

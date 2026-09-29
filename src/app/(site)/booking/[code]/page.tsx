@@ -35,9 +35,9 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
   if (!booking) {
     return (
       <Container className="py-20">
-        <div className="mx-auto max-w-lg rounded-[var(--radius-card)] border-3 border-ink bg-white p-8 text-center shadow-brutal-lg">
-          <TriangleAlert className="mx-auto size-10 text-warning" strokeWidth={2.5} />
-          <h1 className="mt-4 text-3xl font-extrabold">Booking not found</h1>
+        <div className="mx-auto max-w-lg rounded-[var(--radius-card)] border border-line bg-white p-8 text-center shadow-md">
+          <TriangleAlert className="mx-auto size-10 text-warning" />
+          <h1 className="mt-4 text-3xl font-semibold">Booking not found</h1>
           <p className="mt-2 text-muted">This link is invalid or has expired. Sign in to see bookings made with your account, or use the link from your confirmation message.</p>
           <div className="mt-6 flex justify-center gap-2">
             <ButtonLink href="/login?next=/dashboard/bookings" icon={<LogIn className="size-4" />}>
@@ -72,15 +72,15 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
 
         <div
           className={cn(
-            "flex flex-col gap-4 rounded-[var(--radius-card)] border-3 border-ink p-6 shadow-brutal-lg sm:flex-row sm:items-center md:p-8",
+            "flex flex-col gap-4 rounded-[var(--radius-card)] border border-line p-6 shadow-md sm:flex-row sm:items-center md:p-8",
             confirmed ? "bg-brand text-white" : closed ? "bg-paper-2" : "bg-warning-soft",
           )}
         >
-          <span className={cn("grid size-16 shrink-0 place-items-center rounded-2xl border-3 border-ink", confirmed ? "bg-white text-brand" : "bg-white")}>
-            {confirmed ? <CircleCheck className="size-9" strokeWidth={2.5} /> : closed ? <XCircle className="size-9 text-danger" strokeWidth={2.5} /> : <Clock className="size-9" strokeWidth={2.5} />}
+          <span className={cn("grid size-16 shrink-0 place-items-center rounded-2xl border border-line", confirmed ? "bg-white text-brand" : "bg-white")}>
+            {confirmed ? <CircleCheck className="size-9" /> : closed ? <XCircle className="size-9 text-danger" /> : <Clock className="size-9" />}
           </span>
           <div className="flex-1">
-            <h1 className="text-3xl font-extrabold leading-tight md:text-4xl">
+            <h1 className="text-3xl font-semibold leading-tight md:text-4xl">
               {confirmed ? "You're booked!" : awaitingPayment ? (holdActive ? "Complete your payment" : "Hold expired") : `Booking ${LABELS[booking.status]?.toLowerCase()}`}
             </h1>
             <p className={cn("mt-1 font-semibold", confirmed ? "text-white/85" : "text-ink-soft")}>
@@ -94,8 +94,8 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
             </p>
           </div>
           {awaitingPayment && holdActive && booking.holdExpiresAt ? (
-            <div className="rounded-xl border-2 border-ink bg-white px-4 py-2 text-center">
-              <p className="text-xs font-bold uppercase text-muted">Hold ends in</p>
+            <div className="rounded-xl border border-line bg-white px-4 py-2 text-center">
+              <p className="text-xs font-medium uppercase text-muted">Hold ends in</p>
               <p className="text-2xl">
                 <HoldCountdown expiresAt={booking.holdExpiresAt.toISOString()} />
               </p>
@@ -103,11 +103,11 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
           ) : null}
         </div>
 
-        <article className="mt-8 overflow-hidden rounded-[var(--radius-card)] border-3 border-ink bg-white shadow-brutal">
-          <header className="flex flex-wrap items-center justify-between gap-3 border-b-3 border-ink bg-paper px-6 py-4">
+        <article className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-line bg-white shadow-sm">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-6 py-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-muted">Booking ID</p>
-              <p className="font-mono text-2xl font-bold">{booking.code}</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted">Booking ID</p>
+              <p className="font-mono text-2xl font-medium">{booking.code}</p>
             </div>
             <StatusBadge status={booking.status} />
           </header>
@@ -121,28 +121,28 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
                 ["Name", booking.customerName],
                 ["Phone", booking.customerPhone],
               ].map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-4 border-b-2 border-ink/5 pb-2">
+                <div key={k} className="flex justify-between gap-4 border-b border-line pb-2">
                   <dt className="font-semibold text-muted">{k}</dt>
-                  <dd className="text-right font-bold">{v}</dd>
+                  <dd className="text-right font-medium">{v}</dd>
                 </div>
               ))}
             </dl>
-            <div className="rounded-2xl border-2 border-ink p-4">
-              <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-muted">Payment</p>
+            <div className="rounded-2xl border border-line p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Payment</p>
               <dl className="grid gap-2 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-muted">Court fee</dt>
-                  <dd className="font-bold">{formatMoney(booking.subtotal)}</dd>
+                  <dd className="font-medium">{formatMoney(booking.subtotal)}</dd>
                 </div>
                 {booking.discount ? (
                   <div className="flex justify-between text-success">
                     <dt>Discount</dt>
-                    <dd className="font-bold">−{formatMoney(booking.discount)}</dd>
+                    <dd className="font-medium">−{formatMoney(booking.discount)}</dd>
                   </div>
                 ) : null}
-                <div className="flex items-end justify-between border-t-2 border-ink/15 pt-2">
-                  <dt className="font-extrabold">Amount</dt>
-                  <dd className="font-display text-3xl font-extrabold leading-none">{formatMoney(booking.total)}</dd>
+                <div className="flex items-end justify-between border-t border-line pt-2">
+                  <dt className="font-semibold">Amount</dt>
+                  <dd className="font-display text-3xl font-semibold leading-none">{formatMoney(booking.total)}</dd>
                 </div>
                 <div className="mt-2 flex justify-between">
                   <dt className="text-muted">Payment status</dt>
@@ -152,16 +152,16 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
                   <>
                     <div className="flex justify-between">
                       <dt className="text-muted">Receipt no.</dt>
-                      <dd className="font-mono font-bold">{payment.receiptNumber}</dd>
+                      <dd className="font-mono font-medium">{payment.receiptNumber}</dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted">Method</dt>
-                      <dd className="font-bold">{payment.provider === "offline" ? titleCase(payment.method) : `Online · ${payment.provider}`}</dd>
+                      <dd className="font-medium">{payment.provider === "offline" ? titleCase(payment.method) : `Online · ${payment.provider}`}</dd>
                     </div>
                     {payment.paidAt ? (
                       <div className="flex justify-between">
                         <dt className="text-muted">Paid at</dt>
-                        <dd className="font-bold">{formatDateTime(payment.paidAt)}</dd>
+                        <dd className="font-medium">{formatDateTime(payment.paidAt)}</dd>
                       </div>
                     ) : null}
                   </>
@@ -170,14 +170,14 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
             </div>
           </div>
 
-          <div className="border-t-3 border-ink px-6 py-5">
-            <p className="mb-4 text-xs font-extrabold uppercase tracking-wider text-muted">Booking lifecycle</p>
+          <div className="border-t border-line px-6 py-5">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted">Booking lifecycle</p>
             <ol className="grid gap-3 sm:grid-cols-4">
               {LIFECYCLE.map((s, i) => {
                 const at = reached.get(s);
                 return (
-                  <li key={s} className={cn("relative rounded-xl border-2 px-3 py-2", at ? "border-ink bg-brand-50" : "border-dashed border-ink/30 text-muted")}>
-                    <p className="flex items-center gap-1.5 text-sm font-extrabold">
+                  <li key={s} className={cn("relative rounded-xl border px-3 py-2", at ? "border-line bg-brand-50" : "border-dashed border-line-strong text-muted")}>
+                    <p className="flex items-center gap-1.5 text-sm font-semibold">
                       <span className={cn("grid size-5 place-items-center rounded-md text-[11px]", at ? "bg-brand text-white" : "bg-ink/10")}>{i + 1}</span>
                       {LABELS[s]}
                     </p>
@@ -191,8 +191,8 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
                 {(["CANCELLED", "REFUNDED", "EXPIRED"] as const)
                   .filter((s) => reached.has(s))
                   .map((s) => (
-                    <li key={s} className="rounded-xl border-2 border-ink bg-danger-soft px-3 py-2">
-                      <p className="text-sm font-extrabold">{LABELS[s]}</p>
+                    <li key={s} className="rounded-xl border border-line bg-danger-soft px-3 py-2">
+                      <p className="text-sm font-semibold">{LABELS[s]}</p>
                       <p className="text-xs font-semibold">{formatDateTime(reached.get(s)!)}</p>
                     </li>
                   ))}
@@ -209,7 +209,7 @@ export default async function BookingReceiptPage({ params, searchParams }: PageP
           ) : (
             <span />
           )}
-          <Link href="/book" className="inline-flex items-center gap-1 font-bold hover:text-brand" data-print-hide>
+          <Link href="/book" className="inline-flex items-center gap-1 font-medium hover:text-brand" data-print-hide>
             Book another slot <ArrowRight className="size-4" />
           </Link>
         </div>

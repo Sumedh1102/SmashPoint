@@ -43,21 +43,21 @@ export function MockCheckout({ paymentId, amountLabel }: { paymentId: string; am
             role="radio"
             aria-checked={method === m.id}
             onClick={() => setMethod(m.id)}
-            className={cn("flex flex-col items-center gap-1 rounded-xl border-2 border-ink py-3 text-sm font-bold transition", method === m.id ? "bg-ink text-white" : "bg-white hover:bg-paper")}
+            className={cn("flex flex-col items-center gap-1 rounded-xl border border-line py-3 text-sm font-medium transition", method === m.id ? "bg-ink text-white" : "bg-white hover:bg-paper")}
           >
-            <m.icon className="size-5" strokeWidth={2.5} />
+            <m.icon className="size-5" />
             {m.label}
           </button>
         ))}
       </div>
-      <p className="mt-3 rounded-xl border-2 border-dashed border-ink/40 bg-paper px-3 py-2 font-mono text-xs font-bold text-muted">
+      <p className="mt-3 rounded-xl border border-dashed border-line-strong bg-paper px-3 py-2 font-mono text-xs font-medium text-muted">
         Test details: {METHODS.find((m) => m.id === method)!.hint}
       </p>
       <button
         type="button"
         disabled={!!busy}
         onClick={() => complete("success")}
-        className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl border-[2.5px] border-ink bg-success font-display text-lg font-extrabold text-white shadow-brutal-sm transition hover:-translate-y-0.5 hover:shadow-brutal disabled:opacity-60"
+        className="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-line bg-success font-display text-lg font-semibold text-white shadow-xs transition hover:shadow-sm disabled:opacity-60"
       >
         {busy === "success" ? <LoaderCircle className="size-5 animate-spin" /> : <ShieldCheck className="size-5" />}
         Pay {amountLabel}
@@ -66,7 +66,7 @@ export function MockCheckout({ paymentId, amountLabel }: { paymentId: string; am
         type="button"
         disabled={!!busy}
         onClick={() => complete("failure")}
-        className="mt-3 w-full rounded-xl py-2 text-sm font-bold text-danger hover:bg-danger-soft disabled:opacity-60"
+        className="mt-3 w-full rounded-xl py-2 text-sm font-medium text-danger hover:bg-danger-soft disabled:opacity-60"
       >
         {busy === "failure" ? "Declining…" : "Simulate a failed payment"}
       </button>

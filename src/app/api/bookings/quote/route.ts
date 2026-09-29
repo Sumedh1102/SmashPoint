@@ -1,32 +1,36 @@
-import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { db } from "@/server/db";
-import { courts } from "@/server/db/schema";
 import { getCurrentUser } from "@/server/auth/guards";
-import { DomainError } from "@/server/errors";
 import { errorResponse, json, readJson } from "@/server/http";
-import { quoteBooking } from "@/server/services/bookings";
-import { getBookingSettings } from "@/server/settings";
-import { isoDate, uuid } from "@/lib/validation";
+import { quoteReservation, quoteSeriesPlan } from "@/server/services/bookings";
+import { bookingPlanSchema } from "@/lib/validation";
 
-const schema = z.object({
-  courtId: uuid,
-  date: isoDate,
-  startMinute: z.number().int().min(0).max(1439),
-  duration: z.number().int().min(30).max(240),
-  couponCode: z.string().trim().max(30).optional(),
-});
-
+/** Prices the review step: court, discounts, equipment and total (single or recurring). */
 export async function POST(req: Request) {
   try {
-    const input = schema.parse(await readJson(req));
-    const [settings, user] = await Promise.all([getBookingSettings(), getCurrentUser()]);
-    const [court] = await db.select().from(courts).where(eq(courts.id, input.courtId)).limit(1);
-    if (!court) throw new DomainError("Court not found.", "NOT_FOUND", 404);
-    const endMinute = input.startMinute + input.duration;
-    if (input.startMinute < settings.openMinute || endMinute > settings.closeMinute) throw new DomainError("Outside operating hours.");
-    const quote = await quoteBooking(db, { court, date: input.date, startMinute: input.startMinute, endMinute, userId: user?.id, couponCode: input.couponCode }, settings);
-    return json(quote);
+    const input = bookingPlanSchema.parse(await readJson(req));
+    const user = await getCurrentUser();
+    if (input.type === "SINGLE") {
+      const quote = await quoteReservation({
+        courtId: input.courtId,
+        date: input.date,
+        startMinute: input.startMinute,
+        duration: input.duration,
+        userId: user?.id,
+        couponCode: input.couponCode,
+        equipment: input.equipment,
+      });
+      return json({ type: "SINGLE" as const, ...quote });
+    }
+    const plan = await quoteSeriesPlan({
+      type: input.type,
+      courtId: input.courtId,
+      startDate: input.date,
+      daysOfWeek: input.daysOfWeek,
+      startMinute: input.startMinute,
+      duration: input.duration,
+      userId: user?.id,
+      equipment: input.equipment,
+    });
+    return json(plan);
   } catch (err) {
     return errorResponse(err);
   }

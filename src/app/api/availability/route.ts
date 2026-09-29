@@ -1,14 +1,21 @@
 import type { NextRequest } from "next/server";
-import { getAvailability } from "@/server/services/bookings";
+import { z } from "zod";
+import { getDayAvailability } from "@/server/services/bookings";
 import { errorResponse, json } from "@/server/http";
-import { isValidISODate } from "@/lib/time";
+import { isoDate, uuid } from "@/lib/validation";
 
+const schema = z.object({
+  date: isoDate,
+  duration: z.coerce.number().int().min(30).max(240).default(60),
+  sport: uuid.optional(),
+  court: uuid.optional(),
+});
+
+/** Slot grid for one day: every court of a sport, or a single court. */
 export async function GET(req: NextRequest) {
   try {
-    const date = req.nextUrl.searchParams.get("date") ?? "";
-    const duration = Number(req.nextUrl.searchParams.get("duration") ?? 60);
-    if (!isValidISODate(date)) return json({ error: "Invalid date" }, { status: 400 });
-    return json(await getAvailability(date, Number.isFinite(duration) ? duration : 60));
+    const q = schema.parse(Object.fromEntries(req.nextUrl.searchParams));
+    return json(await getDayAvailability({ date: q.date, duration: q.duration, sportId: q.sport, courtId: q.court }));
   } catch (err) {
     return errorResponse(err);
   }

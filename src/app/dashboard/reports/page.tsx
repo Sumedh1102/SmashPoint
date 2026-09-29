@@ -20,7 +20,7 @@ function ExportLinks({ report, from, to, period }: { report: string; from: strin
   return (
     <span className="flex gap-1.5">
       {(["csv", "xlsx"] as const).map((f) => (
-        <Link key={f} prefetch={false} href={hrefWith("/api/reports/export", {}, { report, from, to, period, format: f })} className="inline-flex items-center gap-1 rounded-lg border-2 border-ink bg-white px-2 py-1 text-xs font-extrabold uppercase hover:bg-brand-50">
+        <Link key={f} prefetch={false} href={hrefWith("/api/reports/export", {}, { report, from, to, period, format: f })} className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2 py-1 text-xs font-semibold uppercase hover:bg-brand-50">
           <Download className="size-3.5" /> {f === "csv" ? "CSV" : "Excel"}
         </Link>
       ))}
@@ -45,7 +45,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/dashboar
       <PageHeader title="Reports & analytics" description={`${formatDate(from)} – ${formatDate(to)}`} />
       <div className="mb-3 flex flex-wrap gap-2">
         {PERIODS.map((p) => (
-          <Link key={p} href={hrefWith("/dashboard/reports", {}, { period: p })} className={p === period ? "rounded-lg border-2 border-ink bg-ink px-3 py-1.5 text-sm font-bold text-white" : "rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold hover:bg-brand-50"}>
+          <Link key={p} href={hrefWith("/dashboard/reports", {}, { period: p })} className={p === period ? "rounded-lg border border-line bg-ink px-3 py-1.5 text-sm font-medium text-white" : "rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-brand-50"}>
             {titleCase(p)}
           </Link>
         ))}
@@ -76,7 +76,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/dashboar
       </section>
 
       {/* Bookings */}
-      <h2 className="mb-4 mt-10 flex items-center justify-between text-2xl font-extrabold">
+      <h2 className="mb-4 mt-10 flex items-center justify-between text-2xl font-semibold">
         Bookings <ExportLinks report="bookings" from={from} to={to} />
       </h2>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -103,7 +103,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/dashboar
       </div>
 
       {/* Students */}
-      <h2 className="mb-4 mt-10 flex items-center justify-between text-2xl font-extrabold">
+      <h2 className="mb-4 mt-10 flex items-center justify-between text-2xl font-semibold">
         Students <ExportLinks report="students" from={from} to={to} />
       </h2>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -128,7 +128,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/dashboar
       </div>
 
       {/* Coaches */}
-      <h2 className="mb-4 mt-10 flex items-center justify-between text-2xl font-extrabold">
+      <h2 className="mb-4 mt-10 flex items-center justify-between text-2xl font-semibold">
         Coaches <ExportLinks report="coaches" from={from} to={to} />
       </h2>
       <TableWrap>
@@ -147,14 +147,14 @@ export default async function ReportsPage({ searchParams }: PageProps<"/dashboar
             {coaches.map((c) => (
               <TR key={c.id}>
                 <TD>
-                  <span className="font-bold">{c.name}</span>
+                  <span className="font-medium">{c.name}</span>
                   <span className="block text-xs text-muted">{c.title}</span>
                 </TD>
-                <TD className="font-bold">{c.batches}</TD>
-                <TD className="font-bold">{c.sessions}</TD>
-                <TD className="font-bold">{c.studentsAssigned}</TD>
-                <TD className="font-bold">{c.attendanceHandled}</TD>
-                <TD className="font-bold">{c.counted ? `${Math.round((c.attended / c.counted) * 100)}%` : "—"}</TD>
+                <TD className="font-medium">{c.batches}</TD>
+                <TD className="font-medium">{c.sessions}</TD>
+                <TD className="font-medium">{c.studentsAssigned}</TD>
+                <TD className="font-medium">{c.attendanceHandled}</TD>
+                <TD className="font-medium">{c.counted ? `${Math.round((c.attended / c.counted) * 100)}%` : "—"}</TD>
               </TR>
             ))}
           </tbody>

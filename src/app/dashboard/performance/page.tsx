@@ -55,7 +55,7 @@ export default async function PerformancePage() {
                 return (
                   <TR key={r.id}>
                     <TD>
-                      <Link href={`/dashboard/performance/${r.id}`} className="flex items-center gap-3 font-bold hover:text-brand">
+                      <Link href={`/dashboard/performance/${r.id}`} className="flex items-center gap-3 font-medium hover:text-brand">
                         <Avatar name={r.name} src={r.photoUrl} size={34} />
                         <span>
                           {r.name}
@@ -64,7 +64,7 @@ export default async function PerformancePage() {
                       </Link>
                     </TD>
                     <TD className="text-sm">{titleCase(r.level)}</TD>
-                    <TD className="font-display text-lg font-extrabold">{r.average ?? "—"}<span className="text-xs text-muted">{r.average ? "/10" : ""}</span></TD>
+                    <TD className="font-display text-lg font-semibold">{r.average ?? "—"}<span className="text-xs text-muted">{r.average ? "/10" : ""}</span></TD>
                     <TD className="text-sm">{r.assessments}</TD>
                     <TD className="text-sm">
                       {r.lastAssessed ? formatDate(r.lastAssessed) : "Never"} {isDue ? <Badge tone="yellow" className="ml-1">Due</Badge> : null}

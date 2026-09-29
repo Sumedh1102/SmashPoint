@@ -6,11 +6,10 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { coupons, sessions, users } from "@/server/db/schema";
 import { assertPermission } from "@/server/auth/guards";
-import { hashPassword } from "@/server/auth/password";
 import { audit } from "@/server/audit";
 import { DomainError, isUniqueViolation } from "@/server/errors";
 import { saveSetting } from "@/server/settings";
-import { emailSchema, nameSchema, passwordSchema, phoneSchema } from "@/lib/validation";
+import { emailSchema, nameSchema, phoneSchema } from "@/lib/validation";
 import { formObject, toActionError, type ActionResult } from "./result";
 
 const on = (v: FormDataEntryValue | null) => v === "on";
@@ -93,33 +92,3 @@ export async function toggleCoupon(id: string, active: boolean): Promise<ActionR
   }
 }
 
-export async function createStaff(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  try {
-    const actor = await assertPermission("staff:manage");
-    const input = z
-      .object({ name: nameSchema, email: emailSchema, phone: phoneSchema, role: z.enum(["ADMIN", "MANAGER", "RECEPTION"]), password: passwordSchema })
-      .parse(formObject(formData));
-    const [exists] = await db.select({ id: users.id }).from(users).where(eq(sql`lower(${users.email})`, input.email)).limit(1);
-    if (exists) return { ok: false, error: "Email already in use.", fieldErrors: { email: ["Already in use"] } };
-    await db.insert(users).values({ name: input.name, email: input.email, phone: input.phone, role: input.role, passwordHash: await hashPassword(input.password) });
-    await audit(actor.id, "staff.create", "user", input.email, { role: input.role });
-    revalidatePath("/dashboard/settings");
-    return { ok: true, message: `${input.name} can now sign in as ${input.role.toLowerCase()}` };
-  } catch (err) {
-    return toActionError(err);
-  }
-}
-
-export async function setUserActive(userId: string, active: boolean): Promise<ActionResult> {
-  try {
-    const actor = await assertPermission("staff:manage");
-    if (userId === actor.id) throw new DomainError("You can't deactivate your own account.");
-    await db.update(users).set({ isActive: active }).where(eq(users.id, userId));
-    if (!active) await db.delete(sessions).where(eq(sessions.userId, userId));
-    await audit(actor.id, active ? "user.activate" : "user.deactivate", "user", userId);
-    revalidatePath("/dashboard/settings");
-    return { ok: true, message: active ? "Account reactivated" : "Account deactivated and signed out" };
-  } catch (err) {
-    return toActionError(err);
-  }
-}

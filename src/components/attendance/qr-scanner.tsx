@@ -113,7 +113,7 @@ export function QrScanner({ batches }: { batches: { id: string; label: string }[
     <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
       <div className="grid content-start gap-4">
         <label className="grid gap-1.5">
-          <span className="text-sm font-bold">Batch</span>
+          <span className="text-sm font-medium">Batch</span>
           <Select value={batchId} onChange={(e) => setBatchId(e.target.value)}>
             {batches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -123,17 +123,17 @@ export function QrScanner({ batches }: { batches: { id: string; label: string }[
           </Select>
         </label>
 
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border-3 border-ink bg-ink shadow-brutal">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-ink shadow-sm">
           <video ref={videoRef} className={cn("size-full object-cover", !camera && "hidden")} muted playsInline />
           {camera ? (
             <div className="pointer-events-none absolute inset-0 grid place-items-center">
-              <div className="size-1/2 rounded-3xl border-4 border-white/90 shadow-[0_0_0_2000px_rgba(11,11,15,0.35)]" />
+              <div className="size-1/2 rounded-2xl border border-white/90 shadow-[0_0_0_2000px_rgba(11,11,15,0.35)]" />
             </div>
           ) : (
             <div className="absolute inset-0 grid place-items-center p-6 text-center text-white">
               <div>
                 <Camera className="mx-auto size-10" />
-                <p className="mt-3 font-display text-xl font-extrabold">Scan student QR codes</p>
+                <p className="mt-3 font-display text-xl font-semibold">Scan student QR codes</p>
                 <p className="mt-1 text-sm text-white/70">Point the camera at the code on the student&apos;s phone or ID card.</p>
               </div>
             </div>
@@ -167,41 +167,41 @@ export function QrScanner({ batches }: { batches: { id: string; label: string }[
       <div className="grid content-start gap-4" aria-live="polite">
         {result ? (
           result.kind === "ok" ? (
-            <div className={cn("animate-pop rounded-2xl border-3 border-ink p-5 shadow-brutal", result.alreadyMarked ? "bg-warning-soft" : "bg-success-soft")}>
+            <div className={cn("animate-pop rounded-2xl border border-line p-5 shadow-sm", result.alreadyMarked ? "bg-warning-soft" : "bg-success-soft")}>
               <div className="flex items-center gap-4">
                 <Avatar name={result.name} src={result.photoUrl} size={64} />
                 <div>
-                  <p className="flex items-center gap-2 text-sm font-extrabold uppercase">
+                  <p className="flex items-center gap-2 text-sm font-semibold uppercase">
                     {result.alreadyMarked ? <TriangleAlert className="size-4" /> : <CircleCheck className="size-4 text-success" />}
                     {result.alreadyMarked ? "Already marked" : "Identity verified"}
                   </p>
-                  <p className="font-display text-2xl font-extrabold leading-tight">{result.name}</p>
-                  <p className="font-mono text-xs font-bold text-muted">{result.code}</p>
+                  <p className="font-display text-2xl font-semibold leading-tight">{result.name}</p>
+                  <p className="font-mono text-xs font-medium text-muted">{result.code}</p>
                 </div>
               </div>
-              <p className="mt-3 font-bold">
+              <p className="mt-3 font-medium">
                 {result.alreadyMarked ? `Checked in at ${time(result.markedAt)} (${result.status.toLowerCase()}). No duplicate recorded.` : `Marked ${result.status.toLowerCase()} for ${result.batchName} at ${time(result.markedAt)}.`}
               </p>
             </div>
           ) : (
-            <div className="animate-pop rounded-2xl border-3 border-ink bg-danger-soft p-5 shadow-brutal">
-              <p className="flex items-center gap-2 font-display text-xl font-extrabold">
+            <div className="animate-pop rounded-2xl border border-line bg-danger-soft p-5 shadow-sm">
+              <p className="flex items-center gap-2 font-display text-xl font-semibold">
                 <TriangleAlert className="size-5" /> Not checked in
               </p>
               <p className="mt-1 font-semibold">{result.message}</p>
             </div>
           )
         ) : (
-          <div className="rounded-2xl border-2 border-dashed border-ink/40 p-6 text-center text-sm font-semibold text-muted">Scan results appear here.</div>
+          <div className="rounded-2xl border border-dashed border-line-strong p-6 text-center text-sm font-semibold text-muted">Scan results appear here.</div>
         )}
 
-        <div className="rounded-2xl border-3 border-ink bg-white p-4 shadow-brutal-sm">
-          <p className="mb-2 text-sm font-extrabold">This session · {log.length} checked in</p>
+        <div className="rounded-2xl border border-line bg-white p-4 shadow-xs">
+          <p className="mb-2 text-sm font-semibold">This session · {log.length} checked in</p>
           <ul className="grid gap-1.5 text-sm">
             {log.map((l, i) => (
               <li key={i} className="flex justify-between gap-2">
                 <span className="truncate font-semibold">{l.name}</span>
-                <span className="shrink-0 font-mono text-xs font-bold text-muted">
+                <span className="shrink-0 font-mono text-xs font-medium text-muted">
                   {time(l.markedAt)} · {l.status === "LATE" ? "late" : "on time"}
                 </span>
               </li>

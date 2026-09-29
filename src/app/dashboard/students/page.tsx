@@ -104,7 +104,7 @@ export default async function StudentsPage({ searchParams }: PageProps<"/dashboa
                   return (
                     <TR key={s.id}>
                       <TD>
-                        <Link href={`/dashboard/students/${s.id}`} className="flex items-center gap-3 font-bold hover:text-brand">
+                        <Link href={`/dashboard/students/${s.id}`} className="flex items-center gap-3 font-medium hover:text-brand">
                           <Avatar name={s.name} src={s.photoUrl} size={36} />
                           <span>
                             <span className="block">{s.name}</span>
@@ -124,8 +124,8 @@ export default async function StudentsPage({ searchParams }: PageProps<"/dashboa
                       <TD className="text-sm">
                         {m ? (
                           <>
-                            <span className="font-bold">{m.plan}</span>
-                            <span className={expired ? "block text-xs font-bold text-danger" : "block text-xs text-muted"}>
+                            <span className="font-medium">{m.plan}</span>
+                            <span className={expired ? "block text-xs font-medium text-danger" : "block text-xs text-muted"}>
                               {expired ? "Expired" : "Until"} {formatDate(m.endDate, "short")}
                             </span>
                           </>

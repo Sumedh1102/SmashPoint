@@ -80,7 +80,7 @@ export function GalleryArt({ variant, className }: { variant: string; className?
     case "shuttle":
       return (
         <div className={cn("grid place-items-center bg-brand-100", className)}>
-          <Shuttlecock className="w-1/3 -rotate-[24deg]" />
+          <Shuttlecock className="w-1/3" />
         </div>
       );
     case "trophy":
@@ -92,15 +92,15 @@ export function GalleryArt({ variant, className }: { variant: string; className?
     case "racket":
       return (
         <div className={cn("grid place-items-center bg-paper-2", className)}>
-          <Racket className="h-3/4 rotate-[28deg]" />
+          <Racket className="h-3/4" />
         </div>
       );
     case "grid":
       return (
-        <div className={cn("grid-paper-ink grid place-items-center", className)}>
+        <div className={cn("bg-ink grid place-items-center", className)}>
           <div className="grid grid-cols-4 gap-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <span key={i} className={cn("size-5 rounded-md border-2 border-white", i % 3 === 0 ? "bg-brand" : "bg-transparent")} />
+              <span key={i} className={cn("size-5 rounded-md border border-white", i % 3 === 0 ? "bg-brand" : "bg-transparent")} />
             ))}
           </div>
         </div>

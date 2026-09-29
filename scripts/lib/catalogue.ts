@@ -1,18 +1,139 @@
 /**
- * The academy's real catalogue (courts, programs, membership plans). Shared by the demo seed
- * and the production first-run setup so a fresh deployment has a working public site.
- * Edit prices and descriptions here, or later from the admin dashboard.
+ * The facility's starting catalogue: sports, courts, rental equipment, amenities, café menu
+ * and coaching adverts, plus the academy's internal programs and membership plans. Shared by
+ * the demo seed and the production first-run setup so a fresh deployment has a working public
+ * site. Everything here can be edited later from the admin dashboard.
  */
-import type { courts, membershipPlans, programs } from "../../src/server/db/schema";
+import type { coachingAds, courts, equipmentItems, facilities, foodItems, membershipPlans, programs, sports } from "../../src/server/db/schema";
 
 const rupees = (n: number) => n * 100;
 
-export const COURTS: (typeof courts.$inferInsert)[] = [
-  { name: "Court 1", description: "Main competition court beside the viewing gallery.", hourlyRate: rupees(400), peakHourlyRate: rupees(600), sortOrder: 1 },
-  { name: "Court 2", description: "Training court with shuttle-launcher mount.", hourlyRate: rupees(400), peakHourlyRate: rupees(600), sortOrder: 2 },
-  { name: "Court 3", description: "Standard court, near changing rooms.", hourlyRate: rupees(400), peakHourlyRate: rupees(600), sortOrder: 3 },
-  { name: "Court 4", description: "Standard court with kids' low-net setup available.", hourlyRate: rupees(400), peakHourlyRate: rupees(600), sortOrder: 4 },
-  { name: "Court 5", description: "Show court · premium lighting & 4.5 mm mat.", surface: "Premium 4.5 mm PU mat", hourlyRate: rupees(500), peakHourlyRate: rupees(700), sortOrder: 5 },
+export const SPORTS: (typeof sports.$inferInsert)[] = [
+  {
+    slug: "badminton", name: "Badminton", sortOrder: 1,
+    tagline: "Two BWF-spec wooden courts with glare-free lighting.",
+    description: "Full-size courts on a cushioned synthetic mat over sprung wood, with 9 m clear height and side-mounted LED lighting that stays out of the shuttle's flight path.",
+  },
+  {
+    slug: "pickleball", name: "Pickleball", sortOrder: 2,
+    tagline: "Dedicated courts for the fastest-growing racket sport.",
+    description: "Two permanent pickleball courts with regulation lines, portable nets and a textured acrylic surface that plays consistently for singles and doubles.",
+  },
+  {
+    slug: "basketball", name: "Basketball", sortOrder: 3,
+    tagline: "A full-size indoor court for games, training and events.",
+    description: "A 28 × 15 m hardwood court with adjustable glass backboards, FIBA markings and a scoreboard — bookable for pickup games, team practice and tournaments.",
+  },
+];
+
+/** Courts reference their sport by slug; the seed/setup resolves it to the sport id. */
+export const COURTS: (Omit<typeof courts.$inferInsert, "sportId"> & { sport: string })[] = [
+  {
+    sport: "badminton", name: "Badminton Court 1", sortOrder: 1, surface: "4.5 mm PU mat on wooden sub-floor",
+    description: "Main court beside the viewing gallery.", hourlyRate: rupees(500), peakHourlyRate: rupees(700),
+    durations: [60, 120], bookingTypes: ["SINGLE", "MONTHLY", "QUARTERLY"],
+  },
+  {
+    sport: "badminton", name: "Badminton Court 2", sortOrder: 2, surface: "4.5 mm PU mat on wooden sub-floor",
+    description: "Training court with shuttle-launcher mount.", hourlyRate: rupees(500), peakHourlyRate: rupees(700),
+    durations: [60, 120], bookingTypes: ["SINGLE", "MONTHLY", "QUARTERLY"],
+  },
+  {
+    sport: "pickleball", name: "Pickleball Court 1", sortOrder: 3, surface: "Textured acrylic hard court",
+    description: "Permanent lines and net, ideal for doubles.", hourlyRate: rupees(600), peakHourlyRate: rupees(800),
+    durations: [60, 120], bookingTypes: ["SINGLE", "MONTHLY", "QUARTERLY"],
+  },
+  {
+    sport: "pickleball", name: "Pickleball Court 2", sortOrder: 4, surface: "Textured acrylic hard court",
+    description: "Next to the café lounge.", hourlyRate: rupees(600), peakHourlyRate: rupees(800),
+    durations: [60, 120], bookingTypes: ["SINGLE", "MONTHLY"],
+  },
+  {
+    sport: "basketball", name: "Basketball Court", sortOrder: 5, surface: "Maple hardwood",
+    description: "Full-size indoor court with scoreboard.", hourlyRate: rupees(1500), peakHourlyRate: rupees(2000),
+    durations: [60, 120], bookingTypes: ["SINGLE", "MONTHLY", "QUARTERLY"],
+  },
+];
+
+/** `sport` = sport slug, or null for items shared across sports. */
+export const EQUIPMENT: (Omit<typeof equipmentItems.$inferInsert, "sportId"> & { sport: string | null })[] = [
+  { sport: "badminton", name: "Badminton racket", category: "Racket", size: "Standard (G4)", description: "Yonex Nanoflare graphite racket, freshly strung.", totalQuantity: 16, rentalPrice: rupees(60), pricing: "PER_BOOKING", deposit: rupees(500), sortOrder: 1 },
+  { sport: "badminton", name: "Feather shuttles (tube of 6)", category: "Shuttles", description: "Match-grade feather shuttles. Charged per tube used.", totalQuantity: 40, rentalPrice: rupees(180), pricing: "PER_BOOKING", sortOrder: 2 },
+  { sport: "badminton", name: "Nylon shuttles (tube of 6)", category: "Shuttles", description: "Durable nylon shuttles for practice.", totalQuantity: 30, rentalPrice: rupees(80), pricing: "PER_BOOKING", sortOrder: 3 },
+  { sport: "pickleball", name: "Pickleball paddle", category: "Paddle", size: "Standard", description: "Carbon-face paddle with a polymer honeycomb core.", totalQuantity: 16, rentalPrice: rupees(80), pricing: "PER_BOOKING", deposit: rupees(500), sortOrder: 4 },
+  { sport: "pickleball", name: "Pickleballs (set of 3)", category: "Balls", description: "Indoor 26-hole balls.", totalQuantity: 20, rentalPrice: rupees(40), pricing: "PER_BOOKING", sortOrder: 5 },
+  { sport: "basketball", name: "Basketball", category: "Ball", size: "Size 7", description: "Composite leather indoor ball.", totalQuantity: 10, rentalPrice: rupees(100), pricing: "PER_BOOKING", deposit: rupees(500), sortOrder: 6 },
+  { sport: "basketball", name: "Training bibs (set of 10)", category: "Bibs", description: "Two colours, five of each.", totalQuantity: 4, rentalPrice: rupees(150), pricing: "PER_BOOKING", sortOrder: 7 },
+  { sport: null, name: "Sports towel", category: "Accessories", description: "Fresh cotton towel, returned at the desk.", totalQuantity: 40, rentalPrice: rupees(30), pricing: "PER_BOOKING", sortOrder: 8 },
+];
+
+/** Amenities (the sports themselves come from the sports and courts tables). */
+export const FACILITIES: (typeof facilities.$inferInsert)[] = [
+  { category: "EQUIPMENT", name: "Equipment rental desk", description: "Rackets, paddles, balls and towels to rent with your booking or at the front desk.", availability: "Every day · 6 AM – 10 PM", sortOrder: 1 },
+  { category: "EQUIPMENT", name: "Racket stringing", description: "Same-day restringing with a choice of strings and tensions.", availability: "Drop off before 2 PM", price: rupees(350), sortOrder: 2 },
+  { category: "FOOD_BEVERAGE", name: "Courtside café", description: "Fresh juices, shakes, coffee and light meals, with seating overlooking the courts.", availability: "Every day · 7 AM – 10 PM", sortOrder: 3 },
+  { category: "AMENITY", name: "Changing rooms & showers", description: "Separate men's and women's changing rooms with hot showers.", availability: "During opening hours", sortOrder: 4 },
+  { category: "AMENITY", name: "Lockers", description: "Day-use lockers with your own padlock or a rented one from the desk.", availability: "80 lockers", sortOrder: 5 },
+  { category: "AMENITY", name: "Parking", description: "Free gated parking with CCTV for cars and two-wheelers.", availability: "30 cars · 60 two-wheelers", sortOrder: 6 },
+  { category: "AMENITY", name: "Spectator seating", description: "Raised seating with a clear view of every court.", availability: "60 seats", sortOrder: 7 },
+  { category: "AMENITY", name: "Drinking water & first aid", description: "Chilled RO water stations on the floor and a first-aid kit at the desk.", availability: "Always available", sortOrder: 8 },
+  { category: "AMENITY", name: "Wi-Fi", description: "Free Wi-Fi in the lounge and café.", availability: "Ask the front desk", sortOrder: 9 },
+];
+
+export const FOOD_ITEMS: (typeof foodItems.$inferInsert)[] = [
+  { category: "Beverages", name: "Fresh lime soda", description: "Sweet, salted or mixed.", price: rupees(60), sortOrder: 1 },
+  { category: "Beverages", name: "Tender coconut water", price: rupees(70), sortOrder: 2 },
+  { category: "Beverages", name: "Electrolyte drink", description: "Chilled, sugar-light.", price: rupees(50), sortOrder: 3 },
+  { category: "Beverages", name: "Cold coffee", price: rupees(110), sortOrder: 4 },
+  { category: "Beverages", name: "Masala chai", price: rupees(30), sortOrder: 5 },
+  { category: "Shakes & smoothies", name: "Banana peanut-butter shake", price: rupees(140), sortOrder: 6 },
+  { category: "Shakes & smoothies", name: "Whey protein shake", description: "Chocolate or vanilla, with milk or water.", price: rupees(160), sortOrder: 7 },
+  { category: "Shakes & smoothies", name: "Mixed berry smoothie", price: rupees(150), sortOrder: 8 },
+  { category: "Snacks", name: "Energy bar", price: rupees(60), sortOrder: 9 },
+  { category: "Snacks", name: "Roasted makhana", price: rupees(70), sortOrder: 10 },
+  { category: "Snacks", name: "Fruit bowl", description: "Seasonal cut fruit.", price: rupees(90), sortOrder: 11 },
+  { category: "Light meals", name: "Grilled paneer sandwich", price: rupees(140), sortOrder: 12 },
+  { category: "Light meals", name: "Poha", description: "Made fresh every morning until 11 AM.", price: rupees(60), sortOrder: 13 },
+  { category: "Light meals", name: "Chicken wrap", price: rupees(170), sortOrder: 14 },
+];
+
+/** Coaching adverts. `coachSlug` links a coach when coaches exist (demo data). */
+export const COACHING_ADS: (Omit<typeof coachingAds.$inferInsert, "sportId" | "coachId"> & { sport: string; coachSlug?: string })[] = [
+  {
+    slug: "badminton-foundations", sport: "badminton", coachSlug: "sagar-thakur", sortOrder: 1,
+    title: "Badminton Foundations", summary: "Grips, footwork and the four core strokes in small, friendly groups.",
+    description: "A structured starting point for new players. Sessions cover grip and ready position, six-corner footwork, the clear, drop, smash and serve, and the rules of singles and doubles — with plenty of rallying.",
+    skillLevel: "Beginner", ageRange: "13+ and adults", timing: "Tue · Thu · Sat, 7–8 AM", ctaLabel: "Enquire now",
+    highlights: ["Maximum 12 players per coach", "Rackets and shuttles provided", "Monthly progress check"],
+  },
+  {
+    slug: "junior-badminton", sport: "badminton", coachSlug: "meera-iyer", sortOrder: 2,
+    title: "Junior Badminton", summary: "Coordination, racket skills and confidence for young players.",
+    description: "Movement games, racket control and basic technique taught through play — building discipline and a love for the sport.",
+    skillLevel: "All levels", ageRange: "6–12 years", timing: "Mon–Fri, 3:30–4:30 PM · Weekends, 8–10 AM", ctaLabel: "Enquire now",
+    highlights: ["Maximum 10 children per coach", "Parent updates every month", "Term-end mini tournament"],
+  },
+  {
+    slug: "competitive-squad", sport: "badminton", coachSlug: "vikram-joshi", sortOrder: 3,
+    title: "Competitive Squad", summary: "High-intensity training for district, state and ranking tournaments.",
+    description: "Tactical video review, periodised conditioning, match simulation and individual tournament planning for committed players. Entry is by assessment.",
+    skillLevel: "Advanced", ageRange: "11–25 years", timing: "Mon–Sat, 6–8 AM", ctaLabel: "Book an assessment",
+    highlights: ["Video analysis every fortnight", "Strength & conditioning plan", "Tournament calendar support"],
+  },
+  {
+    slug: "pickleball-clinic", sport: "pickleball", coachSlug: "rahul-dsouza", sortOrder: 4,
+    title: "Pickleball Starter Clinic", summary: "Learn the dink, the third-shot drop and kitchen rules in four evenings.",
+    description: "A four-session clinic for newcomers and tennis or badminton players switching over. Paddles and balls are provided.",
+    skillLevel: "Beginner", ageRange: "15+ and adults", timing: "Wed & Fri, 7–8 PM", ctaLabel: "Enquire now",
+    highlights: ["Four sessions", "Paddles provided", "Doubles strategy basics"],
+  },
+  {
+    slug: "basketball-skills", sport: "basketball", coachSlug: "karan-mehta", sortOrder: 5,
+    title: "Basketball Skills Academy", summary: "Ball handling, shooting mechanics and team play for young athletes.",
+    description: "Progressive skill blocks with small-sided games and conditioning, grouped by age and ability.",
+    skillLevel: "Beginner to intermediate", ageRange: "10–18 years", timing: "Sat & Sun, 7–9 AM", ctaLabel: "Enquire now",
+    highlights: ["Shooting form analysis", "Game-based learning", "Quarterly showcase games"],
+  },
 ];
 
 /** `coachSlug` links a program to its lead coach when coaches exist (demo data). */

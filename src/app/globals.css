@@ -1,63 +1,56 @@
 @import "tailwindcss";
 
 /* ──────────────────────────────────────────────────────────────────────────
-   SmashPoint design tokens — Playful Neo-Brutalist SaaS
-   Ink + warm paper + one electric blue. Personality comes from type, grid,
-   borders and hard shadows — not gradients.
+   SmashPoint design tokens — minimalist, premium sports club.
+   Charcoal + white + warm off-white, one professional blue, muted status
+   colours. Hierarchy comes from type, spacing and thin borders; surfaces use
+   soft shadows and a moderate radius.
    ────────────────────────────────────────────────────────────────────────── */
 @theme {
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-heading), var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-code), ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-ink: #0b0b0f;
-  --color-ink-soft: #2b2b33;
-  --color-muted: #595966;
-  --color-subtle: #8a8a96;
-  --color-paper: #faf7f0;
-  --color-paper-2: #f2ede2;
-  --color-line: #e3ddd0;
+  --color-ink: #111318;
+  --color-ink-soft: #2c3039;
+  --color-muted: #5d6370;
+  --color-subtle: #8e939e;
+  --color-paper: #f7f6f3;
+  --color-paper-2: #efeee9;
+  --color-line: #e5e3dd;
+  --color-line-strong: #d3d0c8;
 
-  --color-brand: #1f47ff;
-  --color-brand-600: #1535d4;
-  --color-brand-700: #0f27a3;
-  --color-brand-200: #bccaff;
-  --color-brand-100: #dbe3ff;
-  --color-brand-50: #eef2ff;
+  --color-brand: #2256d8;
+  --color-brand-600: #1b47b8;
+  --color-brand-700: #163a93;
+  --color-brand-200: #c3d3fa;
+  --color-brand-100: #dfe8fd;
+  --color-brand-50: #f0f4fe;
 
-  --color-success: #12a150;
-  --color-success-soft: #d4f5e0;
-  --color-warning: #f2a900;
-  --color-warning-soft: #fff0c2;
-  --color-danger: #e0393e;
-  --color-danger-soft: #ffe1e1;
+  --color-success: #1d7f4e;
+  --color-success-soft: #e6f4ec;
+  --color-warning: #a8660c;
+  --color-warning-soft: #fcf1de;
+  --color-danger: #c23a3a;
+  --color-danger-soft: #fbeaea;
 
-  --shadow-brutal-xs: 2px 2px 0 0 var(--color-ink);
-  --shadow-brutal-sm: 3px 3px 0 0 var(--color-ink);
-  --shadow-brutal: 5px 5px 0 0 var(--color-ink);
-  --shadow-brutal-lg: 8px 8px 0 0 var(--color-ink);
-  --shadow-brutal-xl: 12px 12px 0 0 var(--color-ink);
-  --shadow-brutal-blue: 6px 6px 0 0 var(--color-brand);
+  /* Soft elevation (overrides Tailwind's defaults so shadow-* stays subtle). */
+  --shadow-xs: 0 1px 2px 0 rgb(17 19 24 / 0.05);
+  --shadow-sm: 0 1px 2px 0 rgb(17 19 24 / 0.05), 0 1px 3px 0 rgb(17 19 24 / 0.05);
+  --shadow-md: 0 2px 4px -1px rgb(17 19 24 / 0.05), 0 6px 16px -4px rgb(17 19 24 / 0.08);
+  --shadow-lg: 0 4px 8px -2px rgb(17 19 24 / 0.05), 0 16px 32px -8px rgb(17 19 24 / 0.12);
+  --shadow-xl: 0 8px 16px -4px rgb(17 19 24 / 0.06), 0 28px 56px -12px rgb(17 19 24 / 0.18);
 
-  --radius-card: 1.25rem;
-  --radius-control: 0.8rem;
+  --radius-card: 0.875rem;
+  --radius-control: 0.5rem;
 
-  --animate-float: float 6s ease-in-out infinite;
-  --animate-pop: pop 180ms ease-out;
-  --animate-toast-in: toast-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  --animate-pop: pop 160ms ease-out;
+  --animate-fade-in: fade-in 200ms ease-out;
+  --animate-toast-in: toast-in 200ms cubic-bezier(0.2, 0.8, 0.3, 1);
 
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0) rotate(var(--tw-rotate, 0deg));
-    }
-    50% {
-      transform: translateY(-8px) rotate(var(--tw-rotate, 0deg));
-    }
-  }
   @keyframes pop {
     0% {
-      transform: scale(0.96);
+      transform: scale(0.98);
       opacity: 0;
     }
     100% {
@@ -65,13 +58,21 @@
       opacity: 1;
     }
   }
-  @keyframes toast-in {
+  @keyframes fade-in {
     0% {
-      transform: translateY(12px) scale(0.98);
       opacity: 0;
     }
     100% {
-      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes toast-in {
+    0% {
+      transform: translateY(8px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
       opacity: 1;
     }
   }
@@ -85,11 +86,7 @@
 
   body {
     @apply bg-paper text-ink font-sans antialiased;
-    background-image:
-      linear-gradient(to right, rgb(11 11 15 / 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(11 11 15 / 0.05) 1px, transparent 1px);
-    background-size: 32px 32px;
-    background-position: -1px -1px;
+    font-feature-settings: "cv11", "ss01";
   }
 
   h1,
@@ -97,15 +94,15 @@
   h3,
   h4 {
     @apply font-display text-balance;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
   }
 
   ::selection {
-    @apply bg-brand text-white;
+    @apply bg-brand-100 text-ink;
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-brand);
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
   }
 
@@ -128,55 +125,40 @@
     *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
   }
 }
 
-/* Reusable surfaces */
-@utility brutal-card {
+/* Standard raised surface: white, hairline border, soft shadow. */
+@utility surface {
   background: white;
-  border: 3px solid var(--color-ink);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-brutal);
+  box-shadow: var(--shadow-sm);
 }
 
-@utility brutal-hover {
+/* Gentle lift for clickable cards. */
+@utility lift-hover {
   transition:
-    transform 150ms ease,
-    box-shadow 150ms ease;
+    box-shadow 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
   &:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: var(--shadow-brutal-lg);
+    border-color: var(--color-line-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
   }
 }
 
-@utility grid-paper-blue {
-  background-color: var(--color-brand);
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.12) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.12) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
-@utility grid-paper-ink {
-  background-color: var(--color-ink);
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
-
-/* Court-line stripe used as a subtle divider motif */
-@utility court-lines {
-  background-image:
-    linear-gradient(var(--color-ink), var(--color-ink)), linear-gradient(var(--color-ink), var(--color-ink));
-  background-size:
-    100% 3px,
-    100% 3px;
-  background-position:
-    0 0,
-    0 9px;
-  background-repeat: no-repeat;
+/* Small uppercase label above section headings. */
+@utility eyebrow {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-brand);
 }
 
 @utility scrollbar-none {
@@ -192,10 +174,10 @@
   }
 }
 
-/* Unavailable-slot hatching (booked / maintenance) */
+/* Unavailable-slot hatching (booked / maintenance / not released) */
 @utility slot-stripes {
-  background-image: repeating-linear-gradient(135deg, rgb(11 11 15 / 0.07) 0 5px, transparent 5px 10px);
+  background-image: repeating-linear-gradient(135deg, rgb(17 19 24 / 0.045) 0 4px, transparent 4px 9px);
 }
 @utility slot-stripes-warn {
-  background-image: repeating-linear-gradient(135deg, rgb(242 169 0 / 0.35) 0 5px, transparent 5px 10px);
+  background-image: repeating-linear-gradient(135deg, rgb(168 102 12 / 0.12) 0 4px, transparent 4px 9px);
 }

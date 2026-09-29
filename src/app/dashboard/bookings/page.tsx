@@ -61,10 +61,10 @@ export default async function BookingsPage({ searchParams }: PageProps<"/dashboa
         }
       />
       <div className="mb-4 flex flex-wrap gap-2">
-        <Link href={hrefWith("/dashboard/bookings", {}, { from: today, to: today })} className="rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold hover:bg-brand-50">Today</Link>
-        <Link href={hrefWith("/dashboard/bookings", {}, { from: today, status: "ACTIVE", dir: "asc" })} className="rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold hover:bg-brand-50">Upcoming</Link>
-        <Link href={hrefWith("/dashboard/bookings", {}, { status: "PAYMENT_INITIATED" })} className="rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold hover:bg-brand-50">Awaiting payment</Link>
-        <Link href={hrefWith("/dashboard/bookings", {}, { status: "CANCELLED" })} className="rounded-lg border-2 border-ink bg-white px-3 py-1.5 text-sm font-bold hover:bg-brand-50">Cancelled</Link>
+        <Link href={hrefWith("/dashboard/bookings", {}, { from: today, to: today })} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-brand-50">Today</Link>
+        <Link href={hrefWith("/dashboard/bookings", {}, { from: today, status: "ACTIVE", dir: "asc" })} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-brand-50">Upcoming</Link>
+        <Link href={hrefWith("/dashboard/bookings", {}, { status: "PAYMENT_INITIATED" })} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-brand-50">Awaiting payment</Link>
+        <Link href={hrefWith("/dashboard/bookings", {}, { status: "CANCELLED" })} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-brand-50">Cancelled</Link>
       </div>
       <FilterBar action="/dashboard/bookings" resetHref="/dashboard/bookings">
         <SearchInput defaultValue={param(sp.q)} placeholder="Booking ID, name, phone or email…" />
@@ -99,20 +99,20 @@ export default async function BookingsPage({ searchParams }: PageProps<"/dashboa
                 {result.rows.map((b) => (
                   <TR key={b.id}>
                     <TD>
-                      <Link href={`/dashboard/bookings/${b.id}`} className="font-mono font-bold hover:text-brand">
+                      <Link href={`/dashboard/bookings/${b.id}`} className="font-mono font-medium hover:text-brand">
                         {b.code}
                       </Link>
                     </TD>
                     <TD className="whitespace-nowrap text-sm">
-                      <span className="font-bold">{formatDate(b.date, "weekday")}</span>
+                      <span className="font-medium">{formatDate(b.date, "weekday")}</span>
                       <span className="block text-muted">{formatTimeRange(b.startMinute, b.endMinute)}</span>
                     </TD>
                     <TD className="font-semibold">{b.courtName}</TD>
                     <TD className="text-sm">
-                      <span className="font-bold">{b.customerName}</span>
+                      <span className="font-medium">{b.customerName}</span>
                       <span className="block text-muted">{b.customerPhone}</span>
                     </TD>
-                    <TD className="font-display font-extrabold">{formatMoney(b.total)}</TD>
+                    <TD className="font-display font-semibold">{formatMoney(b.total)}</TD>
                     <TD>
                       <StatusBadge status={b.status} />
                     </TD>
@@ -162,16 +162,16 @@ async function MyBookings({ userId, tab }: { userId: string; tab: string }) {
             <Card key={b.id} className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-mono text-xs font-bold text-muted">{b.code}</p>
-                  <p className="font-display text-2xl font-extrabold leading-tight">{b.court.name}</p>
+                  <p className="font-mono text-xs font-medium text-muted">{b.code}</p>
+                  <p className="font-display text-2xl font-semibold leading-tight">{b.court.name}</p>
                 </div>
                 <StatusBadge status={b.status} />
               </div>
-              <p className="mt-2 font-bold">{formatDate(b.date, "long")}</p>
+              <p className="mt-2 font-medium">{formatDate(b.date, "long")}</p>
               <p className="text-sm text-muted">{formatTimeRange(b.startMinute, b.endMinute)}</p>
-              <div className="mt-4 flex items-center justify-between border-t-2 border-ink/10 pt-3">
-                <span className="font-display text-xl font-extrabold">{formatMoney(b.total)}</span>
-                <Link href={bookingReceiptPath(b.code)} className="inline-flex items-center gap-1 text-sm font-bold text-brand">
+              <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
+                <span className="font-display text-xl font-semibold">{formatMoney(b.total)}</span>
+                <Link href={bookingReceiptPath(b.code)} className="inline-flex items-center gap-1 text-sm font-medium text-brand">
                   Receipt & options <ExternalLink className="size-3.5" />
                 </Link>
               </div>
