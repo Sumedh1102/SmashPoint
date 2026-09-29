@@ -24,3 +24,6 @@ npm-debug.log*
 
 # bundled release script (Docker build)
 /dist
+
+# local development uploads
+/.uploads

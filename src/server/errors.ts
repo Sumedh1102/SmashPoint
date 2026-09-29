@@ -12,6 +12,7 @@ export class DomainError extends Error {
       | "CAPACITY_FULL"
       | "NOT_RELEASED"
       | "EQUIPMENT_UNAVAILABLE"
+      | "EMAIL_NOT_VERIFIED"
       | "CONFLICT" = "INVALID_INPUT",
     public status = 400,
   ) {

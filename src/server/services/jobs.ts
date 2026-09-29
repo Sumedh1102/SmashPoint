@@ -10,7 +10,6 @@ import {
   membershipPlans,
   notifications,
   parents,
-  passwordResetTokens,
   rateLimits,
   sessions,
   students,
@@ -145,9 +144,8 @@ export async function runScheduledJobs() {
     }
   }
 
-  // Housekeeping: expired sessions, spent rate-limit windows and old reset links.
+  // Housekeeping: expired sessions and spent rate-limit windows.
   await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
   await db.delete(rateLimits).where(lt(rateLimits.resetAt, new Date()));
-  await db.delete(passwordResetTokens).where(lt(passwordResetTokens.expiresAt, new Date(Date.now() - 86_400_000)));
   return result;
 }
