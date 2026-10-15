@@ -1,47 +1,53 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
-import { ToastProvider } from "@/components/ui/toast";
+import { Archivo, Inter } from "next/font/google";
 import { site } from "@/content/site";
 import "./globals.css";
 
-const heading = Manrope({ subsets: ["latin"], variable: "--font-heading", display: "swap", weight: ["500", "600", "700"] });
+const display = Archivo({ subsets: ["latin"], variable: "--font-display-face", display: "swap", axes: ["wdth"] });
 const body = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
-const code = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code", display: "swap", weight: ["500", "700"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: `${site.name} · Palghar — Coaching & Court Booking`,
-    template: `%s · ${site.shortName} Badminton Academy`,
+    default: `${site.name} — Book Badminton, Pickleball & Basketball Courts`,
+    template: `%s · ${site.name}`,
   },
   description: site.description,
   applicationName: site.name,
-  keywords: ["badminton academy Palghar", "badminton coaching", "court booking", "badminton courts near me", "kids badminton classes", "SmashPoint"],
+  keywords: ["court booking", "badminton court booking", "pickleball court", "basketball court booking", "indoor courts", site.name],
   openGraph: {
     type: "website",
     locale: "en_IN",
     siteName: site.name,
-    title: `${site.name} — Palghar`,
+    title: `${site.name} — Your game. Your court.`,
     description: site.description,
   },
-  twitter: { card: "summary_large_image", title: site.name, description: site.description },
+  twitter: { card: "summary_large_image", title: `${site.name} — Your game. Your court.`, description: site.description },
   formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#111318",
+  themeColor: "#0a0c0b",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${heading.variable} ${body.variable} ${code.variable}`}>
+    <html lang="en-IN" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Marks JS as available before first paint, so scroll reveals never hide content without JS. */}
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+      </head>
       <body className="min-h-dvh">
-        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-md focus:border focus:border-line focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-md">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-full focus:bg-lime focus:px-5 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-ink"
+        >
           Skip to content
         </a>
-        <ToastProvider>{children}</ToastProvider>
+        {children}
       </body>
     </html>
   );

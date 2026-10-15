@@ -1,64 +1,51 @@
 import { bookingRequestSchema } from "@/lib/validation";
-import { getCurrentUser } from "@/server/auth/guards";
 import { DomainError } from "@/server/errors";
 import { assertSameOrigin, clientIp, errorResponse, json, readJson } from "@/server/http";
-import { bookingReceiptPath, initiateBookingPayment, initiateSeriesPayment } from "@/server/payments/service";
-import { rateLimit } from "@/server/security";
-import { createBooking, createSeries } from "@/server/services/bookings";
-import { getBookingSettings } from "@/server/settings";
+import { bookingReceiptPath, paymentsEnabled, startCheckout } from "@/server/payments/service";
+import { bookingAccessToken, rateLimit } from "@/server/security";
+import { createBookingHold, releaseHold } from "@/server/services/bookings";
 
 /**
- * Creates a booking hold (Pending) and immediately starts checkout (Payment Initiated).
- * Monthly/quarterly bookings create every session under one reference and one payment.
+ * Step 8 of the booking flow: validates the slot on the server, holds it for the payment
+ * window and creates the Razorpay order. Returns what the browser needs to open Checkout.
  */
 export async function POST(req: Request) {
-  let code: string | undefined;
   try {
     assertSameOrigin(req);
-    if (!(await rateLimit(`booking:${clientIp(req)}`, 20, 10 * 60_000)).ok) throw new DomainError("Too many booking attempts. Please wait a few minutes.", "INVALID_INPUT", 429);
+    if (!(await rateLimit(`booking:${clientIp(req)}`, 12, 10 * 60_000)).ok) {
+      throw new DomainError("Too many booking attempts from your network. Please wait a few minutes.", "RATE_LIMITED", 429);
+    }
+    if (!paymentsEnabled()) throw new DomainError("Online booking is temporarily unavailable because payments aren't set up yet.", "PAYMENTS_UNAVAILABLE", 503);
 
     const input = bookingRequestSchema.parse(await readJson(req));
-    const [user, settings] = await Promise.all([getCurrentUser(), getBookingSettings()]);
-    if (!user && (!settings.allowGuestBooking || input.type !== "SINGLE")) {
-      throw new DomainError(input.type === "SINGLE" ? "Please sign in to book a court." : "Please sign in to make a monthly or quarterly booking.", "FORBIDDEN", 401);
-    }
-    const customer = { name: input.name, phone: input.phone, email: input.email };
-
-    if (input.type === "SINGLE") {
-      const booking = await createBooking({
-        courtId: input.courtId,
-        date: input.date,
-        startMinute: input.startMinute,
-        duration: input.duration,
-        customer,
-        userId: user?.id ?? null,
-        couponCode: input.couponCode,
-        notes: input.notes,
-        equipment: input.equipment,
-        source: "ONLINE",
-      });
-      code = booking.code;
-      const { checkout } = await initiateBookingPayment(booking.code);
-      return json({ code: booking.code, total: booking.total, receiptUrl: bookingReceiptPath(booking.code), checkout }, { status: 201 });
-    }
-
-    const series = await createSeries({
-      type: input.type,
+    const booking = await createBookingHold({
       courtId: input.courtId,
-      startDate: input.date,
-      daysOfWeek: input.daysOfWeek,
+      date: input.date,
       startMinute: input.startMinute,
       duration: input.duration,
-      customer,
-      userId: user!.id,
+      customer: { name: input.name, phone: input.phone, email: input.email },
       notes: input.notes,
-      equipment: input.equipment,
-      source: "ONLINE",
     });
-    code = series.code;
-    const { checkout } = await initiateSeriesPayment(series.code);
-    return json({ code: series.code, total: series.total, receiptUrl: bookingReceiptPath(series.code), checkout }, { status: 201 });
+
+    try {
+      const checkout = await startCheckout(booking);
+      return json(
+        {
+          code: booking.code,
+          token: bookingAccessToken(booking.code),
+          receiptUrl: bookingReceiptPath(booking.code),
+          amount: booking.total,
+          holdExpiresAt: booking.holdExpiresAt?.toISOString() ?? null,
+          checkout,
+        },
+        { status: 201 },
+      );
+    } catch (err) {
+      // No order means no way to pay: give the slot back straight away.
+      await releaseHold(booking.code).catch((e) => console.error("[bookings] release after failed checkout", e));
+      throw err;
+    }
   } catch (err) {
-    return errorResponse(err, code ? { code, receiptUrl: bookingReceiptPath(code) } : undefined);
+    return errorResponse(err);
   }
 }

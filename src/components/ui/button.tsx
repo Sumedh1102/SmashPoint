@@ -1,60 +1,43 @@
 import Link from "next/link";
-import type { ComponentProps, ReactNode } from "react";
-import { LoaderCircle } from "lucide-react";
+import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-export type ButtonVariant = "primary" | "dark" | "outline" | "ghost" | "danger" | "soft";
-export type ButtonSize = "sm" | "md" | "lg" | "xl" | "icon";
-
 const base =
-  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-medium tracking-[-0.005em] " +
-  "rounded-[var(--radius-control)] border transition-[background-color,border-color,color,box-shadow] duration-150 " +
-  "disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
+  "inline-flex items-center justify-center gap-2 rounded-full font-semibold whitespace-nowrap transition-[background-color,color,border-color,transform,box-shadow] duration-200 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45";
 
-const variants: Record<ButtonVariant, string> = {
-  primary: "border-brand bg-brand text-white shadow-xs hover:border-brand-600 hover:bg-brand-600 active:bg-brand-700",
-  dark: "border-line bg-ink text-white shadow-xs hover:bg-ink-soft hover:border-line-strong-soft",
-  outline: "border-line-strong bg-white text-ink shadow-xs hover:border-subtle hover:bg-paper",
-  soft: "border-transparent bg-brand-50 text-brand-700 hover:bg-brand-100",
-  danger: "border-danger bg-danger text-white shadow-xs hover:brightness-95",
-  ghost: "border-transparent bg-transparent text-ink hover:bg-ink/5",
-};
+const variants = {
+  /** Electric lime — the one primary action per view. */
+  primary: "bg-lime text-ink hover:bg-lime-600 shadow-[inset_0_-2px_0_rgb(0_0_0/0.08)]",
+  dark: "bg-ink text-white hover:bg-ink-3",
+  court: "bg-court text-white hover:bg-court-700",
+  outline: "border border-line-strong bg-white/60 text-ink hover:border-ink hover:bg-white",
+  /** Outline for dark surfaces. */
+  ghostLight: "border border-white/25 text-white hover:border-white/60 hover:bg-white/5",
+  ghost: "text-ink hover:bg-paper-2",
+  danger: "bg-danger text-white hover:bg-[#9a2f24]",
+} as const;
 
-const sizes: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
-  lg: "h-11 px-5 text-[15px]",
-  xl: "h-12 px-6 text-base",
-  icon: "h-9 w-9 p-0",
-};
+const sizes = {
+  sm: "h-9 px-4 text-sm",
+  md: "h-11 px-5 text-sm",
+  lg: "h-13 px-7 text-[0.95rem]",
+} as const;
 
-export function buttonStyles({ variant = "primary", size = "md", className }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {
+export type ButtonVariant = keyof typeof variants;
+type Common = { variant?: ButtonVariant; size?: keyof typeof sizes };
+
+export function buttonClass({ variant = "primary", size = "md" }: Common = {}, className?: string) {
   return cn(base, variants[variant], sizes[size], className);
 }
 
-type ButtonProps = ComponentProps<"button"> & {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  loading?: boolean;
-  icon?: ReactNode;
-};
-
-export function Button({ variant, size, loading, icon, className, children, disabled, type = "button", ...props }: ButtonProps) {
-  return (
-    <button type={type} className={buttonStyles({ variant, size, className })} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
-      {loading ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : icon}
-      {children}
-    </button>
-  );
+export function Button({ variant, size, className, type = "button", ...props }: Common & ComponentProps<"button">) {
+  return <button type={type} className={buttonClass({ variant, size }, className)} {...props} />;
 }
 
-type ButtonLinkProps = ComponentProps<typeof Link> & { variant?: ButtonVariant; size?: ButtonSize; icon?: ReactNode };
+export function ButtonLink({ variant, size, className, ...props }: Common & ComponentProps<typeof Link>) {
+  return <Link className={buttonClass({ variant, size }, className)} {...props} />;
+}
 
-export function ButtonLink({ variant, size, icon, className, children, ...props }: ButtonLinkProps) {
-  return (
-    <Link className={buttonStyles({ variant, size, className })} {...props}>
-      {icon}
-      {children}
-    </Link>
-  );
+export function Spinner({ className }: { className?: string }) {
+  return <span aria-hidden className={cn("inline-block size-4 animate-spin-slow rounded-full border-2 border-current border-r-transparent", className)} />;
 }

@@ -1,107 +1,207 @@
 import { describe, expect, it } from "vitest";
-import { applyDiscount, computeAvailability, priceForRange, slotTimes } from "./engine";
+import { computeAvailability, priceForRange, type CourtForAvailability } from "./engine";
+import { checkSlotRules, closureOverlapping, startTimes } from "./rules";
 
-const peakWindows = [{ label: "Evening", startMinute: 17 * 60, endMinute: 19 * 60, days: [] }];
-const court = { id: "c1", name: "Court 1", status: "ACTIVE" as const, hourlyRate: 40000, peakHourlyRate: 60000 };
+const H = 60;
+const peakWindows = [{ label: "Evening", startMinute: 17 * H, endMinute: 22 * H, days: [] }];
 
-describe("slotTimes", () => {
-  it("generates hourly slots between 4 AM and 7 PM", () => {
-    const times = slotTimes(240, 1140, 60);
+const court = (id: string, sportSlug: string, extra: Partial<CourtForAvailability> = {}): CourtForAvailability => ({
+  id,
+  slug: id,
+  name: id,
+  sportSlug,
+  status: "ACTIVE",
+  hourlyRate: 50_000,
+  peakHourlyRate: 70_000,
+  ...extra,
+});
+
+const courts = [
+  court("badminton-1", "badminton"),
+  court("badminton-2", "badminton"),
+  court("pickleball-1", "pickleball"),
+  court("pickleball-2", "pickleball"),
+  court("basketball-1", "basketball"),
+];
+
+const base = { date: "2026-10-20", peakWindows, courts, bookings: [], blocks: [], nowMinute: null };
+const slotOf = (result: ReturnType<typeof computeAvailability>, courtId: string, start: number) =>
+  result.courts.find((c) => c.courtId === courtId)!.slots.find((s) => s.startMinute === start)!;
+
+describe("startTimes", () => {
+  it("offers hourly one-hour slots from 7 AM, the last one ending at 10 PM", () => {
+    const times = startTimes(60);
+    expect(times[0]).toBe(7 * H);
+    expect(times.at(-1)).toBe(21 * H);
     expect(times).toHaveLength(15);
-    expect(times[0]).toEqual({ startMinute: 240, endMinute: 300 });
-    expect(times.at(-1)).toEqual({ startMinute: 1080, endMinute: 1140 });
   });
 
-  it("never produces a slot that runs past closing", () => {
-    const times = slotTimes(240, 1140, 90);
-    expect(times.every((t) => t.endMinute <= 1140)).toBe(true);
-    expect(times).toHaveLength(10);
+  it("offers two-hour slots that never run past 10 PM", () => {
+    const times = startTimes(120);
+    expect(times[0]).toBe(7 * H);
+    expect(times.at(-1)).toBe(20 * H);
+    expect(times.every((s) => s + 120 <= 22 * H)).toBe(true);
+  });
+});
+
+describe("checkSlotRules — opening hours and durations", () => {
+  it("allows 7–8 AM and 9–10 PM", () => {
+    expect(checkSlotRules("pickleball", 7 * H, 60)).toBeNull();
+    expect(checkSlotRules("pickleball", 21 * H, 60)).toBeNull();
+  });
+
+  it("rejects anything before 7 AM or ending after 10 PM", () => {
+    expect(checkSlotRules("pickleball", 6 * H, 60)?.code).toBe("OUTSIDE_HOURS");
+    expect(checkSlotRules("basketball", 21 * H, 120)?.code).toBe("OUTSIDE_HOURS");
+    expect(checkSlotRules("basketball", 22 * H, 60)?.code).toBe("OUTSIDE_HOURS");
+  });
+
+  it("only accepts one- or two-hour bookings starting on the hour", () => {
+    expect(checkSlotRules("pickleball", 9 * H, 90)?.code).toBe("INVALID_DURATION");
+    expect(checkSlotRules("pickleball", 9 * H, 30)?.code).toBe("INVALID_DURATION");
+    expect(checkSlotRules("pickleball", 9 * H + 30, 60)?.code).toBe("MISALIGNED");
+    expect(checkSlotRules("pickleball", 9 * H, 120)).toBeNull();
+  });
+});
+
+describe("checkSlotRules — badminton academy closure (5–7 PM)", () => {
+  const cases: [string, number, number, boolean][] = [
+    ["3–4 PM", 15 * H, 60, true],
+    ["4–5 PM", 16 * H, 60, true],
+    ["5–6 PM", 17 * H, 60, false],
+    ["6–7 PM", 18 * H, 60, false],
+    ["4–6 PM (overlaps the closure)", 16 * H, 120, false],
+    ["5–7 PM", 17 * H, 120, false],
+    ["6–8 PM (overlaps the closure)", 18 * H, 120, false],
+    ["3–5 PM (ends as it starts)", 15 * H, 120, true],
+    ["7–8 PM", 19 * H, 60, true],
+    ["7–9 PM", 19 * H, 120, true],
+  ];
+  for (const [label, start, duration, allowed] of cases) {
+    it(`${allowed ? "allows" : "rejects"} badminton ${label}`, () => {
+      const result = checkSlotRules("badminton", start, duration);
+      if (allowed) expect(result).toBeNull();
+      else expect(result?.code).toBe("SPORT_CLOSURE");
+    });
+  }
+
+  it("does not apply to pickleball or basketball", () => {
+    for (const sport of ["pickleball", "basketball"]) {
+      expect(checkSlotRules(sport, 17 * H, 60)).toBeNull();
+      expect(checkSlotRules(sport, 18 * H, 60)).toBeNull();
+      expect(checkSlotRules(sport, 16 * H, 120)).toBeNull();
+      expect(closureOverlapping(sport, 17 * H, 19 * H)).toBeNull();
+    }
   });
 });
 
 describe("priceForRange", () => {
-  it("charges non-peak rate before 5 PM", () => {
-    expect(priceForRange(court, peakWindows, "2026-09-24", 600, 660)).toEqual({ price: 40000, isPeak: false });
+  it("charges the off-peak rate before 5 PM and the peak rate after", () => {
+    expect(priceForRange(courts[2]!, peakWindows, "2026-10-20", 10 * H, 11 * H)).toEqual({ price: 50_000, isPeak: false });
+    expect(priceForRange(courts[2]!, peakWindows, "2026-10-20", 18 * H, 19 * H)).toEqual({ price: 70_000, isPeak: true });
   });
 
-  it("charges peak rate inside the peak window", () => {
-    expect(priceForRange(court, peakWindows, "2026-09-24", 1020, 1080)).toEqual({ price: 60000, isPeak: true });
-  });
-
-  it("blends rates for slots straddling the window", () => {
-    // 16:30–17:30 → 30 min @ 400/hr + 30 min @ 600/hr = 500
-    expect(priceForRange(court, peakWindows, "2026-09-24", 990, 1050).price).toBe(50000);
+  it("bills each hour of a two-hour booking at its own rate", () => {
+    // 4–6 PM: one off-peak hour + one peak hour
+    expect(priceForRange(courts[2]!, peakWindows, "2026-10-20", 16 * H, 18 * H).price).toBe(120_000);
   });
 
   it("respects weekday-specific windows", () => {
-    const weekendOnly = [{ label: "Weekend", startMinute: 240, endMinute: 1140, days: [0, 6] }];
-    expect(priceForRange(court, weekendOnly, "2026-09-26", 600, 660).isPeak).toBe(true); // Saturday
-    expect(priceForRange(court, weekendOnly, "2026-09-24", 600, 660).isPeak).toBe(false); // Thursday
+    const weekend = [{ label: "Weekend", startMinute: 7 * H, endMinute: 22 * H, days: [0, 6] }];
+    expect(priceForRange(courts[0]!, weekend, "2026-10-17", 10 * H, 11 * H).isPeak).toBe(true); // Saturday
+    expect(priceForRange(courts[0]!, weekend, "2026-10-20", 10 * H, 11 * H).isPeak).toBe(false); // Tuesday
   });
 });
 
 describe("computeAvailability", () => {
-  const base = {
-    date: "2026-09-24",
-    duration: 60,
-    settings: { openMinute: 240, closeMinute: 1140, peakWindows },
-    courts: [court, { ...court, id: "c2", name: "Court 2" }],
-    bookings: [],
-    blocks: [],
-    training: [],
-    nowMinute: null,
-  };
-
-  it("marks overlapping bookings as BOOKED, including partial overlaps", () => {
-    const result = computeAvailability({ ...base, bookings: [{ courtId: "c1", startMinute: 330, endMinute: 390 }] });
-    const c1 = result.courts[0]!.slots;
-    expect(c1.find((s) => s.startMinute === 300)!.state).toBe("BOOKED");
-    expect(c1.find((s) => s.startMinute === 360)!.state).toBe("BOOKED");
-    expect(c1.find((s) => s.startMinute === 420)!.state).toBe("AVAILABLE");
-    expect(result.courts[1]!.slots.every((s) => s.state === "AVAILABLE")).toBe(true);
+  it("returns all five courts with 15 one-hour slots each", () => {
+    const result = computeAvailability({ ...base, duration: 60 });
+    expect(result.courts).toHaveLength(5);
+    for (const c of result.courts) expect(c.slots).toHaveLength(15);
   });
 
-  it("blocks the whole day for maintenance", () => {
+  it("shows both badminton courts as RESTRICTED from 5 to 7 PM, other sports stay open", () => {
+    const result = computeAvailability({ ...base, duration: 60 });
+    for (const id of ["badminton-1", "badminton-2"]) {
+      expect(slotOf(result, id, 16 * H).state).toBe("AVAILABLE");
+      expect(slotOf(result, id, 17 * H).state).toBe("RESTRICTED");
+      expect(slotOf(result, id, 18 * H).state).toBe("RESTRICTED");
+      expect(slotOf(result, id, 19 * H).state).toBe("AVAILABLE");
+    }
+    for (const id of ["pickleball-1", "pickleball-2", "basketball-1"]) {
+      expect(slotOf(result, id, 17 * H).state).toBe("AVAILABLE");
+      expect(slotOf(result, id, 18 * H).state).toBe("AVAILABLE");
+    }
+  });
+
+  it("restricts two-hour badminton slots that overlap the closure", () => {
+    const result = computeAvailability({ ...base, duration: 120 });
+    expect(slotOf(result, "badminton-1", 15 * H).state).toBe("AVAILABLE"); // 3–5
+    expect(slotOf(result, "badminton-1", 16 * H).state).toBe("RESTRICTED"); // 4–6
+    expect(slotOf(result, "badminton-1", 18 * H).state).toBe("RESTRICTED"); // 6–8
+    expect(slotOf(result, "badminton-1", 19 * H).state).toBe("AVAILABLE"); // 7–9
+  });
+
+  it("blocks a slot only on the booked court", () => {
     const result = computeAvailability({
       ...base,
-      blocks: [{ courtId: "c2", type: "MAINTENANCE", startMinute: null, endMinute: null, reason: "Floor resurfacing" }],
+      duration: 60,
+      bookings: [{ courtId: "badminton-1", startMinute: 19 * H, endMinute: 20 * H, held: false }],
     });
-    expect(result.courts[1]!.slots.every((s) => s.state === "MAINTENANCE")).toBe(true);
-    expect(result.courts[1]!.availableCount).toBe(0);
+    expect(slotOf(result, "badminton-1", 19 * H).state).toBe("BOOKED");
+    expect(slotOf(result, "badminton-2", 19 * H).state).toBe("AVAILABLE");
   });
 
-  it("marks court in maintenance mode and hides inactive courts", () => {
+  it("needs both hours free for a two-hour booking", () => {
     const result = computeAvailability({
       ...base,
-      courts: [{ ...court, status: "MAINTENANCE" }, { ...court, id: "c3", status: "INACTIVE" }],
+      duration: 120,
+      bookings: [{ courtId: "pickleball-1", startMinute: 20 * H, endMinute: 21 * H, held: false }],
     });
-    expect(result.courts).toHaveLength(1);
-    expect(result.courts[0]!.slots[0]!.state).toBe("MAINTENANCE");
+    expect(slotOf(result, "pickleball-1", 19 * H).state).toBe("BOOKED"); // 7–9 overlaps 8–9
+    expect(slotOf(result, "pickleball-1", 20 * H).state).toBe("BOOKED"); // 8–10
+    expect(slotOf(result, "pickleball-1", 18 * H).state).toBe("AVAILABLE"); // 6–8
   });
 
-  it("marks elapsed slots as PAST for today", () => {
-    const result = computeAvailability({ ...base, nowMinute: 600 });
-    const slots = result.courts[0]!.slots;
-    expect(slots.find((s) => s.startMinute === 600)!.state).toBe("PAST");
-    expect(slots.find((s) => s.startMinute === 660)!.state).toBe("AVAILABLE");
-  });
-
-  it("reserves courts for training batches", () => {
+  it("a two-hour booking occupies both of its one-hour slots", () => {
     const result = computeAvailability({
       ...base,
-      training: [{ courtId: "c1", startMinute: 360, endMinute: 480, label: "Advanced Morning" }],
+      duration: 60,
+      bookings: [{ courtId: "basketball-1", startMinute: 19 * H, endMinute: 21 * H, held: false }],
     });
-    const slot = result.courts[0]!.slots.find((s) => s.startMinute === 420)!;
-    expect(slot.state).toBe("TRAINING");
-    expect(slot.label).toBe("Advanced Morning");
+    expect(slotOf(result, "basketball-1", 19 * H).state).toBe("BOOKED");
+    expect(slotOf(result, "basketball-1", 20 * H).state).toBe("BOOKED");
+    expect(slotOf(result, "basketball-1", 21 * H).state).toBe("AVAILABLE");
   });
-});
 
-describe("applyDiscount", () => {
-  it("applies capped percentage discounts", () => {
-    expect(applyDiscount(100000, { type: "PERCENT", value: 20, maxDiscount: 15000 })).toEqual({ discount: 15000, total: 85000 });
+  it("shows unpaid holds as HELD", () => {
+    const result = computeAvailability({
+      ...base,
+      duration: 60,
+      bookings: [{ courtId: "pickleball-2", startMinute: 9 * H, endMinute: 10 * H, held: true }],
+    });
+    expect(slotOf(result, "pickleball-2", 9 * H).state).toBe("HELD");
   });
-  it("never goes below zero", () => {
-    expect(applyDiscount(10000, { type: "FLAT", value: 50000 })).toEqual({ discount: 10000, total: 0 });
+
+  it("applies maintenance and blocks, and hides inactive courts", () => {
+    const result = computeAvailability({
+      ...base,
+      duration: 60,
+      courts: [...courts.slice(0, 4), court("basketball-1", "basketball", { status: "INACTIVE" })],
+      blocks: [
+        { courtId: "pickleball-1", type: "MAINTENANCE", startMinute: null, endMinute: null, reason: "Resurfacing" },
+        { courtId: "badminton-2", type: "BLOCKED", startMinute: 8 * H, endMinute: 10 * H, reason: "Private event" },
+      ],
+    });
+    expect(result.courts).toHaveLength(4);
+    expect(slotOf(result, "pickleball-1", 12 * H)).toMatchObject({ state: "MAINTENANCE", label: "Resurfacing" });
+    expect(slotOf(result, "badminton-2", 9 * H)).toMatchObject({ state: "BLOCKED", label: "Private event" });
+    expect(slotOf(result, "badminton-2", 10 * H).state).toBe("AVAILABLE");
+  });
+
+  it("marks slots that have started as PAST on today's date", () => {
+    const result = computeAvailability({ ...base, duration: 60, nowMinute: 9 * H + 5 });
+    expect(slotOf(result, "basketball-1", 9 * H).state).toBe("PAST");
+    expect(slotOf(result, "basketball-1", 10 * H).state).toBe("AVAILABLE");
   });
 });

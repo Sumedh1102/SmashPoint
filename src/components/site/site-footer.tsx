@@ -1,87 +1,85 @@
 import Link from "next/link";
-import { ArrowUpRight, Clock, Mail, MapPin, Phone } from "lucide-react";
-import { Logo } from "@/components/brand/logo";
-import { SOCIAL_ICONS } from "@/components/brand/social-icons";
-import { ButtonLink } from "@/components/ui/button";
-import { site } from "@/content/site";
-import { PUBLIC_NAV } from "./nav-links";
+import { Wordmark } from "@/components/brand/wordmark";
+import { mailHref, site, telHref } from "@/content/site";
+import { ContactValue } from "./contact-value";
+
+const SPORTS = [
+  { name: "Badminton", courts: 2 },
+  { name: "Pickleball", courts: 2 },
+  { name: "Basketball", courts: 1 },
+];
 
 export function SiteFooter() {
-  const year = new Date().getFullYear();
   return (
-    <footer className="mt-24 border-t border-line bg-ink text-white" data-print-hide>
-      <div className="mx-auto max-w-[88rem] px-4 sm:px-6">
-        <div className="grid gap-10 border-b border-white/15 py-14 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+    <footer className="bg-ink text-white">
+      <div className="mx-auto max-w-7xl px-4 pt-16 pb-10 sm:px-6 lg:px-8">
+        <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
-            <Logo inverted />
-            <p className="mt-5 max-w-sm text-white/75">{site.description}</p>
-            <div className="mt-6 flex gap-3">
-              {site.socials.map((s) => {
-                const Icon = SOCIAL_ICONS[s.label];
-                return (
-                  <a
-                    key={s.label}
-                    href={s.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`${site.shortName} on ${s.label}`}
-                    className="grid size-11 place-items-center rounded-xl border border-white bg-white/5 transition hover:bg-brand"
-                  >
-                    {Icon ? <Icon className="size-5" /> : null}
-                  </a>
-                );
-              })}
-            </div>
+            <Wordmark />
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-muted">{site.descriptor}. Book online, pay securely and play.</p>
+            <p className="mt-6 text-sm text-white/80">{site.hours}</p>
           </div>
+
           <div>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-white/60">Explore</h2>
-            <ul className="grid gap-2">
-              {PUBLIC_NAV.slice(1).map((item) => (
-                <li key={item.href}>
-                  <Link href={item.href} className="font-semibold hover:text-brand-200 hover:underline">
-                    {item.label}
-                  </Link>
+            <h2 className="eyebrow text-ink-muted">Sports</h2>
+            <ul className="mt-4 space-y-2.5 text-sm">
+              {SPORTS.map((s) => (
+                <li key={s.name}>
+                  <Link href="/#courts" className="text-white/85 hover:text-white">
+                    {s.name}
+                  </Link>{" "}
+                  <span className="text-ink-muted">
+                    · {s.courts} {s.courts === 1 ? "court" : "courts"}
+                  </span>
                 </li>
               ))}
             </ul>
           </div>
+
           <div>
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-white/60">Visit</h2>
-            <ul className="grid gap-3 text-white/85">
-              <li className="flex gap-2.5">
-                <MapPin className="mt-0.5 size-4 shrink-0" />
-                <span>{site.contact.addressLines.join(", ")}</span>
+            <h2 className="eyebrow text-ink-muted">Contact</h2>
+            <address className="mt-4 space-y-2.5 text-sm not-italic text-white/85">
+              <p>
+                <ContactValue value={site.contact.phone} href={telHref(site.contact.phone)} />
+              </p>
+              <p>
+                <ContactValue value={site.contact.email} href={mailHref(site.contact.email)} />
+              </p>
+              {site.contact.addressLines.map((line) => (
+                <p key={line}>
+                  <ContactValue value={line} href={null} />
+                </p>
+              ))}
+            </address>
+          </div>
+
+          <div>
+            <h2 className="eyebrow text-ink-muted">Policies</h2>
+            <ul className="mt-4 space-y-2.5 text-sm">
+              <li>
+                <Link href="/cancellation-policy" className="text-white/85 hover:text-white">
+                  Payments, cancellations &amp; refunds
+                </Link>
               </li>
-              <li className="flex gap-2.5">
-                <Clock className="mt-0.5 size-4 shrink-0" />
-                <span>Every day · 4:00 AM – 7:00 PM</span>
+              <li>
+                <Link href="/terms" className="text-white/85 hover:text-white">
+                  Terms &amp; conditions
+                </Link>
               </li>
-              <li className="flex gap-2.5">
-                <Phone className="mt-0.5 size-4 shrink-0" />
-                <a href={site.contact.phoneHref} className="hover:underline">
-                  {site.contact.phone}
-                </a>
-              </li>
-              <li className="flex gap-2.5">
-                <Mail className="mt-0.5 size-4 shrink-0" />
-                <a href={`mailto:${site.contact.email}`} className="hover:underline">
-                  {site.contact.email}
-                </a>
+              <li>
+                <Link href="/privacy" className="text-white/85 hover:text-white">
+                  Privacy policy
+                </Link>
               </li>
             </ul>
           </div>
-          <div className="rounded-2xl border border-white bg-brand p-6 shadow-[6px_6px_0_0_#fff]">
-            <p className="font-display text-2xl font-semibold leading-tight">Courts open at 4 AM. Your slot is one tap away.</p>
-            <ButtonLink href="/book" variant="outline" className="mt-5 w-full">
-              Book a Court <ArrowUpRight className="size-4" />
-            </ButtonLink>
-          </div>
         </div>
-        <div className="flex flex-col gap-2 py-6 text-sm text-white/60 sm:flex-row sm:items-center sm:justify-between">
+
+        <div className="mt-14 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {year} {site.name}. All rights reserved.
+            © {new Date().getFullYear()} {site.name}. All rights reserved.
           </p>
-          <p>Made for players in Palghar, Maharashtra.</p>
+          <p>Online payments are processed securely by Razorpay.</p>
         </div>
       </div>
     </footer>

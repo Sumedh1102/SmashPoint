@@ -1,509 +1,490 @@
 import "server-only";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, lte, or } from "drizzle-orm";
 import { db, type Transaction } from "@/server/db";
-import {
-  bookingSeries,
-  bookings,
-  courts,
-  eventRegistrations,
-  events,
-  memberships,
-  membershipPlans,
-  payments,
-  students,
-  type Payment,
-} from "@/server/db/schema";
+import { bookings, courts, payments, sports, type Booking, type Payment } from "@/server/db/schema";
 import { formatDate, formatMoney, formatTimeRange } from "@/lib/format";
+import { site } from "@/content/site";
 import { DomainError, isExclusionViolation } from "@/server/errors";
+import { sendEmail } from "@/server/email";
 import { bookingAccessToken, randomCode } from "@/server/security";
-import { getBookingSettings } from "@/server/settings";
-import { notify } from "@/server/notifications";
-import { transitionBooking, transitionSeries } from "@/server/services/bookings";
-import { incrementCouponUse } from "@/server/services/coupons";
-import { getPaymentProvider } from "./index";
-import type { CheckoutInstruction } from "./types";
+import { transitionBooking } from "@/server/services/bookings";
+import {
+  capturePaymentApi,
+  createOrder,
+  createRefund,
+  fetchOrderPayments,
+  fetchPayment,
+  fetchRefund,
+  isValidCheckoutSignature,
+  razorpayConfig,
+  type RazorpayPayment,
+} from "./razorpay";
 
-type Purpose = Payment["purpose"];
+/**
+ * Booking payment lifecycle on Razorpay:
+ *
+ *   startCheckout      payment row (CREATED) → Razorpay order → INITIATED; booking PAYMENT_INITIATED
+ *   verifyCheckout     browser success callback: signature check + payment fetched from Razorpay
+ *   recordCapture      the single, idempotent place a payment becomes PAID and its booking CONFIRMED
+ *   (webhooks and the reconciliation job call recordCapture too, so a payment is confirmed even if
+ *    the customer closes the tab before the callback arrives)
+ *   refundPayment      Razorpay refund; booking CANCELLED → REFUNDED once Razorpay processes it
+ *
+ * A booking is only ever confirmed from a payment the server has verified with Razorpay.
+ */
 
-type StartPaymentInput = {
-  purpose: Purpose;
-  amount: number;
-  description: string;
-  payer: { name: string; email?: string | null; phone?: string | null };
-  userId?: string | null;
-  studentId?: string | null;
-  bookingId?: string | null;
-  seriesId?: string | null;
-  membershipId?: string | null;
-  eventRegistrationId?: string | null;
-};
+export const PROVIDER = "razorpay";
 
-/** Creates a payment row and a gateway order; returns what the browser must do next. */
-export async function startPayment(input: StartPaymentInput): Promise<{ paymentId: string; checkout: CheckoutInstruction }> {
-  const provider = getPaymentProvider();
-  const [payment] = await db
-    .insert(payments)
-    .values({
-      receiptNumber: randomCode("RCP", 8),
-      purpose: input.purpose,
-      amount: input.amount,
-      currency: "INR",
-      status: "CREATED",
-      method: "ONLINE",
-      provider: provider.id,
-      payerName: input.payer.name,
-      payerEmail: input.payer.email ?? null,
-      payerPhone: input.payer.phone ?? null,
-      userId: input.userId ?? null,
-      studentId: input.studentId ?? null,
-      bookingId: input.bookingId ?? null,
-      seriesId: input.seriesId ?? null,
-      membershipId: input.membershipId ?? null,
-      eventRegistrationId: input.eventRegistrationId ?? null,
-    })
-    .returning();
-
-  try {
-    const order = await provider.createOrder({
-      paymentId: payment!.id,
-      amount: input.amount,
-      currency: "INR",
-      receipt: payment!.receiptNumber,
-      description: input.description,
-      customer: input.payer,
-      notes: { purpose: input.purpose },
-    });
-    await db.update(payments).set({ status: "INITIATED", providerOrderId: order.orderId }).where(eq(payments.id, payment!.id));
-    return { paymentId: payment!.id, checkout: order.checkout };
-  } catch (err) {
-    await db
-      .update(payments)
-      .set({ status: "FAILED", failureReason: "Could not reach payment gateway" })
-      .where(eq(payments.id, payment!.id));
-    console.error("[payments] createOrder failed", err);
-    throw new DomainError("We couldn't reach the payment gateway. Please try again.", "PAYMENT_FAILED", 502);
-  }
+export function paymentsEnabled() {
+  return razorpayConfig() !== null;
 }
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/* Booking payments                                                          */
-/* ────────────────────────────────────────────────────────────────────────── */
 
 export function bookingReceiptPath(code: string) {
   return `/booking/${code}?t=${bookingAccessToken(code)}`;
 }
 
-export async function initiateBookingPayment(code: string): Promise<{ checkout: CheckoutInstruction }> {
-  const settings = await getBookingSettings();
-  const [booking] = await db.select().from(bookings).where(eq(bookings.code, code)).limit(1);
-  if (!booking) throw new DomainError("Booking not found.", "NOT_FOUND", 404);
-  if (booking.status === "PAID" || booking.status === "CONFIRMED") {
-    throw new DomainError("This booking is already paid.", "CONFLICT", 409);
-  }
-  if (!["PENDING", "PAYMENT_INITIATED"].includes(booking.status)) {
-    throw new DomainError("This booking can no longer be paid. Please make a new booking.", "EXPIRED", 410);
-  }
-  if (booking.holdExpiresAt && booking.holdExpiresAt < new Date()) {
-    await transitionBooking(db, booking.id, "EXPIRED", { note: "Payment window elapsed" });
-    throw new DomainError("Your slot hold expired. Please choose the slot again.", "EXPIRED", 410);
-  }
+/** What the browser needs to open Razorpay Checkout. Contains no secrets. */
+export type CheckoutParams = {
+  keyId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  prefill: { name: string; email: string; contact: string };
+  /** Seconds until the slot hold ends; Checkout closes itself then. */
+  timeoutSeconds: number;
+};
 
-  // Fully discounted bookings are confirmed without visiting a gateway.
-  if (booking.total === 0) {
-    await recordOfflinePayment({
+function checkoutParams(booking: Booking & { courtName: string }, orderId: string): CheckoutParams {
+  const cfg = razorpayConfig()!;
+  const remaining = booking.holdExpiresAt ? Math.floor((booking.holdExpiresAt.getTime() - Date.now()) / 1000) : 600;
+  return {
+    keyId: cfg.keyId,
+    orderId,
+    amount: booking.total,
+    currency: "INR",
+    name: site.name,
+    description: `${booking.courtName} · ${formatDate(booking.date)} · ${formatTimeRange(booking.startMinute, booking.endMinute)}`,
+    prefill: { name: booking.customerName, email: booking.customerEmail ?? "", contact: booking.customerPhone },
+    timeoutSeconds: Math.max(60, remaining),
+  };
+}
+
+async function bookingWithCourt(code: string) {
+  const [row] = await db
+    .select({ booking: bookings, courtName: courts.name, sportName: sports.name })
+    .from(bookings)
+    .innerJoin(courts, eq(courts.id, bookings.courtId))
+    .innerJoin(sports, eq(sports.id, bookings.sportId))
+    .where(eq(bookings.code, code))
+    .limit(1);
+  return row ? { ...row.booking, courtName: row.courtName, sportName: row.sportName } : null;
+}
+
+function assertPayable(booking: Booking) {
+  if (booking.status === "PAID" || booking.status === "CONFIRMED") throw new DomainError("This booking is already paid.", "CONFLICT", 409);
+  const holdActive = booking.holdExpiresAt ? booking.holdExpiresAt.getTime() > Date.now() : false;
+  if ((booking.status !== "PENDING" && booking.status !== "PAYMENT_INITIATED") || !holdActive) {
+    throw new DomainError("The time to pay for this slot has run out, so it was released. Please choose your slot again.", "EXPIRED", 410);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Checkout                                                                  */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/** Creates the Razorpay order for a held booking. */
+export async function startCheckout(booking: Booking & { courtName: string }): Promise<CheckoutParams> {
+  if (!paymentsEnabled()) throw new DomainError("Online payments aren't available right now. Please try again later.", "PAYMENTS_UNAVAILABLE", 503);
+  assertPayable(booking);
+
+  const [payment] = await db
+    .insert(payments)
+    .values({
+      receiptNumber: randomCode("RCP", 8),
       purpose: "BOOKING",
       bookingId: booking.id,
-      amount: 0,
+      payerName: booking.customerName,
+      payerEmail: booking.customerEmail,
+      payerPhone: booking.customerPhone,
+      amount: booking.total,
+      currency: "INR",
+      status: "CREATED",
       method: "ONLINE",
-      payer: { name: booking.customerName, email: booking.customerEmail, phone: booking.customerPhone },
-      userId: booking.userId,
-      note: "Fully discounted",
+      provider: PROVIDER,
+    })
+    .returning();
+
+  let orderId: string;
+  try {
+    const order = await createOrder({
+      amount: booking.total,
+      currency: "INR",
+      receipt: payment!.receiptNumber,
+      notes: { booking_code: booking.code, payment_id: payment!.id, court: booking.courtName, date: booking.date },
     });
-    return { checkout: { kind: "redirect", url: bookingReceiptPath(code) } };
+    orderId = order.id;
+  } catch (err) {
+    console.error("[payments] order creation failed", err);
+    await db.update(payments).set({ status: "FAILED", failureReason: "Could not create the Razorpay order" }).where(eq(payments.id, payment!.id));
+    throw new DomainError("We couldn't reach the payment gateway. Your slot hasn't been charged. Please try again.", "PAYMENT_FAILED", 502);
   }
 
-  // Supersede any earlier unfinished attempt.
-  await db
-    .update(payments)
-    .set({ status: "FAILED", failureReason: "Superseded by a new payment attempt" })
-    .where(and(eq(payments.bookingId, booking.id), inArray(payments.status, ["CREATED", "INITIATED"])));
-
-  const { checkout } = await startPayment({
-    purpose: "BOOKING",
-    amount: booking.total,
-    description: `Court booking ${booking.code}`,
-    payer: { name: booking.customerName, email: booking.customerEmail, phone: booking.customerPhone },
-    userId: booking.userId,
-    bookingId: booking.id,
-  });
-
-  await transitionBooking(db, booking.id, "PAYMENT_INITIATED", {
-    note: `Checkout started (${getPaymentProvider().displayName})`,
-    patch: { holdExpiresAt: new Date(Date.now() + settings.holdMinutes * 60_000) },
-  });
-  return { checkout };
-}
-
-/** Checkout for a monthly/quarterly booking: one payment covers every session. */
-export async function initiateSeriesPayment(code: string): Promise<{ checkout: CheckoutInstruction }> {
-  const settings = await getBookingSettings();
-  const [series] = await db.select().from(bookingSeries).where(eq(bookingSeries.code, code)).limit(1);
-  if (!series) throw new DomainError("Booking not found.", "NOT_FOUND", 404);
-  if (series.status === "PAID" || series.status === "CONFIRMED") throw new DomainError("This booking is already paid.", "CONFLICT", 409);
-  if (!["PENDING", "PAYMENT_INITIATED"].includes(series.status)) {
-    throw new DomainError("This booking can no longer be paid. Please make a new booking.", "EXPIRED", 410);
-  }
-  if (series.holdExpiresAt && series.holdExpiresAt < new Date()) {
-    await db.transaction((tx) => transitionSeries(tx, series.id, "EXPIRED", { note: "Payment window elapsed", fromStatuses: ["PENDING", "PAYMENT_INITIATED"] }));
-    throw new DomainError("Your slot hold expired. Please choose the slots again.", "EXPIRED", 410);
-  }
-  if (series.total === 0) {
-    await recordOfflinePayment({
-      purpose: "BOOKING",
-      seriesId: series.id,
-      amount: 0,
-      method: "ONLINE",
-      payer: { name: series.customerName, email: series.customerEmail, phone: series.customerPhone },
-      userId: series.userId,
-      note: "Fully discounted",
-    });
-    return { checkout: { kind: "redirect", url: bookingReceiptPath(code) } };
-  }
-  await db
-    .update(payments)
-    .set({ status: "FAILED", failureReason: "Superseded by a new payment attempt" })
-    .where(and(eq(payments.seriesId, series.id), inArray(payments.status, ["CREATED", "INITIATED"])));
-  const { checkout } = await startPayment({
-    purpose: "BOOKING",
-    amount: series.total,
-    description: `${series.type === "MONTHLY" ? "Monthly" : "Quarterly"} court booking ${series.code}`,
-    payer: { name: series.customerName, email: series.customerEmail, phone: series.customerPhone },
-    userId: series.userId,
-    seriesId: series.id,
-  });
-  const holdExpiresAt = new Date(Date.now() + settings.holdMinutes * 60_000);
   await db.transaction(async (tx) => {
-    await tx.update(bookingSeries).set({ status: "PAYMENT_INITIATED", holdExpiresAt }).where(eq(bookingSeries.id, series.id));
-    await tx
-      .update(bookings)
-      .set({ status: "PAYMENT_INITIATED", holdExpiresAt })
-      .where(and(eq(bookings.seriesId, series.id), inArray(bookings.status, ["PENDING", "PAYMENT_INITIATED"])));
+    await tx.update(payments).set({ status: "INITIATED", providerOrderId: orderId }).where(eq(payments.id, payment!.id));
+    if (booking.status === "PENDING") await transitionBooking(tx, booking.id, "PAYMENT_INITIATED", { note: `Razorpay order ${orderId} created` });
   });
-  return { checkout };
+  return checkoutParams(booking, orderId);
+}
+
+/** Re-opens checkout for a held booking (after the customer closed the Razorpay window). */
+export async function resumeCheckout(code: string): Promise<CheckoutParams> {
+  const booking = await bookingWithCourt(code);
+  if (!booking) throw new DomainError("Booking not found.", "NOT_FOUND", 404);
+  assertPayable(booking);
+  const [open] = await db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.bookingId, booking.id), eq(payments.provider, PROVIDER), inArray(payments.status, ["INITIATED", "FAILED"])))
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
+  // A Razorpay order accepts further attempts after a failed one, so reuse it.
+  if (open?.providerOrderId) return checkoutParams(booking, open.providerOrderId);
+  return startCheckout(booking);
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/* Capture / fail / refund                                                   */
+/* Verification                                                              */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-type FulfilmentOutcome = { needsRefund: boolean; reason?: string };
-
-async function fulfil(tx: Transaction, payment: Payment, actorId?: string | null): Promise<FulfilmentOutcome> {
-  if (payment.purpose === "BOOKING" && payment.seriesId) {
-    const [series] = await tx.select().from(bookingSeries).where(eq(bookingSeries.id, payment.seriesId)).for("update");
-    if (!series) return { needsRefund: true, reason: "Booking no longer exists" };
-    if (series.status === "PAID" || series.status === "CONFIRMED") return { needsRefund: true, reason: "Duplicate payment" };
-    if (series.status === "CANCELLED" || series.status === "REFUNDED") return { needsRefund: true, reason: "Booking was cancelled" };
-    try {
-      // Late payments re-activate expired sessions only if every one is still free.
-      await tx.transaction(async (sp) => {
-        await transitionSeries(sp, series.id, "PAID", {
-          note: `Payment ${payment.receiptNumber} received`,
-          actorId,
-          fromStatuses: ["PENDING", "PAYMENT_INITIATED", "EXPIRED"],
-          patch: { paidAt: new Date(), holdExpiresAt: null },
-        });
-      });
-    } catch (err) {
-      if (isExclusionViolation(err)) return { needsRefund: true, reason: "Some sessions were taken after the hold expired" };
-      throw err;
-    }
-    await transitionSeries(tx, series.id, "CONFIRMED", { note: "Booking confirmed", actorId, fromStatuses: ["PAID"], patch: { confirmedAt: new Date() } });
-    return { needsRefund: false };
-  }
-
-  if (payment.purpose === "BOOKING" && payment.bookingId) {
-    const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).for("update");
-    if (!booking) return { needsRefund: true, reason: "Booking no longer exists" };
-    if (booking.status === "PAID" || booking.status === "CONFIRMED") return { needsRefund: true, reason: "Duplicate payment" };
-    if (booking.status === "CANCELLED" || booking.status === "REFUNDED") return { needsRefund: true, reason: "Booking was cancelled" };
-
-    try {
-      // A late payment for an expired hold re-activates the booking only if the slot is still free;
-      // the savepoint + EXCLUDE constraint decide atomically.
-      await tx.transaction(async (sp) => {
-        await transitionBooking(sp, booking.id, "PAID", {
-          note: `Payment ${payment.receiptNumber} received`,
-          actorId,
-          patch: { paidAt: new Date(), holdExpiresAt: null },
-        });
-      });
-    } catch (err) {
-      if (isExclusionViolation(err)) return { needsRefund: true, reason: "Slot was taken after the hold expired" };
-      throw err;
-    }
-    await transitionBooking(tx, booking.id, "CONFIRMED", { note: "Booking confirmed", actorId, patch: { confirmedAt: new Date() } });
-    if (booking.couponId) await incrementCouponUse(tx, booking.couponId);
-    return { needsRefund: false };
-  }
-
-  if (payment.purpose === "MEMBERSHIP" && payment.membershipId) {
-    await tx.update(memberships).set({ status: "ACTIVE", paymentStatus: "PAID" }).where(eq(memberships.id, payment.membershipId));
-    return { needsRefund: false };
-  }
-
-  if (payment.purpose === "EVENT" && payment.eventRegistrationId) {
-    await tx
-      .update(eventRegistrations)
-      .set({ status: "CONFIRMED", paymentStatus: "PAID" })
-      .where(eq(eventRegistrations.id, payment.eventRegistrationId));
-    return { needsRefund: false };
-  }
-  return { needsRefund: false };
+async function paymentByOrder(orderId: string) {
+  const [row] = await db.select().from(payments).where(and(eq(payments.provider, PROVIDER), eq(payments.providerOrderId, orderId))).limit(1);
+  return row ?? null;
 }
 
-/** Sends the customer-facing confirmation for a fulfilled payment. */
-async function announceFulfilment(payment: Payment) {
-  if (payment.purpose === "BOOKING" && payment.seriesId) {
-    const [s] = await db
-      .select({ series: bookingSeries, court: courts.name })
-      .from(bookingSeries)
-      .innerJoin(courts, eq(courts.id, bookingSeries.courtId))
-      .where(eq(bookingSeries.id, payment.seriesId))
-      .limit(1);
-    if (!s) return;
-    await notify({
-      userId: s.series.userId,
-      recipient: { name: s.series.customerName, email: s.series.customerEmail, phone: s.series.customerPhone },
-      type: "BOOKING_CONFIRMED",
-      title: `${s.series.type === "MONTHLY" ? "Monthly" : "Quarterly"} booking confirmed · ${s.series.code}`,
-      body: `${s.court}, ${formatTimeRange(s.series.startMinute, s.series.endMinute)}, ${s.series.sessionCount} sessions from ${formatDate(s.series.startDate, "long")} to ${formatDate(s.series.endDate, "long")}. Amount paid: ${formatMoney(s.series.total)}.`,
-      link: s.series.userId ? "/dashboard/bookings" : bookingReceiptPath(s.series.code),
-    });
-    return;
+/**
+ * Checks a fetched Razorpay payment against our records and captures it if it is only
+ * authorized. Returns the captured payment, or null if it isn't successful (yet).
+ */
+async function ensureCaptured(local: Payment, remote: RazorpayPayment): Promise<RazorpayPayment | null> {
+  if (remote.order_id !== local.providerOrderId) throw new DomainError("This payment doesn't belong to this booking.", "PAYMENT_FAILED", 400);
+  if (remote.amount !== local.amount || remote.currency !== local.currency) {
+    console.error("[payments] amount mismatch", { payment: local.id, expected: local.amount, got: remote.amount, currency: remote.currency });
+    throw new DomainError("The paid amount doesn't match this booking. Please contact us with your payment reference.", "PAYMENT_FAILED", 400);
   }
-  if (payment.purpose === "BOOKING" && payment.bookingId) {
-    const [b] = await db.query.bookings.findMany({ where: eq(bookings.id, payment.bookingId), with: { court: true }, limit: 1 });
-    if (!b) return;
-    await notify({
-      userId: b.userId,
-      recipient: { name: b.customerName, email: b.customerEmail, phone: b.customerPhone },
-      type: "BOOKING_CONFIRMED",
-      title: `Booking confirmed · ${b.code}`,
-      body: `${b.court.name} on ${formatDate(b.date, "long")}, ${formatTimeRange(b.startMinute, b.endMinute)}. Amount paid: ${formatMoney(b.total)}. See you on court!`,
-      link: b.userId ? `/dashboard/bookings` : bookingReceiptPath(b.code),
-    });
-  } else if (payment.purpose === "MEMBERSHIP" && payment.membershipId) {
-    const [m] = await db
-      .select({ endDate: memberships.endDate, plan: membershipPlans.name, userId: students.userId })
-      .from(memberships)
-      .innerJoin(membershipPlans, eq(membershipPlans.id, memberships.planId))
-      .innerJoin(students, eq(students.id, memberships.studentId))
-      .where(eq(memberships.id, payment.membershipId))
-      .limit(1);
-    await notify({
-      userId: payment.userId ?? m?.userId,
-      recipient: { name: payment.payerName, email: payment.payerEmail, phone: payment.payerPhone },
-      type: "PAYMENT_RECEIVED",
-      title: "Membership activated",
-      body: `Your ${m?.plan ?? ""} membership is active until ${formatDate(m?.endDate)}. Receipt ${payment.receiptNumber} · ${formatMoney(payment.amount)}.`,
-      link: "/dashboard/membership",
-    });
-  } else if (payment.purpose === "EVENT" && payment.eventRegistrationId) {
-    const [r] = await db
-      .select({ name: events.name, date: events.date, slug: events.slug })
-      .from(eventRegistrations)
-      .innerJoin(events, eq(events.id, eventRegistrations.eventId))
-      .where(eq(eventRegistrations.id, payment.eventRegistrationId))
-      .limit(1);
-    await notify({
-      userId: payment.userId,
-      recipient: { name: payment.payerName, email: payment.payerEmail, phone: payment.payerPhone },
-      type: "EVENT",
-      title: `You're registered · ${r?.name ?? "Event"}`,
-      body: `Registration confirmed for ${r?.name} on ${formatDate(r?.date, "long")}. Receipt ${payment.receiptNumber}.`,
-      link: r ? `/events/${r.slug}` : null,
-    });
-  }
+  if (remote.status === "captured") return remote;
+  if (remote.status === "authorized") return capturePaymentApi(remote.id, local.amount, local.currency);
+  return null;
 }
 
-export async function capturePayment(input: {
-  providerId: string;
-  orderId: string;
-  providerPaymentId: string;
-  signature?: string;
-  /** True when the event already arrived through a verified webhook. */
-  preVerified?: boolean;
-}): Promise<Payment> {
-  const provider = getPaymentProvider(input.providerId);
-  if (!input.preVerified) {
-    const ok = input.signature ? await provider.verifyPayment({ orderId: input.orderId, providerPaymentId: input.providerPaymentId, signature: input.signature }) : false;
-    if (!ok) {
-      await failPayment({ providerId: input.providerId, orderId: input.orderId, reason: "Signature verification failed" });
-      throw new DomainError("We couldn't verify this payment. If money was deducted it will be auto-refunded.", "PAYMENT_FAILED", 400);
-    }
+/**
+ * The browser's Checkout success callback. The signature proves the callback came from
+ * Razorpay for this order; the payment is then fetched from Razorpay's API (amount, currency,
+ * order and status checked) before anything is confirmed.
+ */
+export async function verifyCheckout(input: { code: string; orderId: string; paymentId: string; signature: string }) {
+  const cfg = razorpayConfig();
+  if (!cfg) throw new DomainError("Online payments aren't configured.", "PAYMENTS_UNAVAILABLE", 503);
+  const local = await paymentByOrder(input.orderId);
+  const booking = local?.bookingId ? (await db.select().from(bookings).where(eq(bookings.id, local.bookingId)).limit(1))[0] : null;
+  if (!local || !booking || booking.code !== input.code) throw new DomainError("Payment not found for this booking.", "NOT_FOUND", 404);
+  if (!isValidCheckoutSignature(input, cfg.keySecret)) {
+    throw new DomainError("We couldn't verify this payment. If money was deducted, it will be confirmed or refunded automatically.", "PAYMENT_FAILED", 400);
   }
 
-  const { payment, outcome, alreadyProcessed } = await db.transaction(async (tx) => {
+  const captured = await ensureCaptured(local, await fetchPayment(input.paymentId));
+  if (!captured) return { status: booking.status, pending: true as const };
+  await recordCapture({ orderId: input.orderId, paymentId: captured.id, amount: captured.amount, signature: input.signature });
+  const [after] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, booking.id)).limit(1);
+  return { status: after!.status, pending: false as const };
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Capture (idempotent)                                                      */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+type Fulfilment = { refund: false } | { refund: true; reason: string };
+
+/** Confirms the booking a captured payment is for, or says why it must be refunded. */
+async function fulfil(tx: Transaction, payment: Payment): Promise<Fulfilment> {
+  if (!payment.bookingId) return { refund: true, reason: "Payment isn't linked to a booking" };
+  const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).for("update");
+  if (!booking) return { refund: true, reason: "Booking no longer exists" };
+  if (booking.status === "PAID" || booking.status === "CONFIRMED") return { refund: true, reason: "Booking was already paid (duplicate payment)" };
+  if (booking.status === "CANCELLED" || booking.status === "REFUNDED") return { refund: true, reason: "Booking was cancelled before the payment arrived" };
+
+  try {
+    // A payment that lands after its hold expired re-activates the booking only if the slot is
+    // still free; the savepoint lets the EXCLUDE constraint decide atomically.
+    await tx.transaction(async (sp) => {
+      await transitionBooking(sp, booking.id, "PAID", {
+        note: `Payment ${payment.providerPaymentId} verified (${formatMoney(payment.amount)})`,
+        patch: { paidAt: new Date(), holdExpiresAt: null },
+      });
+    });
+  } catch (err) {
+    if (isExclusionViolation(err)) return { refund: true, reason: "The slot was taken after the payment window ran out" };
+    throw err;
+  }
+  await transitionBooking(tx, booking.id, "CONFIRMED", { note: "Booking confirmed", patch: { confirmedAt: new Date() } });
+  return { refund: false };
+}
+
+/**
+ * Marks a verified, captured Razorpay payment as PAID and confirms its booking. Safe to call
+ * any number of times for the same payment (browser callback, webhook, reconciliation).
+ */
+export async function recordCapture(input: { orderId: string; paymentId: string; amount: number; signature?: string }) {
+  const outcome = await db.transaction(async (tx) => {
     const [row] = await tx
       .select()
       .from(payments)
-      .where(and(eq(payments.provider, provider.id), eq(payments.providerOrderId, input.orderId)))
+      .where(and(eq(payments.provider, PROVIDER), eq(payments.providerOrderId, input.orderId)))
       .for("update");
-    if (!row) throw new DomainError("Payment not found.", "NOT_FOUND", 404);
+    if (!row) return { kind: "unknown" as const };
+    if (input.amount !== row.amount) {
+      console.error("[payments] captured amount mismatch", { payment: row.id, expected: row.amount, got: input.amount });
+      await tx.update(payments).set({ failureReason: `Captured amount ${input.amount} doesn't match ${row.amount}; needs review` }).where(eq(payments.id, row.id));
+      return { kind: "mismatch" as const };
+    }
     if (row.status === "PAID" || row.status === "REFUNDED") {
-      return { payment: row, outcome: { needsRefund: false } as FulfilmentOutcome, alreadyProcessed: true };
+      // Same payment reported again → nothing to do. A different payment on the same order
+      // (the customer was charged twice) → refund the extra one.
+      return row.providerPaymentId === input.paymentId ? { kind: "duplicate" as const } : { kind: "extra" as const, payment: row };
     }
     const [paid] = await tx
       .update(payments)
-      .set({ status: "PAID", paidAt: new Date(), providerPaymentId: input.providerPaymentId, providerSignature: input.signature ?? null, failureReason: null })
+      .set({ status: "PAID", paidAt: new Date(), providerPaymentId: input.paymentId, providerSignature: input.signature ?? row.providerSignature, failureReason: null })
       .where(eq(payments.id, row.id))
       .returning();
-    const outcome = await fulfil(tx, paid!);
-    return { payment: paid!, outcome, alreadyProcessed: false };
+    return { kind: "captured" as const, payment: paid!, fulfilment: await fulfil(tx, paid!) };
   });
 
-  if (alreadyProcessed) return payment;
-  if (outcome.needsRefund) {
-    await refundPayment(payment.id, { reason: outcome.reason ?? "Automatic refund" });
-    return payment;
+  if (outcome.kind === "extra") {
+    const extras = (outcome.payment.meta?.extraPaymentRefunds as { paymentId: string }[] | undefined) ?? [];
+    if (extras.some((e) => e.paymentId === input.paymentId)) return "duplicate" as const;
+    const refund = await createRefund(input.paymentId, input.amount, { reason: "Second payment for the same order" });
+    await db
+      .update(payments)
+      .set({ meta: { ...(outcome.payment.meta ?? {}), extraPaymentRefunds: [...extras, { paymentId: input.paymentId, refundId: refund.id, status: refund.status }] } })
+      .where(eq(payments.id, outcome.payment.id));
+    return outcome.kind;
   }
-  await announceFulfilment(payment);
-  return payment;
+  if (outcome.kind !== "captured") return outcome.kind;
+  if (outcome.fulfilment.refund) {
+    // The booking wasn't confirmed by this payment, so leave the booking as it is.
+    await refundPayment(outcome.payment.id, { reason: outcome.fulfilment.reason, cancelBooking: false });
+    return "refunded" as const;
+  }
+  await sendConfirmation(outcome.payment.bookingId!);
+  return outcome.kind;
 }
 
-export async function failPayment(input: { providerId: string; orderId: string; reason?: string }) {
+/** Records a failed attempt. The order stays open, so the customer can retry until the hold ends. */
+export async function recordFailure(orderId: string, reason: string | null) {
   await db
     .update(payments)
-    .set({ status: "FAILED", failureReason: input.reason?.slice(0, 300) ?? "Payment failed" })
-    .where(
-      and(eq(payments.provider, input.providerId), eq(payments.providerOrderId, input.orderId), inArray(payments.status, ["CREATED", "INITIATED"])),
-    );
+    .set({ status: "FAILED", failureReason: (reason || "Payment failed").slice(0, 300) })
+    .where(and(eq(payments.provider, PROVIDER), eq(payments.providerOrderId, orderId), inArray(payments.status, ["CREATED", "INITIATED", "FAILED"])));
 }
 
-/** Staff-recorded payments (cash / UPI at the desk) and zero-value confirmations. */
-export async function recordOfflinePayment(input: {
-  purpose: Purpose;
-  amount: number;
-  method: "CASH" | "UPI" | "CARD" | "BANK_TRANSFER" | "ONLINE";
-  payer: { name: string; email?: string | null; phone?: string | null };
-  userId?: string | null;
-  studentId?: string | null;
-  bookingId?: string | null;
-  seriesId?: string | null;
-  membershipId?: string | null;
-  eventRegistrationId?: string | null;
-  actorId?: string | null;
-  note?: string;
-}) {
-  const payment = await db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(payments)
-      .values({
-        receiptNumber: randomCode("RCP", 8),
-        purpose: input.purpose,
-        amount: input.amount,
-        status: "PAID",
-        method: input.method,
-        provider: "offline",
-        payerName: input.payer.name,
-        payerEmail: input.payer.email ?? null,
-        payerPhone: input.payer.phone ?? null,
-        userId: input.userId ?? null,
-        studentId: input.studentId ?? null,
-        bookingId: input.bookingId ?? null,
-        seriesId: input.seriesId ?? null,
-        membershipId: input.membershipId ?? null,
-        eventRegistrationId: input.eventRegistrationId ?? null,
-        paidAt: new Date(),
-        recordedById: input.actorId ?? null,
-        meta: input.note ? { note: input.note } : null,
-      })
-      .returning();
-    const outcome = await fulfil(tx, row!, input.actorId);
-    if (outcome.needsRefund) throw new DomainError(outcome.reason ?? "Could not apply payment.", "CONFLICT", 409);
-    return row!;
-  });
-  await announceFulfilment(payment);
-  return payment;
+/** Webhook: an authorized (not yet captured) payment. Captures it, then confirms as usual. */
+export async function handleAuthorized(input: { orderId: string; paymentId: string; amount: number }) {
+  const local = await paymentByOrder(input.orderId);
+  if (!local) return "unknown";
+  if (local.status === "PAID" && local.providerPaymentId === input.paymentId) return "duplicate";
+  const captured = await ensureCaptured(local, await fetchPayment(input.paymentId));
+  if (!captured) return "pending";
+  return recordCapture({ orderId: input.orderId, paymentId: captured.id, amount: captured.amount });
 }
 
-export async function refundPayment(paymentId: string, opts: { reason: string; actorId?: string | null }) {
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Refunds                                                                   */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Refunds a paid booking in full through Razorpay and cancels the booking. The payment is
+ * only marked REFUNDED once Razorpay reports the refund as processed (immediately, or later
+ * through the refund.processed webhook / reconciliation job); until then it shows as pending.
+ */
+export async function refundPayment(
+  paymentId: string,
+  opts: {
+    reason: string;
+    actorId?: string | null;
+    /** Cancel the booking this payment paid for (false for automatic refunds of payments that never confirmed it). */
+    cancelBooking?: boolean;
+  },
+) {
   const [payment] = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
   if (!payment) throw new DomainError("Payment not found.", "NOT_FOUND", 404);
-  if (payment.status !== "PAID") throw new DomainError("Only paid payments can be refunded.");
+  if (payment.status !== "PAID") throw new DomainError("Only paid payments can be refunded.", "CONFLICT", 409);
+  if (payment.provider !== PROVIDER || !payment.providerPaymentId) {
+    throw new DomainError("This payment wasn't made online, so it can't be refunded through Razorpay. Refund it at the desk.", "CONFLICT", 409);
+  }
 
-  let refundReference = "manual";
-  if (payment.provider !== "offline" && payment.providerPaymentId && payment.amount > 0) {
-    const provider = getPaymentProvider(payment.provider);
-    refundReference = (await provider.refund({ providerPaymentId: payment.providerPaymentId, amount: payment.amount, reason: opts.reason })).refundId;
+  // Claim the refund so two simultaneous requests can't both reach Razorpay. A claim older than
+  // 15 minutes (the process died mid-request) may be retried.
+  const claimed = await db
+    .update(payments)
+    .set({ refundStatus: "requested" })
+    .where(
+      and(
+        eq(payments.id, payment.id),
+        eq(payments.status, "PAID"),
+        or(isNull(payments.refundStatus), eq(payments.refundStatus, "failed"), and(eq(payments.refundStatus, "requested"), lt(payments.updatedAt, new Date(Date.now() - 15 * 60_000)))),
+      ),
+    )
+    .returning({ id: payments.id });
+  if (!claimed.length) throw new DomainError("A refund has already been issued for this payment.", "CONFLICT", 409);
+
+  let refund: Awaited<ReturnType<typeof createRefund>>;
+  try {
+    refund = await createRefund(payment.providerPaymentId, payment.amount, { reason: opts.reason.slice(0, 200), receipt: payment.receiptNumber });
+  } catch (err) {
+    await db.update(payments).set({ refundStatus: payment.refundStatus }).where(eq(payments.id, payment.id));
+    console.error("[payments] refund request failed", err);
+    throw new DomainError("Razorpay didn't accept the refund request. Nothing was refunded; please try again.", "PAYMENT_FAILED", 502);
+  }
+  if (refund.status === "failed") {
+    await db.update(payments).set({ refundReference: refund.id, refundStatus: "failed" }).where(eq(payments.id, payment.id));
+    throw new DomainError("Razorpay couldn't process this refund. Check the Razorpay dashboard and try again.", "PAYMENT_FAILED", 502);
   }
 
   await db.transaction(async (tx) => {
     await tx
       .update(payments)
-      .set({ status: "REFUNDED", refundedAmount: payment.amount, refundedAt: new Date(), refundReference, failureReason: opts.reason.slice(0, 300) })
+      .set({ refundReference: refund.id, refundStatus: refund.status, refundedAmount: payment.amount, failureReason: opts.reason.slice(0, 300) })
       .where(eq(payments.id, payment.id));
-    if (payment.seriesId) {
-      const [series] = await tx.select({ status: bookingSeries.status }).from(bookingSeries).where(eq(bookingSeries.id, payment.seriesId));
-      if (series && series.status !== "REFUNDED") {
-        await transitionSeries(tx, payment.seriesId, "CANCELLED", {
-          note: opts.reason,
+    if (payment.bookingId && opts.cancelBooking !== false) {
+      const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).for("update");
+      if (booking && booking.status !== "CANCELLED" && booking.status !== "REFUNDED") {
+        await transitionBooking(tx, booking.id, "CANCELLED", {
+          note: `${opts.reason} · refund ${refund.id} requested`,
           actorId: opts.actorId,
-          fromStatuses: ["PENDING", "PAYMENT_INITIATED", "PAID", "CONFIRMED"],
-          patch: { cancelledAt: new Date(), cancelReason: opts.reason },
+          patch: { cancelledAt: new Date(), cancelReason: opts.reason.slice(0, 300), holdExpiresAt: null },
         });
-        await transitionSeries(tx, payment.seriesId, "REFUNDED", { note: `Refund ${refundReference}`, actorId: opts.actorId, fromStatuses: ["CANCELLED"] });
       }
-    }
-    if (payment.bookingId) {
-      const [booking] = await tx.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, payment.bookingId));
-      if (booking && booking.status !== "REFUNDED") {
-        if (booking.status !== "CANCELLED") {
-          await transitionBooking(tx, payment.bookingId, "CANCELLED", { note: opts.reason, actorId: opts.actorId, patch: { cancelledAt: new Date(), cancelReason: opts.reason } });
-        }
-        await transitionBooking(tx, payment.bookingId, "REFUNDED", { note: `Refund ${refundReference}`, actorId: opts.actorId });
-      }
-    }
-    if (payment.membershipId) {
-      await tx.update(memberships).set({ status: "CANCELLED", paymentStatus: "REFUNDED" }).where(eq(memberships.id, payment.membershipId));
-    }
-    if (payment.eventRegistrationId) {
-      await tx
-        .update(eventRegistrations)
-        .set({ status: "CANCELLED", paymentStatus: "REFUNDED" })
-        .where(eq(eventRegistrations.id, payment.eventRegistrationId));
     }
   });
+  if (refund.status === "processed") await applyRefundStatus(refund.id, "processed");
 
-  await notify({
-    userId: payment.userId,
-    recipient: { name: payment.payerName, email: payment.payerEmail, phone: payment.payerPhone },
-    type: "PAYMENT_RECEIVED",
-    title: "Refund initiated",
-    body: `We've refunded ${formatMoney(payment.amount)} for receipt ${payment.receiptNumber}. It usually reaches your account in 5–7 working days.`,
+  await sendEmail({
+    to: payment.payerEmail,
+    subject: `Refund initiated · ${site.name}`,
+    text: `Hi ${payment.payerName},\n\nWe've refunded ${formatMoney(payment.amount)} (receipt ${payment.receiptNumber}) to your original payment method. Reason: ${opts.reason}.\nRazorpay refund reference: ${refund.id}. Refunds usually reach your account within 5–7 working days.\n\n${site.name}`,
   });
 }
 
-/** Where the customer lands after a completed (or failed) checkout. */
-export async function paymentReturnUrl(payment: Pick<Payment, "purpose" | "bookingId" | "seriesId" | "eventRegistrationId">, outcome: "success" | "failed" = "success") {
-  if (payment.purpose === "BOOKING" && payment.seriesId) {
-    const [s] = await db.select({ code: bookingSeries.code }).from(bookingSeries).where(eq(bookingSeries.id, payment.seriesId)).limit(1);
-    if (s) return `${bookingReceiptPath(s.code)}${outcome === "failed" ? "&payment=failed" : ""}`;
+/** Applies a refund status reported by Razorpay (webhook, refund response or reconciliation). */
+export async function applyRefundStatus(refundId: string, status: "pending" | "processed" | "failed") {
+  await db.transaction(async (tx) => {
+    const [payment] = await tx.select().from(payments).where(eq(payments.refundReference, refundId)).for("update");
+    if (!payment || payment.refundStatus === status) return;
+    if (status === "processed") {
+      await tx.update(payments).set({ status: "REFUNDED", refundStatus: "processed", refundedAt: new Date() }).where(eq(payments.id, payment.id));
+      if (payment.bookingId) {
+        const [booking] = await tx.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, payment.bookingId));
+        if (booking?.status === "CANCELLED") await transitionBooking(tx, payment.bookingId, "REFUNDED", { note: `Refund ${refundId} processed by Razorpay` });
+      }
+    } else {
+      await tx.update(payments).set({ refundStatus: status }).where(eq(payments.id, payment.id));
+    }
+  });
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Reconciliation                                                            */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Safety net for missed callbacks and webhooks (run by the scheduled job): asks Razorpay about
+ * recent unfinished orders and pending refunds, and applies what it reports.
+ */
+export async function reconcilePayments() {
+  const result = { checked: 0, confirmed: 0, refundsUpdated: 0, errors: 0 };
+  if (!paymentsEnabled()) return result;
+
+  const open = await db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.provider, PROVIDER),
+        inArray(payments.status, ["INITIATED", "FAILED"]),
+        gte(payments.createdAt, new Date(Date.now() - 3 * 86_400_000)),
+        lte(payments.createdAt, new Date(Date.now() - 2 * 60_000)),
+      ),
+    )
+    .orderBy(desc(payments.createdAt))
+    .limit(50);
+  for (const local of open) {
+    if (!local.providerOrderId) continue;
+    result.checked++;
+    try {
+      const attempts = await fetchOrderPayments(local.providerOrderId);
+      const done = attempts.find((p) => p.status === "captured") ?? attempts.find((p) => p.status === "authorized");
+      if (!done) continue;
+      const captured = await ensureCaptured(local, done);
+      if (captured) {
+        await recordCapture({ orderId: local.providerOrderId, paymentId: captured.id, amount: captured.amount });
+        result.confirmed++;
+      }
+    } catch (err) {
+      result.errors++;
+      console.error("[payments] reconcile order failed", local.providerOrderId, err);
+    }
   }
-  if (payment.purpose === "BOOKING" && payment.bookingId) {
-    const [b] = await db.select({ code: bookings.code }).from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1);
-    if (b) return `${bookingReceiptPath(b.code)}${outcome === "failed" ? "&payment=failed" : ""}`;
+
+  const refunds = await db.select().from(payments).where(and(eq(payments.provider, PROVIDER), eq(payments.refundStatus, "pending"))).limit(50);
+  for (const p of refunds) {
+    if (!p.providerPaymentId || !p.refundReference) continue;
+    try {
+      const refund = await fetchRefund(p.providerPaymentId, p.refundReference);
+      if (refund.status !== "pending") {
+        await applyRefundStatus(refund.id, refund.status);
+        result.refundsUpdated++;
+      }
+    } catch (err) {
+      result.errors++;
+      console.error("[payments] reconcile refund failed", p.refundReference, err);
+    }
   }
-  if (payment.purpose === "MEMBERSHIP") return `/dashboard/membership?payment=${outcome}`;
-  if (payment.purpose === "EVENT" && payment.eventRegistrationId) {
-    const [r] = await db
-      .select({ slug: events.slug })
-      .from(eventRegistrations)
-      .innerJoin(events, eq(events.id, eventRegistrations.eventId))
-      .where(eq(eventRegistrations.id, payment.eventRegistrationId))
-      .limit(1);
-    if (r) return `/events/${r.slug}?payment=${outcome}`;
-  }
-  return "/";
+  return result;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Customer emails                                                           */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+async function sendConfirmation(bookingId: string) {
+  const [row] = await db
+    .select({ b: bookings, court: courts.name, sport: sports.name })
+    .from(bookings)
+    .innerJoin(courts, eq(courts.id, bookings.courtId))
+    .innerJoin(sports, eq(sports.id, bookings.sportId))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  if (!row) return;
+  const { b } = row;
+  await sendEmail({
+    to: b.customerEmail,
+    subject: `Booking confirmed · ${b.code} · ${site.name}`,
+    text: [
+      `Hi ${b.customerName},`,
+      "",
+      "Your court is booked.",
+      "",
+      `Reference: ${b.code}`,
+      `Court: ${row.court} (${row.sport})`,
+      `Date: ${formatDate(b.date, "long")}`,
+      `Time: ${formatTimeRange(b.startMinute, b.endMinute)}`,
+      `Paid: ${formatMoney(b.total)}`,
+      "",
+      `View your booking: ${site.url}${bookingReceiptPath(b.code)}`,
+      "",
+      site.name,
+    ].join("\n"),
+  });
 }

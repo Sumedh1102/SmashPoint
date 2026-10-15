@@ -1,21 +1,22 @@
 import type { NextRequest } from "next/server";
-import { z } from "zod";
-import { getDayAvailability } from "@/server/services/bookings";
+import { availabilityQuerySchema, uuid } from "@/lib/validation";
 import { errorResponse, json } from "@/server/http";
-import { isoDate, uuid } from "@/lib/validation";
+import { getAvailability } from "@/server/services/bookings";
 
-const schema = z.object({
-  date: isoDate,
-  duration: z.coerce.number().int().min(30).max(240).default(60),
-  sport: uuid.optional(),
-  court: uuid.optional(),
-});
-
-/** Slot grid for one day: every court of a sport, or a single court. */
+/** Live slot grid for one date: a single court (id or slug), every court of a sport, or all courts. */
 export async function GET(req: NextRequest) {
   try {
-    const q = schema.parse(Object.fromEntries(req.nextUrl.searchParams));
-    return json(await getDayAvailability({ date: q.date, duration: q.duration, sportId: q.sport, courtId: q.court }));
+    const q = availabilityQuerySchema.parse(Object.fromEntries(req.nextUrl.searchParams));
+    const byId = q.court && uuid.safeParse(q.court).success;
+    return json(
+      await getAvailability({
+        date: q.date,
+        duration: q.duration,
+        sportSlug: q.sport,
+        courtId: byId ? q.court : undefined,
+        courtSlug: q.court && !byId ? q.court : undefined,
+      }),
+    );
   } catch (err) {
     return errorResponse(err);
   }

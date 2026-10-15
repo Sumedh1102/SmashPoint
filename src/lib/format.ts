@@ -23,14 +23,6 @@ export function formatMoney(minor: number, opts: { precise?: boolean } = {}): st
   return `${sign}₹${groupIndian(rupees)}${frac}`;
 }
 
-export function monthShort(index: number) {
-  return MONTHS_SHORT[index]!;
-}
-
-export function formatNumber(n: number): string {
-  return `${n < 0 ? "-" : ""}${groupIndian(n)}`;
-}
-
 /** 1050 → "5:30 PM" */
 export function formatMinutes(minutes: number): string {
   const h24 = Math.floor(minutes / 60) % 24;
@@ -52,6 +44,20 @@ export function formatTimeRange(start: number, end: number): string {
 /** 1050 → "17:30" (compact 24h label for grids) */
 export function formatMinutes24(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+/** 540 → "9 AM", 1050 → "5:30 PM" (compact, for chips and axes). */
+export function formatHour(minutes: number): string {
+  const h24 = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h24 >= 12 ? "PM" : "AM"}`;
+}
+
+/** Pieces of an ISO date for date pickers: { weekday: "Tue", day: 15, month: "Oct" }. */
+export function dateParts(iso: string) {
+  const d = parseISODate(iso);
+  return { weekday: WEEKDAYS_SHORT[d.getUTCDay()]!, day: d.getUTCDate(), month: MONTHS_SHORT[d.getUTCMonth()]! };
 }
 
 type DateStyle = "short" | "medium" | "long" | "weekday" | "dayMonth";
@@ -91,48 +97,9 @@ export function formatDateTime(value: Date | string | null | undefined, tz = "As
   }).format(d);
 }
 
-export function formatRelative(value: Date | string, now = new Date()): string {
-  const d = typeof value === "string" ? new Date(value) : value;
-  const diff = Math.round((d.getTime() - now.getTime()) / 1000);
-  const abs = Math.abs(diff);
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-  if (abs < 60) return rtf.format(diff, "second");
-  if (abs < 3600) return rtf.format(Math.round(diff / 60), "minute");
-  if (abs < 86400) return rtf.format(Math.round(diff / 3600), "hour");
-  if (abs < 86400 * 30) return rtf.format(Math.round(diff / 86400), "day");
-  return formatDateTime(d);
-}
-
-export function formatDays(days: number[]): string {
-  const sorted = [...days].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
-  const key = sorted.join(",");
-  if (key === "1,2,3,4,5,6") return "Mon – Sat";
-  if (key === "1,2,3,4,5") return "Mon – Fri";
-  if (key === "1,2,3,4,5,6,0") return "Every day";
-  if (key === "6,0") return "Sat & Sun";
-  return sorted.map((d) => WEEKDAYS_SHORT[d]).join(", ");
-}
-
 export function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m ? `${h}h ${m}m` : `${h} hr${h > 1 ? "s" : ""}`;
-}
-
-export function ageFromDob(dob: string | null | undefined, todayIso: string): number | null {
-  if (!dob) return null;
-  const [y, m, d] = dob.split("-").map(Number);
-  const [ty, tm, td] = todayIso.split("-").map(Number);
-  let age = ty! - y!;
-  if (tm! < m! || (tm === m && td! < d!)) age--;
-  return age;
-}
-
-export function titleCase(value: string): string {
-  return value
-    .toLowerCase()
-    .split(/[_\s]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
+  return m ? `${h} h ${m} min` : `${h} hour${h > 1 ? "s" : ""}`;
 }

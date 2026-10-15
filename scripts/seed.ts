@@ -1,7 +1,7 @@
 /**
- * Loads the demo academy. DESTRUCTIVE: wipes every application table first, so it refuses
- * to run on a database that holds anything other than earlier demo data (pass --force to
- * override).
+ * Loads the demo facility (five courts + demo admin). DESTRUCTIVE: wipes every application
+ * table first, so it refuses to run on a database that holds anything other than earlier demo
+ * data (pass --force to override).
  *
  * Run with: npm run db:seed
  */

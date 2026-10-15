@@ -1,91 +1,87 @@
 /**
- * Production first-run setup. Idempotent and non-destructive: it only fills what is missing.
- *  - default booking / notification / attendance settings
- *  - the starting catalogue (sports, courts, equipment, amenities, café menu, coaching adverts,
- *    programs, membership plans) — each only when its table is empty
- *  - an admin account for ADMIN_EMAIL (no password: the admin signs in with Firebase using
- *    that address, and the account links once the email is verified)
+ * Production first-run setup, run by `npm run db:deploy` after migrations. Idempotent and
+ * non-destructive: it only adds what is missing and never changes prices, courts or
+ * passwords that already exist.
+ *  - default booking and notification settings
+ *  - the three sports and five courts (matched by slug)
+ *  - an administrator for ADMIN_EMAIL with ADMIN_PASSWORD (only if that account doesn't exist
+ *    yet, or exists without a password)
  */
-import { count, eq, sql } from "drizzle-orm";
+import { and, eq, ne, notInArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { PgTable } from "drizzle-orm/pg-core";
 import * as schema from "../../src/server/db/schema";
-import { DEFAULT_ATTENDANCE_SETTINGS, DEFAULT_BOOKING_SETTINGS, DEFAULT_NOTIFICATION_SETTINGS } from "../../src/lib/settings-types";
-import { COACHING_ADS, COURTS, EQUIPMENT, FACILITIES, FOOD_ITEMS, MEMBERSHIP_PLANS, PROGRAMS, SPORTS } from "./catalogue";
+import { hashPassword } from "../../src/server/auth/password";
+import { DEFAULT_BOOKING_SETTINGS, DEFAULT_NOTIFICATION_SETTINGS } from "../../src/lib/settings-types";
+import { COURTS, SPORTS } from "./catalogue";
 
 type Db = NodePgDatabase<typeof schema>;
 type Env = Record<string, string | undefined>;
 
-const isEmpty = async (db: Db, table: PgTable) => ((await db.select({ n: count() }).from(table))[0]?.n ?? 0) === 0;
+export const MIN_ADMIN_PASSWORD = 12;
 
-export async function setupProduction(db: Db, env: Env) {
+export async function ensureCatalogue(db: Db) {
   const done: string[] = [];
-
   const inserted = await db
     .insert(schema.settings)
     .values([
       { key: "booking", value: DEFAULT_BOOKING_SETTINGS },
       { key: "notifications", value: DEFAULT_NOTIFICATION_SETTINGS },
-      { key: "attendance", value: DEFAULT_ATTENDANCE_SETTINGS },
     ])
     .onConflictDoNothing()
     .returning({ key: schema.settings.key });
   if (inserted.length) done.push(`settings (${inserted.map((r) => r.key).join(", ")})`);
 
-  if (await isEmpty(db, schema.sports)) {
-    await db.insert(schema.sports).values(SPORTS);
-    done.push(`${SPORTS.length} sports`);
-  }
+  const newSports = await db.insert(schema.sports).values(SPORTS).onConflictDoNothing({ target: schema.sports.slug }).returning({ slug: schema.sports.slug });
+  if (newSports.length) done.push(`sports: ${newSports.map((s) => s.slug).join(", ")}`);
+
   const sportRows = await db.select({ id: schema.sports.id, slug: schema.sports.slug }).from(schema.sports);
-  const sportId = (slug: string) => sportRows.find((r) => r.slug === slug)?.id;
+  const sportId = (slug: string) => sportRows.find((r) => r.slug === slug)!.id;
+  const newCourts = await db
+    .insert(schema.courts)
+    .values(COURTS.map(({ sport, ...c }) => ({ ...c, sportId: sportId(sport) })))
+    .onConflictDoNothing({ target: schema.courts.slug })
+    .returning({ name: schema.courts.name });
+  if (newCourts.length) done.push(`courts: ${newCourts.map((c) => c.name).join(", ")}`);
 
-  if (await isEmpty(db, schema.courts)) {
-    const rows = COURTS.filter((c) => sportId(c.sport)).map(({ sport, ...c }) => ({ ...c, sportId: sportId(sport)! }));
-    if (rows.length) await db.insert(schema.courts).values(rows);
-    done.push(`${rows.length} courts`);
+  // Courts from an earlier setup that aren't part of the five stay visible until an admin
+  // deactivates them; point that out instead of guessing.
+  const extra = await db
+    .select({ name: schema.courts.name })
+    .from(schema.courts)
+    .where(and(notInArray(schema.courts.slug, COURTS.map((c) => c.slug)), ne(schema.courts.status, "INACTIVE")));
+  if (extra.length) {
+    console.warn(`⚠️  Courts outside the standard five are still bookable: ${extra.map((c) => c.name).join(", ")}. Set them to Inactive in /admin/courts if they no longer exist.`);
   }
-  if (await isEmpty(db, schema.equipmentItems)) {
-    const rows = EQUIPMENT.filter((e) => !e.sport || sportId(e.sport)).map(({ sport, ...e }) => ({ ...e, sportId: sport ? sportId(sport)! : null }));
-    await db.insert(schema.equipmentItems).values(rows);
-    done.push(`${rows.length} equipment items`);
-  }
-  if (await isEmpty(db, schema.facilities)) {
-    await db.insert(schema.facilities).values(FACILITIES);
-    done.push(`${FACILITIES.length} facilities`);
-  }
-  if (await isEmpty(db, schema.foodItems)) {
-    await db.insert(schema.foodItems).values(FOOD_ITEMS);
-    done.push(`${FOOD_ITEMS.length} café items`);
-  }
-  if (await isEmpty(db, schema.coachingAds)) {
-    const rows = COACHING_ADS.map(({ sport, coachSlug: _coach, ...a }) => ({ ...a, sportId: sportId(sport) ?? null, coachId: null }));
-    await db.insert(schema.coachingAds).values(rows);
-    done.push(`${rows.length} coaching adverts`);
-  }
-  if (await isEmpty(db, schema.programs)) {
-    await db.insert(schema.programs).values(PROGRAMS.map(({ coachSlug: _coach, ...p }) => ({ ...p, coachId: null })));
-    done.push(`${PROGRAMS.length} programs`);
-  }
-  if (await isEmpty(db, schema.membershipPlans)) {
-    await db.insert(schema.membershipPlans).values(MEMBERSHIP_PLANS);
-    done.push(`${MEMBERSHIP_PLANS.length} membership plans`);
-  }
-
-  const email = env.ADMIN_EMAIL?.trim().toLowerCase();
-  const [{ n: adminCount } = { n: 0 }] = await db.select({ n: count() }).from(schema.users).where(eq(schema.users.role, "ADMIN"));
-  if (email) {
-    const [existing] = await db.select({ id: schema.users.id, role: schema.users.role }).from(schema.users).where(eq(sql`lower(${schema.users.email})`, email)).limit(1);
-    if (!existing) {
-      await db.insert(schema.users).values({ name: env.ADMIN_NAME?.trim() || "Facility Admin", email, phone: env.ADMIN_PHONE?.trim() || null, role: "ADMIN" });
-      done.push(`admin account ${email} (sign in with Firebase using this email)`);
-    } else if (existing.role !== "ADMIN" && adminCount === 0) {
-      // Bootstrap: the owner registered before the first deploy with ADMIN_EMAIL set.
-      await db.update(schema.users).set({ role: "ADMIN" }).where(eq(schema.users.id, existing.id));
-      done.push(`promoted ${email} to admin`);
-    }
-  } else if (adminCount === 0) {
-    console.warn("⚠️  No admin account exists. Set ADMIN_EMAIL and deploy again, then sign in with that email.");
-  }
-
   return done;
+}
+
+export async function ensureAdmin(db: Db, env: Env) {
+  const done: string[] = [];
+  const email = env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = env.ADMIN_PASSWORD ?? "";
+  if (email) {
+    const [existing] = await db.select().from(schema.users).where(eq(sql`lower(${schema.users.email})`, email)).limit(1);
+    if (!existing || !existing.passwordHash) {
+      if (password.length < MIN_ADMIN_PASSWORD) {
+        console.warn(`⚠️  ADMIN_PASSWORD must be at least ${MIN_ADMIN_PASSWORD} characters; admin ${email} was not ${existing ? "updated" : "created"}.`);
+      } else if (!existing) {
+        await db.insert(schema.users).values({ name: env.ADMIN_NAME?.trim() || "Administrator", email, passwordHash: await hashPassword(password), role: "ADMIN" });
+        done.push(`admin account ${email}`);
+      } else {
+        await db.update(schema.users).set({ passwordHash: await hashPassword(password), role: "ADMIN", isActive: true }).where(eq(schema.users.id, existing.id));
+        done.push(`password set for admin ${email}`);
+      }
+    }
+  }
+  const [admin] = await db
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(and(eq(schema.users.role, "ADMIN"), eq(schema.users.isActive, true), sql`${schema.users.passwordHash} IS NOT NULL`))
+    .limit(1);
+  if (!admin) console.warn("⚠️  No administrator can sign in yet. Set ADMIN_EMAIL and ADMIN_PASSWORD and deploy again, or run `npm run admin -- create`.");
+  return done;
+}
+
+export async function setupProduction(db: Db, env: Env) {
+  return [...(await ensureCatalogue(db)), ...(await ensureAdmin(db, env))];
 }

@@ -1,16 +1,11 @@
 import "server-only";
-import { revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 
-export const TAGS = {
-  coaches: "coaches",
-  programs: "programs",
-  plans: "membership-plans",
-  events: "events",
-  announcements: "announcements",
-  courts: "courts",
-} as const;
-
-/** Expires cached public data immediately after an admin change. */
-export function invalidate(...tags: (typeof TAGS)[keyof typeof TAGS][]) {
-  for (const tag of tags) revalidateTag(tag, { expire: 0 });
+/**
+ * Public pages read live data (availability changes every booking), so they are rendered per
+ * request and nothing needs tag invalidation. After an admin edits courts, refresh any page
+ * the client router may still hold.
+ */
+export function refreshPublicPages() {
+  revalidatePath("/", "layout");
 }

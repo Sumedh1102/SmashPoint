@@ -1,224 +1,147 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CircleCheck, Clock, LogIn, TriangleAlert, XCircle } from "lucide-react";
-import { Container } from "@/components/marketing/section";
-import { HoldCountdown, PayNowButton, ReceiptToolbar } from "@/components/booking/receipt-actions";
-import { StatusBadge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
-import { FormMessage } from "@/components/ui/form";
-import { formatDate, formatDateTime, formatDuration, formatMoney, formatTimeRange, titleCase } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { canCustomerCancel } from "@/server/services/bookings";
-import { findAccessibleBooking } from "@/server/services/booking-access";
-import { getBookingSettings } from "@/server/settings";
+import { notFound } from "next/navigation";
+import { CalendarPlus, Check, Clock3, RotateCcw, XCircle } from "lucide-react";
+import { BookingStatusPoller } from "@/components/booking/booking-status-poller";
+import { PrintButton } from "@/components/booking/print-button";
+import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
+import { formatDate, formatDateTime, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
+import { site } from "@/content/site";
+import { findCustomerBooking } from "@/server/queries/public";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your booking", robots: { index: false, follow: false } };
 
-const LIFECYCLE = ["PENDING", "PAYMENT_INITIATED", "PAID", "CONFIRMED"] as const;
-const LABELS: Record<string, string> = {
-  PENDING: "Pending",
-  PAYMENT_INITIATED: "Payment initiated",
-  PAID: "Paid",
-  CONFIRMED: "Confirmed",
-  CANCELLED: "Cancelled",
-  REFUNDED: "Refunded",
-  EXPIRED: "Hold expired",
-};
+type View = { tone: "success" | "pending" | "ended"; title: string; text: string };
 
-export default async function BookingReceiptPage({ params, searchParams }: PageProps<"/booking/[code]">) {
+function viewFor(status: string, refundStatus: string | null | undefined, holdActive: boolean): View {
+  switch (status) {
+    case "CONFIRMED":
+    case "PAID":
+      return { tone: "success", title: "Booking confirmed", text: "Your payment is verified and the court is yours. A confirmation has been sent to your email." };
+    case "PENDING":
+    case "PAYMENT_INITIATED":
+      return holdActive
+        ? { tone: "pending", title: "Waiting for payment", text: "We're waiting for Razorpay to confirm your payment. This page updates by itself." }
+        : { tone: "ended", title: "Not confirmed", text: "The payment window ended before a payment was confirmed, so the slot was released." };
+    case "EXPIRED":
+      return { tone: "ended", title: "Not confirmed", text: "The payment wasn't completed in time, so the slot was released. If money left your account, it's refunded automatically." };
+    case "CANCELLED":
+      return {
+        tone: "ended",
+        title: "Booking cancelled",
+        text: refundStatus === "pending" || refundStatus === "requested" ? "This booking was cancelled and a refund is on its way (usually 5–7 working days)." : "This booking was cancelled.",
+      };
+    case "REFUNDED":
+      return { tone: "ended", title: "Booking refunded", text: "This booking was cancelled and the payment has been refunded to the original payment method." };
+    default:
+      return { tone: "ended", title: "Booking", text: "" };
+  }
+}
+
+export default async function BookingPage({ params, searchParams }: PageProps<"/booking/[code]">) {
   const { code } = await params;
-  const sp = await searchParams;
-  const token = typeof sp.t === "string" ? sp.t : undefined;
-  const { booking } = await findAccessibleBooking(code, token);
+  const { t } = await searchParams;
+  const token = typeof t === "string" ? t : null;
+  const found = await findCustomerBooking(code, token);
+  if (!found || !token) notFound();
+  const { booking, court, sport, payment } = found;
 
-  if (!booking) {
-    return (
-      <Container className="py-20">
-        <div className="mx-auto max-w-lg rounded-[var(--radius-card)] border border-line bg-white p-8 text-center shadow-md">
-          <TriangleAlert className="mx-auto size-10 text-warning" />
-          <h1 className="mt-4 text-3xl font-semibold">Booking not found</h1>
-          <p className="mt-2 text-muted">This link is invalid or has expired. Sign in to see bookings made with your account, or use the link from your confirmation message.</p>
-          <div className="mt-6 flex justify-center gap-2">
-            <ButtonLink href="/login?next=/dashboard/bookings" icon={<LogIn className="size-4" />}>
-              Sign in
-            </ButtonLink>
-            <ButtonLink href="/book" variant="outline">
-              Book a court
-            </ButtonLink>
-          </div>
-        </div>
-      </Container>
-    );
+  const holdActive = !!booking.holdExpiresAt && booking.holdExpiresAt.getTime() > Date.now();
+  const view = viewFor(booking.status, payment?.refundStatus, holdActive);
+  const duration = booking.endMinute - booking.startMinute;
+
+  const rows: [string, string][] = [
+    ["Sport", sport.name],
+    ["Court", court.name],
+    ["Date", formatDate(booking.date, "long")],
+    ["Start time", formatMinutes(booking.startMinute)],
+    ["End time", formatMinutes(booking.endMinute)],
+    ["Duration", formatDuration(duration)],
+    ["Name", booking.customerName],
+    ["Amount", formatMoney(booking.total)],
+  ];
+  if (payment?.status === "PAID" || payment?.status === "REFUNDED") {
+    rows.push(["Payment", `${payment.providerPaymentId ?? payment.receiptNumber}${payment.paidAt ? ` · ${formatDateTime(payment.paidAt)}` : ""}`]);
   }
 
-  const settings = await getBookingSettings();
-  const payment = booking.payments.find((p) => p.status === "PAID" || p.status === "REFUNDED") ?? booking.payments[0];
-  const reached = new Map(booking.events.map((e) => [e.status, e.createdAt]));
-  const awaitingPayment = booking.status === "PENDING" || booking.status === "PAYMENT_INITIATED";
-  const holdActive = awaitingPayment && booking.holdExpiresAt && booking.holdExpiresAt > new Date();
-  const confirmed = booking.status === "CONFIRMED" || booking.status === "PAID";
-  const closed = ["CANCELLED", "REFUNDED", "EXPIRED"].includes(booking.status);
-  const icsHref = `/api/bookings/${booking.code}/ics${token ? `?t=${token}` : ""}`;
-
   return (
-    <Container className="py-10 md:py-14">
-      <div className="mx-auto max-w-3xl">
-        {sp.payment === "failed" && awaitingPayment ? (
-          <div className="mb-6">
-            <FormMessage>Payment failed or was cancelled. Your slot is still held — you can try again below.</FormMessage>
-          </div>
-        ) : null}
-
-        <div
-          className={cn(
-            "flex flex-col gap-4 rounded-[var(--radius-card)] border border-line p-6 shadow-md sm:flex-row sm:items-center md:p-8",
-            confirmed ? "bg-brand text-white" : closed ? "bg-paper-2" : "bg-warning-soft",
-          )}
-        >
-          <span className={cn("grid size-16 shrink-0 place-items-center rounded-2xl border border-line", confirmed ? "bg-white text-brand" : "bg-white")}>
-            {confirmed ? <CircleCheck className="size-9" /> : closed ? <XCircle className="size-9 text-danger" /> : <Clock className="size-9" />}
-          </span>
-          <div className="flex-1">
-            <h1 className="text-3xl font-semibold leading-tight md:text-4xl">
-              {confirmed ? "You're booked!" : awaitingPayment ? (holdActive ? "Complete your payment" : "Hold expired") : `Booking ${LABELS[booking.status]?.toLowerCase()}`}
-            </h1>
-            <p className={cn("mt-1 font-semibold", confirmed ? "text-white/85" : "text-ink-soft")}>
-              {confirmed
-                ? `Confirmation sent to ${booking.customerEmail ?? booking.customerPhone}. See you on court.`
-                : awaitingPayment && holdActive
-                  ? "Your slot is reserved while you pay."
-                  : booking.status === "REFUNDED"
-                    ? "Your refund has been initiated to the original payment method."
-                    : "This booking is no longer active."}
-            </p>
-          </div>
-          {awaitingPayment && holdActive && booking.holdExpiresAt ? (
-            <div className="rounded-xl border border-line bg-white px-4 py-2 text-center">
-              <p className="text-xs font-medium uppercase text-muted">Hold ends in</p>
-              <p className="text-2xl">
-                <HoldCountdown expiresAt={booking.holdExpiresAt.toISOString()} />
-              </p>
+    <div className="bg-paper pt-28 pb-20 sm:pt-32">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6">
+        <div className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-white shadow-md">
+          <div className={view.tone === "success" ? "bg-ink px-6 py-8 text-white sm:px-10 sm:py-10" : "border-b border-line px-6 py-8 sm:px-10"}>
+            <div className="flex items-start justify-between gap-4">
+              <span
+                aria-hidden
+                className={
+                  view.tone === "success"
+                    ? "grid size-14 place-items-center rounded-full bg-lime text-ink"
+                    : view.tone === "pending"
+                      ? "grid size-14 place-items-center rounded-full bg-warning-soft text-warning"
+                      : "grid size-14 place-items-center rounded-full bg-paper-2 text-muted"
+                }
+              >
+                {view.tone === "success" ? <Check className="size-7" strokeWidth={2.5} /> : view.tone === "pending" ? <Clock3 className="size-7" /> : <XCircle className="size-7" />}
+              </span>
+              <div className="text-right">
+                <p className={view.tone === "success" ? "eyebrow text-ink-muted" : "eyebrow text-subtle"}>Booking reference</p>
+                <p className="display tabular mt-1 text-[1.9rem] leading-none">{booking.code}</p>
+              </div>
             </div>
-          ) : null}
-        </div>
-
-        <article className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-line bg-white shadow-sm">
-          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-6 py-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted">Booking ID</p>
-              <p className="font-mono text-2xl font-medium">{booking.code}</p>
-            </div>
-            <StatusBadge status={booking.status} />
-          </header>
-          <div className="grid gap-6 p-6 md:grid-cols-2">
-            <dl className="grid content-start gap-3 text-sm">
-              {[
-                ["Court", booking.court.name],
-                ["Date", formatDate(booking.date, "long")],
-                ["Time", formatTimeRange(booking.startMinute, booking.endMinute)],
-                ["Duration", formatDuration(booking.endMinute - booking.startMinute)],
-                ["Name", booking.customerName],
-                ["Phone", booking.customerPhone],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-4 border-b border-line pb-2">
-                  <dt className="font-semibold text-muted">{k}</dt>
-                  <dd className="text-right font-medium">{v}</dd>
-                </div>
-              ))}
-            </dl>
-            <div className="rounded-2xl border border-line p-4">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Payment</p>
-              <dl className="grid gap-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-muted">Court fee</dt>
-                  <dd className="font-medium">{formatMoney(booking.subtotal)}</dd>
-                </div>
-                {booking.discount ? (
-                  <div className="flex justify-between text-success">
-                    <dt>Discount</dt>
-                    <dd className="font-medium">−{formatMoney(booking.discount)}</dd>
-                  </div>
-                ) : null}
-                <div className="flex items-end justify-between border-t border-line pt-2">
-                  <dt className="font-semibold">Amount</dt>
-                  <dd className="font-display text-3xl font-semibold leading-none">{formatMoney(booking.total)}</dd>
-                </div>
-                <div className="mt-2 flex justify-between">
-                  <dt className="text-muted">Payment status</dt>
-                  <dd>{payment ? <StatusBadge status={payment.status} /> : <StatusBadge status="CREATED" />}</dd>
-                </div>
-                {payment ? (
-                  <>
-                    <div className="flex justify-between">
-                      <dt className="text-muted">Receipt no.</dt>
-                      <dd className="font-mono font-medium">{payment.receiptNumber}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-muted">Method</dt>
-                      <dd className="font-medium">{payment.provider === "offline" ? titleCase(payment.method) : `Online · ${payment.provider}`}</dd>
-                    </div>
-                    {payment.paidAt ? (
-                      <div className="flex justify-between">
-                        <dt className="text-muted">Paid at</dt>
-                        <dd className="font-medium">{formatDateTime(payment.paidAt)}</dd>
-                      </div>
-                    ) : null}
-                  </>
-                ) : null}
-              </dl>
-            </div>
-          </div>
-
-          <div className="border-t border-line px-6 py-5">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted">Booking lifecycle</p>
-            <ol className="grid gap-3 sm:grid-cols-4">
-              {LIFECYCLE.map((s, i) => {
-                const at = reached.get(s);
-                return (
-                  <li key={s} className={cn("relative rounded-xl border px-3 py-2", at ? "border-line bg-brand-50" : "border-dashed border-line-strong text-muted")}>
-                    <p className="flex items-center gap-1.5 text-sm font-semibold">
-                      <span className={cn("grid size-5 place-items-center rounded-md text-[11px]", at ? "bg-brand text-white" : "bg-ink/10")}>{i + 1}</span>
-                      {LABELS[s]}
-                    </p>
-                    <p className="mt-0.5 text-xs font-semibold">{at ? formatDateTime(at) : "—"}</p>
-                  </li>
-                );
-              })}
-            </ol>
-            {reached.has("CANCELLED") || reached.has("REFUNDED") || reached.has("EXPIRED") ? (
-              <ol className="mt-3 grid gap-3 sm:grid-cols-4">
-                {(["CANCELLED", "REFUNDED", "EXPIRED"] as const)
-                  .filter((s) => reached.has(s))
-                  .map((s) => (
-                    <li key={s} className="rounded-xl border border-line bg-danger-soft px-3 py-2">
-                      <p className="text-sm font-semibold">{LABELS[s]}</p>
-                      <p className="text-xs font-semibold">{formatDateTime(reached.get(s)!)}</p>
-                    </li>
-                  ))}
-              </ol>
+            <h1 className="display mt-6 text-[clamp(2.4rem,7vw,3.75rem)]">{view.title}</h1>
+            <p className={view.tone === "success" ? "mt-3 max-w-xl text-white/75" : "mt-3 max-w-xl text-muted"}>{view.text}</p>
+            {view.tone === "pending" ? (
+              <div className="mt-4">
+                <BookingStatusPoller code={booking.code} token={token} status={booking.status} />
+              </div>
             ) : null}
           </div>
-        </article>
 
-        <div className="mt-6 flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {confirmed ? (
-            <ReceiptToolbar icsHref={icsHref} cancel={canCustomerCancel(booking, settings) ? { code: booking.code, token } : undefined} />
-          ) : awaitingPayment && holdActive ? (
-            <PayNowButton code={booking.code} token={token} label={`Pay ${formatMoney(booking.total)} now`} />
-          ) : (
-            <span />
-          )}
-          <Link href="/book" className="inline-flex items-center gap-1 font-medium hover:text-brand" data-print-hide>
-            Book another slot <ArrowRight className="size-4" />
-          </Link>
+          <dl className="grid gap-px bg-line sm:grid-cols-2">
+            {rows.map(([k, v]) => (
+              <div key={k} className="bg-white px-6 py-4 sm:px-10">
+                <dt className="eyebrow text-subtle">{k}</dt>
+                <dd className="mt-1 font-medium break-words">{v}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {payment?.refundStatus ? (
+            <div className="border-t border-line px-6 py-4 text-sm sm:px-10">
+              <Badge tone={payment.refundStatus === "processed" ? "success" : payment.refundStatus === "failed" ? "danger" : "warning"}>
+                Refund {payment.refundStatus === "requested" ? "requested" : payment.refundStatus}
+              </Badge>
+              {payment.refundReference ? <span className="ml-2 text-muted">Razorpay reference {payment.refundReference}</span> : null}
+            </div>
+          ) : null}
+
+          <div className="no-print flex flex-col gap-3 border-t border-line bg-paper px-6 py-5 sm:flex-row sm:flex-wrap sm:px-10">
+            {view.tone === "success" ? (
+              <>
+                <a href={`/api/bookings/${booking.code}/ics?t=${encodeURIComponent(token)}`} className={buttonClass({ variant: "dark" })}>
+                  <CalendarPlus className="size-4" /> Add to calendar
+                </a>
+                <PrintButton />
+              </>
+            ) : null}
+            <Link href="/#book" className={buttonClass({ variant: view.tone === "success" ? "outline" : "primary" }, "sm:ml-auto")}>
+              {view.tone === "success" ? "Book another court" : (
+                <>
+                  <RotateCcw className="size-4" /> Book a court
+                </>
+              )}
+            </Link>
+          </div>
         </div>
-        {confirmed ? (
-          <p className="mt-6 text-sm text-muted">
-            Please arrive 10 minutes early and wear non-marking shoes. Cancellations are free up to {settings.cancellationCutoffHours} hours before your slot.
-          </p>
-        ) : null}
+
+        <p className="mt-6 text-center text-sm text-muted">
+          Keep this page&apos;s link to come back to your booking. Need help? Contact {site.name} with reference <span className="font-semibold text-ink">{booking.code}</span>.{" "}
+          <Link href="/cancellation-policy" className="underline underline-offset-2 hover:text-ink">
+            Cancellation &amp; refund policy
+          </Link>
+        </p>
       </div>
-    </Container>
+    </div>
   );
 }
