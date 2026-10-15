@@ -12,7 +12,7 @@ import { HeroDepth } from "./hero-depth";
 const FACTS = [
   { value: "05", label: "Indoor courts" },
   { value: "03", label: "Sports" },
-  { value: "7–10", label: "AM to PM, daily" },
+  { value: "15", label: "Hours a day · 7 AM – 10 PM" },
   { value: "Live", label: "Availability" },
 ];
 
@@ -46,15 +46,15 @@ export function SportsHero() {
         {/* Racket: mid layer (desktop and tablet) */}
         <Parallax speed={0.14} minWidth={768} className="pointer-events-none absolute top-[9%] right-[-7%] hidden w-[46vw] max-w-[760px] md:block lg:right-[-3%] lg:w-[40vw]">
           <div className="[transform:translate3d(calc(var(--px)*-22px),calc(var(--py)*-14px),0)_rotateY(calc(var(--px)*6deg))_rotateX(calc(var(--py)*-4deg))] transition-transform duration-300 ease-out [transform-style:preserve-3d]">
-            <Image src={heroRacket} alt="" sizes="(min-width: 768px) 40vw, 1px" quality={80} className="h-auto w-full drop-shadow-[0_40px_60px_rgb(0_0_0/0.55)]" />
+            <Image src={heroRacket} alt="" sizes="(min-width: 768px) 40vw, 1px" quality={80} loading="eager" fetchPriority="high" className="h-auto w-full drop-shadow-[0_40px_60px_rgb(0_0_0/0.55)]" />
           </div>
         </Parallax>
 
-        {/* Shuttle: foreground, fastest layer, with a soft flight trail */}
-        <Parallax speed={-0.12} minWidth={0} className="pointer-events-none absolute top-[17%] right-[6%] w-[30vw] max-w-[150px] md:top-[24%] md:right-[33%] md:w-[13vw] md:max-w-[230px]">
+        {/* Shuttle: foreground, fastest layer, with a soft flight trail (tablet and up; phones get a calmer hero) */}
+        <Parallax speed={-0.12} minWidth={768} className="pointer-events-none absolute top-[11%] right-[30%] hidden w-[11vw] max-w-[200px] md:block lg:right-[27%]">
           <div className="relative animate-float [transform:translate3d(calc(var(--px)*-36px),calc(var(--py)*-24px),0)] transition-transform duration-300 ease-out">
             <span aria-hidden className="absolute top-[58%] left-[52%] h-[14%] w-[190%] origin-left rotate-[33deg] rounded-full bg-[linear-gradient(90deg,rgb(255_255_255/0.28),rgb(200_240_74/0.10)_45%,transparent)] blur-[6px]" />
-            <Image src={heroShuttle} alt="" sizes="(min-width: 768px) 13vw, 30vw" quality={80} className="relative h-auto w-full drop-shadow-[0_24px_30px_rgb(0_0_0/0.5)]" />
+            <Image src={heroShuttle} alt="" sizes="(min-width: 768px) 11vw, 1px" quality={80} className="relative h-auto w-full drop-shadow-[0_24px_30px_rgb(0_0_0/0.5)]" />
           </div>
         </Parallax>
       </HeroDepth>

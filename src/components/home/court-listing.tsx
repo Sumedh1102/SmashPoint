@@ -29,7 +29,8 @@ function availabilityText(court: PublicCourt, today: string) {
   }
   if (court.next) {
     const day = court.next.date === addDays(today, 1) ? "tomorrow" : formatDate(court.next.date, "weekday");
-    return { live: true, text: `Fully booked today · next free ${day}, ${formatMinutes(court.next.startMinute)}` };
+    const todayText = court.remainingToday === 0 ? "No more slots today" : "Fully booked today";
+    return { live: true, text: `${todayText} · next free ${day}, ${formatMinutes(court.next.startMinute)}` };
   }
   return { live: false, text: "No free slots today or tomorrow" };
 }
@@ -44,14 +45,14 @@ export function CourtCard({ court, today, index }: { court: PublicCourt; today: 
       style={{ ["--reveal-delay" as string]: `${(index % 3) * 90}ms` }}
       className="group flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-white shadow-sm transition-[box-shadow,transform,border-color] duration-500 ease-out hover:-translate-y-1 hover:border-line-strong hover:shadow-lg"
     >
-      <div className="relative aspect-[16/10] overflow-hidden bg-ink">
+      <div className="relative aspect-[16/9] overflow-hidden bg-ink">
         <Image
           src={courtImage(court.slug, court.sport.slug)}
           alt={courtImageAlt(court.name, court.slug, court.sport.slug)}
           fill
           sizes="(min-width: 1024px) 31vw, (min-width: 640px) 46vw, 100vw"
           placeholder="blur"
-          className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.045]"
+          className="object-cover object-[center_80%] transition-transform duration-[1200ms] ease-out group-hover:scale-[1.045]"
         />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink/70 to-transparent" />
         <span className="eyebrow absolute top-3 left-3 rounded-full bg-ink/75 px-3 py-1.5 text-[0.65rem] text-white backdrop-blur">{court.sport.name}</span>
@@ -83,7 +84,7 @@ export function CourtCard({ court, today, index }: { court: PublicCourt; today: 
         </dl>
 
         <div className="mt-auto flex items-end justify-between gap-4 pt-6">
-          <p className="text-sm text-muted">
+          <p className="text-sm whitespace-nowrap text-muted">
             From <span className="tabular text-lg font-semibold text-ink">{formatMoney(court.hourlyRate)}</span>
             <span className="text-subtle"> / hour</span>
           </p>

@@ -355,7 +355,8 @@ export async function refundPayment(
   await db.transaction(async (tx) => {
     await tx
       .update(payments)
-      .set({ refundReference: refund.id, refundStatus: refund.status, refundedAmount: payment.amount, failureReason: opts.reason.slice(0, 300) })
+      // "processed" is applied by applyRefundStatus below, which also moves the payment and booking on.
+      .set({ refundReference: refund.id, refundStatus: "pending", refundedAmount: payment.amount, failureReason: opts.reason.slice(0, 300) })
       .where(eq(payments.id, payment.id));
     if (payment.bookingId && opts.cancelBooking !== false) {
       const [booking] = await tx.select().from(bookings).where(eq(bookings.id, payment.bookingId)).for("update");

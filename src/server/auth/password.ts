@@ -1,4 +1,4 @@
-import "server-only";
+// No "server-only" marker: also used by CLI scripts and test setup; node:crypto keeps it out of client bundles anyway.
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 
 /**

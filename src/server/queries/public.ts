@@ -18,6 +18,8 @@ export type PublicCourt = {
   sport: { slug: string; name: string };
   /** Live: free one-hour slots left today and the next free slot. */
   freeToday: number;
+  /** One-hour slots today that haven't started yet (free or not). */
+  remainingToday: number;
   next: { date: string; startMinute: number } | null;
 };
 
@@ -36,6 +38,7 @@ export async function getHomeData() {
       peakHourlyRate: court.peakHourlyRate,
       sport: { slug: sport.slug, name: sport.name },
       freeToday: snap?.freeToday ?? 0,
+      remainingToday: snap?.remainingToday ?? 0,
       next: snap?.next ?? null,
     };
   });

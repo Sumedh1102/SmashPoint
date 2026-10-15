@@ -40,7 +40,6 @@ export function checkProductionEnv(env: Env): { errors: string[]; warnings: stri
   const cron = env.CRON_SECRET ?? "";
   if (!cron || PLACEHOLDER_SECRETS.has(cron)) warnings.push("CRON_SECRET is not set; hold expiry, payment reconciliation and reminders won't run on a schedule.");
   if (!env.RESEND_API_KEY) warnings.push("RESEND_API_KEY is not set; booking confirmation emails will not be sent.");
-  if (env.DEMO_MODE === "true") warnings.push("DEMO_MODE is on: the demo admin login is shown on /admin/login.");
 
   return { errors, warnings };
 }

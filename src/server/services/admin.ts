@@ -51,6 +51,7 @@ export async function cancelBooking(bookingId: string, opts: { reason: string; r
     });
   }
   await audit(opts.actorId, opts.refund ? "booking.cancel_refund" : "booking.cancel", "booking", booking.id, { code: booking.code, reason: opts.reason });
+  return booking.code;
 }
 
 /** Refunds the paid payment of an already-cancelled booking. */
@@ -64,6 +65,8 @@ export async function refundCancelledBooking(bookingId: string, opts: { reason: 
   if (!paid) throw new DomainError("There is no paid payment to refund for this booking.", "CONFLICT", 409);
   await refundPayment(paid.id, { reason: opts.reason, actorId: opts.actorId, cancelBooking: true });
   await audit(opts.actorId, "booking.refund", "booking", bookingId, { reason: opts.reason });
+  const [row] = await db.select({ code: bookings.code }).from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+  return row!.code;
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */

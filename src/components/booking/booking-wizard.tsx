@@ -7,6 +7,7 @@ import { Button, Spinner } from "@/components/ui/button";
 import type { AvailabilityResult } from "@/lib/booking/engine";
 import { closuresFor, DURATIONS } from "@/lib/booking/rules";
 import { formatDate, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
+import { addDays } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import type { PublicCourt } from "@/server/queries/public";
 import { api, ApiError } from "./api";
@@ -57,7 +58,8 @@ export function BookingWizard({
   const initial = bookable.find((c) => c.slug === initialCourtSlug) ?? null;
   const [sport, setSport] = useState<string | null>(initial?.sport.slug ?? null);
   const [courtId, setCourtId] = useState<string | null>(initial?.id ?? null);
-  const [date, setDate] = useState(today);
+  // Late in the evening every slot today has started: open on tomorrow instead.
+  const [date, setDate] = useState(() => (courts.some((c) => c.remainingToday > 0) || lastDate <= today ? today : addDays(today, 1)));
   const [duration, setDuration] = useState<number>(60);
   const [start, setStart] = useState<number | null>(null);
   const [data, setData] = useState<AvailabilityResult | null>(null);
@@ -159,7 +161,11 @@ export function BookingWizard({
       </dl>
       <div className="mt-5 flex items-baseline justify-between border-t border-white/10 pt-5">
         <span className="text-sm text-ink-muted">Total</span>
-        <span className="display tabular text-[2.4rem] leading-none text-white">{selectedSlot ? formatMoney(selectedSlot.price) : "—"}</span>
+        {selectedSlot ? (
+          <span className="display tabular text-[2.4rem] leading-none text-white">{formatMoney(selectedSlot.price)}</span>
+        ) : (
+          <span className="text-sm text-ink-muted">Choose a time</span>
+        )}
       </div>
       {selectedSlot?.isPeak ? <p className="mt-1 text-right text-xs text-ink-muted">Includes peak-hour rate</p> : null}
     </>
@@ -168,8 +174,8 @@ export function BookingWizard({
   const canContinue = paymentsEnabled && !!selection;
 
   return (
-    <div className={cn("grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12", selection && "pb-24 lg:pb-0")}>
-      <div className="space-y-9">
+    <div className={cn("grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12", selection && "pb-24 lg:pb-0")}>
+      <div className="min-w-0 space-y-9">
         <p className="sr-only" aria-live="polite">
           {loading ? "Loading availability" : notice ?? ""}
         </p>
@@ -357,7 +363,7 @@ export function BookingWizard({
 
       {/* Summary: bottom bar on phones and tablets */}
       {selection ? (
-        <div className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink/95 px-4 pt-3 text-white backdrop-blur lg:hidden">
+        <div role="region" aria-label="Selected slot" className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink/95 px-4 pt-3 text-white backdrop-blur lg:hidden">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
             <div className="min-w-0 text-sm">
               <p className="truncate font-semibold">

@@ -129,8 +129,10 @@ export async function getAvailability(input: { date: string; duration: number; s
 
 export type CourtSnapshot = {
   courtId: string;
-  /** Free one-hour slots left today (null when the court can't be booked at all today). */
+  /** Free one-hour slots left today. */
   freeToday: number;
+  /** One-hour slots today that haven't started yet. */
+  remainingToday: number;
   /** The next free one-hour slot, today or tomorrow. */
   next: { date: string; startMinute: number } | null;
 };
@@ -154,6 +156,7 @@ export async function getCourtSnapshots(): Promise<Map<string, CourtSnapshot>> {
     out.set(court.courtId, {
       courtId: court.courtId,
       freeToday: court.availableCount,
+      remainingToday: court.slots.filter((s) => s.state !== "PAST").length,
       next: firstToday ? { date: today, startMinute: firstToday.startMinute } : firstTomorrow ? { date: tomorrow, startMinute: firstTomorrow.startMinute } : null,
     });
   }
