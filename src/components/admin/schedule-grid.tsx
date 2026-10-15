@@ -25,11 +25,11 @@ function spans(cells: ScheduleCell[]) {
 export function ScheduleGrid({ hours, courts, linkCourts = true }: { hours: number[]; courts: Court[]; linkCourts?: boolean }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[56rem] table-fixed border-separate border-spacing-1 text-xs">
+      <table className="w-full min-w-[60rem] table-fixed border-separate border-spacing-1 text-xs">
         <caption className="sr-only">Court schedule by hour</caption>
         <thead>
           <tr>
-            <th scope="col" className="w-36 px-2 text-left font-semibold text-subtle">
+            <th scope="col" className="w-40 px-2 text-left font-semibold text-subtle">
               Court
             </th>
             {hours.map((h) => (
@@ -42,7 +42,7 @@ export function ScheduleGrid({ hours, courts, linkCourts = true }: { hours: numb
         <tbody>
           {courts.map((c) => (
             <tr key={c.id}>
-              <th scope="row" className="truncate px-2 text-left text-sm font-semibold">
+              <th scope="row" className="px-2 text-left text-sm leading-tight font-semibold">
                 {linkCourts ? (
                   <Link href={`/admin/courts/${c.slug}`} className="hover:underline">
                     {c.name}

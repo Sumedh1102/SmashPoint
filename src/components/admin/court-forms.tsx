@@ -91,9 +91,11 @@ export function DeleteBlockButton({ blockId }: { blockId: string }) {
 export function CourtSettingsForm({
   court,
   upcoming,
+  peakText,
 }: {
   court: { id: string; description: string | null; status: string; hourlyRate: number; peakHourlyRate: number };
   upcoming: number;
+  peakText: string;
 }) {
   const [state, dispatch, pending] = useActionState(updateCourtAction, null);
   const [status, setStatus] = useState(court.status);
@@ -117,7 +119,7 @@ export function CourtSettingsForm({
         <Field id="court-rate" label="Off-peak price / hour (₹)" error={fieldError(state, "hourlyRate")}>
           <Input id="court-rate" name="hourlyRate" type="number" min={0} step={1} inputMode="numeric" defaultValue={court.hourlyRate / 100} required />
         </Field>
-        <Field id="court-peak" label="Peak price / hour (₹)" hint="Peak: 5 PM – 10 PM" error={fieldError(state, "peakHourlyRate")}>
+        <Field id="court-peak" label="Peak price / hour (₹)" hint={peakText} error={fieldError(state, "peakHourlyRate")}>
           <Input id="court-peak" name="peakHourlyRate" type="number" min={0} step={1} inputMode="numeric" defaultValue={court.peakHourlyRate / 100} required />
         </Field>
       </div>

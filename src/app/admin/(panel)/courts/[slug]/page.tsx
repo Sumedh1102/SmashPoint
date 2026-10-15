@@ -7,10 +7,11 @@ import { ScheduleGrid } from "@/components/admin/schedule-grid";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
-import { formatDate, formatTimeRange } from "@/lib/format";
-import { addDays, isValidISODate } from "@/lib/time";
+import { formatDate, formatHour, formatTimeRange } from "@/lib/format";
+import { addDays, isValidISODate, WEEKDAYS_SHORT } from "@/lib/time";
 import { getCourtAdmin, getScheduleForDate } from "@/server/queries/admin";
 import { upcomingBookingCount } from "@/server/services/admin";
+import { getBookingSettings } from "@/server/settings";
 
 export async function generateMetadata({ params }: PageProps<"/admin/courts/[slug]">) {
   return { title: `Court · ${(await params).slug}` };
@@ -23,7 +24,10 @@ export default async function AdminCourtPage({ params, searchParams }: PageProps
   if (!data) notFound();
   const { court, sport, blocks, today } = data;
   const date = typeof dateParam === "string" && isValidISODate(dateParam) ? dateParam : today;
-  const [schedule, upcoming] = await Promise.all([getScheduleForDate(date, court.id), upcomingBookingCount(court.id)]);
+  const [schedule, upcoming, settings] = await Promise.all([getScheduleForDate(date, court.id), upcomingBookingCount(court.id), getBookingSettings()]);
+  const peakText = settings.peakWindows.length
+    ? `Peak: ${settings.peakWindows.map((w) => `${formatHour(w.startMinute)} – ${formatHour(w.endMinute)}${w.days.length && w.days.length < 7 ? ` (${w.days.map((d) => WEEKDAYS_SHORT[d]).join(", ")})` : ""}`).join("; ")}`
+    : "No peak hours set";
 
   return (
     <>
@@ -87,7 +91,7 @@ export default async function AdminCourtPage({ params, searchParams }: PageProps
 
           <Panel title="Court settings">
             <div className="p-5">
-              <CourtSettingsForm court={court} upcoming={upcoming} />
+              <CourtSettingsForm court={court} upcoming={upcoming} peakText={peakText} />
             </div>
           </Panel>
         </div>

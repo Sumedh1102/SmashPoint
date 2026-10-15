@@ -51,7 +51,7 @@ export async function getOverview() {
     db
       .select({ total: sum(payments.amount), n: count() })
       .from(payments)
-      .where(and(inArray(payments.status, ["PAID", "REFUNDED"]), gte(payments.paidAt, since))),
+      .where(and(eq(payments.status, "PAID"), gte(payments.paidAt, since))),
     db
       .select({ id: payments.id, receiptNumber: payments.receiptNumber, refundStatus: payments.refundStatus, failureReason: payments.failureReason, code: bookings.code })
       .from(payments)

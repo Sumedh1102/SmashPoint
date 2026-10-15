@@ -1,12 +1,13 @@
-# Hourly trigger for /api/cron/reminders (booking reminders, hold/membership expiry,
-# housekeeping). Works with any host. Configure two repository secrets:
-#   APP_URL      e.g. https://smashpoint.in
+# Runs /api/cron/reminders every 30 minutes: releases expired payment holds, reconciles
+# Razorpay payments and refunds whose callback/webhook didn't arrive, sends booking reminders
+# and cleans up. Works with any host. Configure two repository secrets:
+#   APP_URL      e.g. https://courts.example.com
 #   CRON_SECRET  the same value as the app's CRON_SECRET
 name: Scheduled jobs
 
 on:
   schedule:
-    - cron: "7 * * * *"
+    - cron: "7,37 * * * *"
   workflow_dispatch:
 
 jobs:

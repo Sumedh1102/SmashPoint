@@ -23,7 +23,7 @@
   --color-line: #dedcd3;
   --color-line-strong: #c9c6bb;
   --color-muted: #5b625c;
-  --color-subtle: #848b85;
+  --color-subtle: #6a716b;
 
   /* Brand */
   --color-court: #1d6a48;
@@ -85,7 +85,17 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
-    scroll-padding-top: 5rem;
+    scroll-padding-top: 5rem; /* the public site's fixed navigation bar */
+  }
+  /* Admin has no fixed bar on desktop (only a 4rem sticky one on small screens). Without this,
+     Next.js treats the page header as hidden behind the padding and scrolls past it. */
+  html:has([data-admin-shell]) {
+    scroll-padding-top: 0;
+  }
+  @media (width < 64rem) {
+    html:has([data-admin-shell]) {
+      scroll-padding-top: 4rem;
+    }
   }
   body {
     background: var(--color-paper);

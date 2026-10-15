@@ -56,7 +56,7 @@ export function AdminShell({ adminName, logout, children }: { adminName: string;
   );
 
   return (
-    <div className="min-h-dvh bg-paper lg:grid lg:grid-cols-[16rem_1fr]">
+    <div data-admin-shell className="min-h-dvh bg-paper lg:grid lg:grid-cols-[16rem_1fr]">
       <aside className="sticky top-0 hidden h-dvh flex-col bg-ink px-4 py-6 lg:flex">
         <Link href="/admin" className="mb-8 px-2">
           <Wordmark />

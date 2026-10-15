@@ -132,17 +132,17 @@ export function CheckoutDialog({
   if (!selection) return null;
   const amount = session?.amount ?? selection.price;
 
-  const release = () => {
-    if (!session) return;
-    void api(`/api/bookings/${session.code}/release?t=${encodeURIComponent(session.token)}`, { method: "POST" }).catch(() => {});
+  // Resolves once the server has answered, so the slot grid refreshes after the hold is gone.
+  const release = (): Promise<unknown> => {
+    if (!session) return Promise.resolve();
+    return api(`/api/bookings/${session.code}/release?t=${encodeURIComponent(session.token)}`, { method: "POST" }).catch(() => {});
   };
 
   const close = () => {
     if (busy || step === "verifying") return;
     // Free a held slot the customer walked away from (never after a payment that may have gone through).
     if (session && (step === "notPaid" || step === "review")) {
-      release();
-      onReleased();
+      void release().then(onReleased);
     }
     if (step === "expired") onReleased();
     onClose();
@@ -246,8 +246,7 @@ export function CheckoutDialog({
   };
 
   const chooseAnother = () => {
-    release();
-    onReleased();
+    void release().then(onReleased);
     onClose();
   };
 

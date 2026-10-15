@@ -149,17 +149,33 @@ ensure_secret() { # key min-length generator...
 }
 
 set_env DATABASE_URL "$DATABASE_URL"
-set_env DEMO_MODE true
 set_env SEED_DEMO_DATA true
-set_env PAYMENT_PROVIDER mock
 # Generated once and then kept, so redeploys don't sign everyone out.
 ensure_secret AUTH_SECRET 32 openssl rand -base64 32
 ensure_secret CRON_SECRET 16 openssl rand -hex 24
 
-# Real-academy settings (e.g. pasted from .env.example) don't belong in the demo and some break
-# it: a localhost NEXT_PUBLIC_SITE_URL ends up in links and metadata (without it the app uses
-# the Vercel production URL), and ADMIN_* with a placeholder password fails later builds.
-for key in NEXT_PUBLIC_SITE_URL ADMIN_EMAIL ADMIN_PASSWORD ADMIN_NAME RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_WEBHOOK_SECRET SMS_PROVIDER_API_KEY WHATSAPP_PROVIDER_API_KEY; do
+# Razorpay TEST keys (optional repository secrets). Without them the demo runs with online
+# payment switched off; live keys are refused so the public demo can never take real money.
+if [[ -n ${RAZORPAY_KEY_ID:-} && -n ${RAZORPAY_KEY_SECRET:-} ]]; then
+  if [[ $RAZORPAY_KEY_ID != rzp_test_* ]]; then
+    echo "::error::RAZORPAY_KEY_ID for the demo must be a TEST key (rzp_test_…)."
+    exit 1
+  fi
+  set_env RAZORPAY_KEY_ID "$RAZORPAY_KEY_ID"
+  set_env RAZORPAY_KEY_SECRET "$RAZORPAY_KEY_SECRET"
+  if [[ -n ${RAZORPAY_WEBHOOK_SECRET:-} ]]; then set_env RAZORPAY_WEBHOOK_SECRET "$RAZORPAY_WEBHOOK_SECRET"; fi
+  echo "  Razorpay test mode enabled"
+else
+  for key in RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_WEBHOOK_SECRET; do
+    if jq -e --arg k "$key" 'any(.envs[]?; .key == $k)' <<<"$ENV_JSON" >/dev/null; then remove_env "$key"; fi
+  done
+  echo "  No Razorpay test keys: online booking is switched off on the demo"
+fi
+
+# Settings that don't belong in the demo, and variables of the earlier academy app: a localhost
+# NEXT_PUBLIC_SITE_URL ends up in links and metadata (without it the app uses the Vercel
+# production URL), and ADMIN_* with a placeholder password fails later builds.
+for key in NEXT_PUBLIC_SITE_URL ADMIN_EMAIL ADMIN_PASSWORD ADMIN_NAME DEMO_MODE PAYMENT_PROVIDER SMS_PROVIDER_API_KEY WHATSAPP_PROVIDER_API_KEY; do
   if jq -e --arg k "$key" 'any(.envs[]?; .key == $k)' <<<"$ENV_JSON" >/dev/null; then
     remove_env "$key"
     echo "  removed $key (not used by the demo)"
@@ -190,7 +206,7 @@ for i in $(seq 1 30); do
   fi
   sleep 5
 done
-for path in / /book /coaching /login; do
+for path in / /admin/login /privacy /terms /cancellation-policy; do
   code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$SITE$path")
   echo "  $path → $code"
   if [[ $code != 200 ]]; then curl -sS --max-time 30 "$SITE$path" 2>&1 | head -c 1500 || true; echo; exit 1; fi
@@ -203,7 +219,7 @@ if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
     echo
     echo "**$SITE**"
     echo
-    echo "One-click demo logins are on $SITE/login (password \`SmashPoint@123\`)."
+    echo "Admin: $SITE/admin/login — admin@example.com / \`SmashPoint@123\` (demo data only)."
   } >> "$GITHUB_STEP_SUMMARY"
 fi
 if [[ -n ${GITHUB_OUTPUT:-} ]]; then echo "url=$SITE" >> "$GITHUB_OUTPUT"; fi

@@ -2,6 +2,8 @@
 # Setup (once): add repository secrets
 #   VERCEL_TOKEN  a Vercel access token (vercel.com → Account Settings → Tokens)
 #   DATABASE_URL  pooled Postgres connection string for the DEMO database (e.g. Neon, Mumbai)
+# Optional: RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET / RAZORPAY_WEBHOOK_SECRET — Razorpay TEST keys
+# (rzp_test_…) to enable checkout on the demo. Live keys are refused.
 # Optional repository variables: VERCEL_PROJECT_NAME (default: smashpoint-demo) and
 # VERCEL_SCOPE (team slug; default: the token's default team).
 # Every push to the branch redeploys; the nightly job reloads fresh demo data.
@@ -27,6 +29,9 @@ jobs:
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+      RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+      RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
       PROJECT_NAME: ${{ vars.VERCEL_PROJECT_NAME || 'smashpoint-demo' }}
       VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE }}
     steps:

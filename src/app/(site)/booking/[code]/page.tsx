@@ -9,17 +9,22 @@ import { buttonClass } from "@/components/ui/button";
 import { formatDate, formatDateTime, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
 import { site } from "@/content/site";
 import { findCustomerBooking } from "@/server/queries/public";
+import { getSetting } from "@/server/settings";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your booking", robots: { index: false, follow: false } };
 
 type View = { tone: "success" | "pending" | "ended"; title: string; text: string };
 
-function viewFor(status: string, refundStatus: string | null | undefined, holdActive: boolean): View {
+function viewFor(status: string, refundStatus: string | null | undefined, holdActive: boolean, emailOn: boolean): View {
   switch (status) {
     case "CONFIRMED":
     case "PAID":
-      return { tone: "success", title: "Booking confirmed", text: "Your payment is verified and the court is yours. A confirmation has been sent to your email." };
+      return {
+        tone: "success",
+        title: "Booking confirmed",
+        text: `Your payment is verified and the court is yours. ${emailOn ? "A confirmation has been sent to your email." : "Keep this page's link — it's your confirmation."}`,
+      };
     case "PENDING":
     case "PAYMENT_INITIATED":
       return holdActive
@@ -49,7 +54,8 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
   const { booking, court, sport, payment } = found;
 
   const holdActive = !!booking.holdExpiresAt && booking.holdExpiresAt.getTime() > Date.now();
-  const view = viewFor(booking.status, payment?.refundStatus, holdActive);
+  const emailOn = !!process.env.RESEND_API_KEY && (await getSetting("notifications")).email;
+  const view = viewFor(booking.status, payment?.refundStatus, holdActive, emailOn);
   const duration = booking.endMinute - booking.startMinute;
 
   const rows: [string, string][] = [
@@ -99,8 +105,8 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
           </div>
 
           <dl className="grid gap-px bg-line sm:grid-cols-2">
-            {rows.map(([k, v]) => (
-              <div key={k} className="bg-white px-6 py-4 sm:px-10">
+            {rows.map(([k, v], i) => (
+              <div key={k} className={`bg-white px-6 py-4 sm:px-10 ${i === rows.length - 1 && rows.length % 2 ? "sm:col-span-2" : ""}`}>
                 <dt className="eyebrow text-subtle">{k}</dt>
                 <dd className="mt-1 font-medium break-words">{v}</dd>
               </div>

@@ -17,7 +17,7 @@ export default async function AdminOverviewPage() {
     { label: "Confirmed", value: o.stats.confirmed30, href: "/admin/bookings?status=confirmed", note: "Confirmed in the last 30 days" },
     { label: "Pending payments", value: o.stats.pendingPayments, href: "/admin/bookings?status=pending", note: "Slots held right now" },
     { label: "Cancellations", value: o.stats.cancelled30, href: "/admin/bookings?status=cancelled", note: "Last 30 days" },
-    { label: "Collected", value: formatMoney(o.stats.revenue30), href: "/admin/payments?status=PAID", note: `${o.stats.payments30} payments, last 30 days` },
+    { label: "Collected", value: formatMoney(o.stats.revenue30), href: "/admin/payments?status=PAID", note: `${o.stats.payments30} paid in 30 days, refunds excluded` },
   ];
 
   return (

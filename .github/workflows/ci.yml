@@ -41,9 +41,50 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Integration tests (PostgreSQL + fake Razorpay API)
+        run: |
+          PGPASSWORD=smashpoint psql -h localhost -U smashpoint -d smashpoint -c "CREATE DATABASE smashpoint_test"
+          npm run test:integration
+        env:
+          TEST_DATABASE_URL: postgres://smashpoint:smashpoint@localhost:5432/smashpoint_test
       - name: Migrations + demo seed on a fresh database
         run: npm run db:deploy
         env:
           SEED_DEMO_DATA: "true"
       - name: Production build
         run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: smashpoint
+          POSTGRES_PASSWORD: smashpoint
+          POSTGRES_DB: smashpoint_e2e_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U smashpoint"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgres://smashpoint:smashpoint@localhost:5432/smashpoint_e2e_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: End-to-end tests (desktop + mobile)
+        run: npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

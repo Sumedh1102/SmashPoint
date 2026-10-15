@@ -11,7 +11,7 @@ on:
         required: true
       paths:
         description: Space-separated paths to fetch
-        default: /api/health / /login /book
+        default: /api/health / /admin/login
       project:
         description: Vercel project name
         default: smashpoint-demo

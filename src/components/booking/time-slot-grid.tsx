@@ -54,16 +54,14 @@ export function TimeSlotGrid({ slots, selected, onSelect, disabled }: { slots: S
                       slot.state === "RESTRICTED" && "hatched border-dashed",
                     )}
                   >
-                    <span className={cn("tabular text-[0.95rem] font-semibold", !available && "line-through decoration-1 opacity-70")}>
-                      {formatMinutes(slot.startMinute)}
-                      <span className={cn("font-normal", isSelected ? "text-white/60" : "text-subtle")}> – {formatMinutes(slot.endMinute)}</span>
-                    </span>
-                    <span className={cn("mt-0.5 text-xs", isSelected ? "text-lime" : available ? "text-muted" : "")}>
+                    <span className={cn("tabular text-[1rem] font-semibold", !available && "line-through decoration-1 opacity-70")}>{formatMinutes(slot.startMinute)}</span>
+                    <span className={cn("mt-0.5 text-xs", isSelected ? "text-white/70" : available ? "text-muted" : "")}>
+                      until {formatMinutes(slot.endMinute)} ·{" "}
                       {available ? (
-                        <>
+                        <span className={isSelected ? "font-semibold text-lime" : "font-semibold text-ink"}>
                           {formatMoney(slot.price)}
-                          {slot.isPeak ? <span className="ml-1.5 text-[0.65rem] tracking-wider uppercase opacity-80">Peak</span> : null}
-                        </>
+                          {slot.isPeak ? <span className="ml-1 text-[0.62rem] tracking-wider uppercase opacity-80">Peak</span> : null}
+                        </span>
                       ) : (
                         reason
                       )}
