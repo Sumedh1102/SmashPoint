@@ -15,7 +15,7 @@ export type SportContent = {
   /** One-line hook for cards. */
   headline: string;
   summary: string;
-  /** Fixed highlights (court surfaces are added from the database). */
+  /** Fixed details (court surfaces are added from the database; the notice is shown separately). */
   highlights: string[];
   /** A notice customers must see before booking, from the rate card. */
   notice: string | null;
@@ -44,7 +44,7 @@ export const SPORTS_CONTENT: readonly SportContent[] = [
     name: "Pickleball",
     headline: "Grab a paddle and play.",
     summary: "Paddles are included with your court rental, so you can turn up and play. Book an hour, two hours, or a monthly plan.",
-    highlights: ["Paddle included", "Ball must be purchased separately"],
+    highlights: [],
     notice: PICKLEBALL_NOTICE,
     image: pickleballImage,
     imageAlt: "Illustration of a pickleball court with a paddle and pickleballs in front of the net",

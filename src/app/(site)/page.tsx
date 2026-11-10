@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { AboutSection } from "@/components/home/about-section";
-import { CoachingSection } from "@/components/home/coaching-section";
 import { ContactSection } from "@/components/home/contact-section";
 import { CourtListing } from "@/components/home/court-listing";
 import { RentalPricing } from "@/components/home/rental-pricing";
 import { SectionHeading } from "@/components/home/section-heading";
 import { SportsHero } from "@/components/home/sports-hero";
 import { SportsOverview } from "@/components/home/sports-overview";
-import { WhyChooseUs } from "@/components/home/why-choose-us";
 import { isPlaceholder, site } from "@/content/site";
 import { SPORT_SLUGS } from "@/lib/booking/rules";
 import { courtDisplayName, lowestHourlyBySport, tariffRows } from "@/lib/pricing";
@@ -61,45 +59,35 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
-      <SportsHero fromPrices={lowestHourlyBySport(data.courts)} />
+      <SportsHero fromPrices={lowestHourlyBySport(data.courts)} hours={data.hours} />
       <SportsOverview courts={data.courts} />
-      <AboutSection />
 
-      <section id="courts" aria-labelledby="courts-title" className="scroll-mt-16 bg-paper py-20 sm:py-28">
+      <section id="courts" aria-labelledby="courts-title" className="scroll-mt-16 bg-ink-2 py-20 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             id="courts-title"
-            eyebrow="Court availability"
-            title={
-              <>
-                Pick your <span className="text-royal">court.</span>
-              </>
-            }
+            eyebrow="The courts"
+            title="Pick your court."
             intro="Availability below is live — straight from the booking system. Choose a court to start booking."
           />
           <div className="mt-10">
             <CourtListing courts={data.courts} today={data.window.today} />
           </div>
-          <p className="mt-6 text-xs text-subtle">Court images are illustrative 3D renders.</p>
+          <p className="mt-6 text-xs text-ink-subtle">Court images are illustrative 3D renders.</p>
         </div>
       </section>
 
       <RentalPricing courts={data.courts} />
-      <CoachingSection />
-      <WhyChooseUs />
+      <AboutSection />
 
-      <section id="book" aria-labelledby="book-title" className="scroll-mt-16 border-t border-line bg-paper py-20 sm:py-28">
+      <section id="book" aria-labelledby="book-title" className="scroll-mt-16 bg-ink-2 py-20 sm:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             id="book-title"
             eyebrow="Book a court"
-            title={
-              <>
-                Reserve your <span className="text-royal">court.</span>
-              </>
-            }
-            intro="Choose a sport, court, date and time. Pay securely with Razorpay — your court is confirmed the moment the payment is verified."
-            className="mb-10"
+            title="Find your slot."
+            intro="Choose a sport, court, date and time. You'll pay securely with Razorpay, and your court is confirmed the moment the payment is verified."
+            className="mb-12"
           />
           <BookingWizard
             courts={data.courts}

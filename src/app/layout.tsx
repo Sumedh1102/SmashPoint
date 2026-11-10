@@ -7,7 +7,7 @@ const display = Archivo({ subsets: ["latin"], variable: "--font-display-face", d
 const body = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 
 const title = `${site.name} — Badminton, Pickleball & Basketball Court Booking`;
-const shareTitle = `${site.name} — One destination. Three ways to play.`;
+const shareTitle = `${site.name} — Your game. Your court.`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#071b3a",
+  themeColor: "#080808",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -50,14 +50,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-IN" data-scroll-behavior="smooth" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
-      <head>
-        {/* Marks JS as available before first paint, so scroll reveals never hide content without JS. */}
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
-      </head>
       <body className="min-h-dvh">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-full focus:bg-gold focus:px-5 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-ink"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-full focus:bg-neon focus:px-5 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-ink"
         >
           Skip to content
         </a>

@@ -62,7 +62,7 @@ export async function openRazorpay(
     name: params.name,
     description: params.description,
     prefill: params.prefill,
-    theme: { color: "#1d6a48" },
+    theme: { color: "#080808" },
     timeout: params.timeoutSeconds,
     retry: { enabled: true },
     modal: { ondismiss: handlers.onDismiss, escape: true, confirm_close: true, backdropclose: false },

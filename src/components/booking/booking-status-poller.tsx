@@ -40,10 +40,10 @@ export function BookingStatusPoller({ code, token, status }: { code: string; tok
   }, [code, token, status, router]);
 
   return gaveUp ? (
-    <p className="text-sm text-muted">Still waiting for Razorpay. Refresh this page in a few minutes — or contact us with your booking reference.</p>
+    <p className="text-sm text-ink-muted">Still waiting for Razorpay. Refresh this page in a few minutes — or contact us with your booking reference.</p>
   ) : (
-    <p role="status" className="flex items-center gap-2 text-sm text-muted">
-      <Spinner className="text-royal" /> Checking for your payment confirmation…
+    <p role="status" className="flex items-center gap-2 text-sm text-ink-muted">
+      <Spinner className="text-neon" /> Checking for your payment confirmation…
     </p>
   );
 }

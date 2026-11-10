@@ -1,71 +1,61 @@
 @import "tailwindcss";
 
 /* ──────────────────────────────────────────────────────────────────────────
-   On The Sol Sports Academy — navy, royal blue and gold, from the academy's
-   rate card and logo. Deep navy carries the brand (header, hero, footer, key
-   panels) over light, airy surfaces; royal blue is the interactive colour;
-   golden yellow is a restrained accent for the one primary action per view
-   and highlights on navy; sky blue is a subtle secondary accent.
-   Contrast: gold is used as a fill (navy text on it) or on navy — on light
-   surfaces gold text uses gold-700.
+   On The Sol Sports Academy — neon black and white.
+   Black surfaces and white type carry the site; condensed display type carries
+   the energy. Neon (#B7FF00) is kept for a few jobs only: the primary action,
+   the selected time slot, the active navigation link, key prices, live status
+   and small accents. Everything else is black, white and grey.
+
+   Surfaces: ink #080808 (page) · ink-2 #111111 (alternate sections) ·
+   ink-3 #171717 (cards) · ink-line #303030 (borders) · ink-muted #BDBDBD.
+
+   The admin dashboard keeps light content panels (paper/line/muted tokens) under
+   a black sidebar. Components shared by both (form fields, alerts, badges) use
+   the switching tokens below (fg, edge, field, success, …): dark by default,
+   light inside `.surface-light`.
    ────────────────────────────────────────────────────────────────────────── */
 @theme {
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display-face), var(--font-body), ui-sans-serif, system-ui, sans-serif;
 
-  /* Navy surfaces (and the primary text colour) */
-  --color-ink: #071b3a;
-  --color-ink-2: #0c2852;
-  --color-ink-3: #12346a;
-  --color-ink-line: #1e3d6e;
-  --color-ink-muted: #a3b4cc;
+  /* Black surfaces (ink is also the text colour on light surfaces) */
+  --color-ink: #080808;
+  --color-ink-2: #111111;
+  --color-ink-3: #171717;
+  --color-ink-4: #1f1f1f;
+  --color-ink-line: #303030;
+  --color-ink-line-strong: #5a5a5a;
+  --color-ink-muted: #bdbdbd;
+  --color-ink-subtle: #8c8c8c;
 
-  /* Light surfaces */
-  --color-paper: #f5f7fa;
-  --color-paper-2: #eaeff5;
-  --color-line: #dce3ec;
-  --color-line-strong: #c2cddb;
-  --color-muted: #4a5872;
-  --color-subtle: #5f6e86;
+  /* Neon accent. On light surfaces neon is only a fill (with ink text);
+     neon-ink is its legible stand-in for text there. */
+  --color-neon: #b7ff00;
+  --color-neon-300: #ccff4d;
+  --color-neon-ink: #3f5700;
 
-  /* Brand */
-  --color-royal: #0878c9;
-  --color-royal-700: #0663a6;
-  --color-royal-800: #054c80;
-  --color-royal-100: #d4e9f8;
-  --color-royal-50: #ebf5fd;
-  --color-gold: #d99a13;
-  --color-gold-600: #c4880c;
-  --color-gold-700: #9a6a06;
-  --color-gold-100: #f7e6bf;
-  --color-gold-50: #fdf6e6;
-  --color-sky: #38bdf8;
-  --color-sky-50: #e8f7fe;
+  /* Light surfaces: the admin content area and print */
+  --color-paper: #f4f4f4;
+  --color-paper-2: #e8e8e8;
+  --color-line: #dcdcdc;
+  --color-line-strong: #c2c2c2;
+  --color-muted: #555555;
+  --color-subtle: #6b6b6b;
 
-  /* Status */
-  --color-success: #157a4a;
-  --color-success-soft: #e3f3ea;
-  --color-live: #22c55e;
-  --color-warning: #9a5b0b;
+  /* Soft status fills for light surfaces (admin) */
+  --color-success-soft: #e4f2e8;
   --color-warning-soft: #fbf0db;
-  --color-danger: #b4372a;
   --color-danger-soft: #fbe9e6;
-  --color-info: #0663a6;
-  --color-info-soft: #ebf5fd;
+  --color-info-soft: #e6f1f8;
 
-  --shadow-sm: 0 1px 2px 0 rgb(7 27 58 / 0.06);
-  --shadow-md: 0 2px 4px -2px rgb(7 27 58 / 0.06), 0 10px 24px -8px rgb(7 27 58 / 0.12);
-  --shadow-lg: 0 4px 10px -4px rgb(7 27 58 / 0.08), 0 28px 56px -18px rgb(7 27 58 / 0.24);
-
-  --radius-card: 1rem;
-  --radius-control: 0.75rem;
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
-  --animate-fade-in: fade-in 240ms var(--ease-out-expo);
-  --animate-rise: rise 520ms var(--ease-out-expo) both;
-  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
-  --animate-float: float 7s ease-in-out infinite;
+  --animate-fade-in: fade-in 200ms var(--ease-out-expo);
+  --animate-rise: rise 360ms var(--ease-out-expo) both;
   --animate-spin-slow: spin 1s linear infinite;
 
   @keyframes fade-in {
@@ -73,22 +63,53 @@
     to { opacity: 1; }
   }
   @keyframes rise {
-    from { opacity: 0; transform: translateY(14px); }
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  @keyframes pulse-dot {
-    0%, 100% { box-shadow: 0 0 0 0 rgb(34 197 94 / 0.5); }
-    50% { box-shadow: 0 0 0 6px rgb(34 197 94 / 0); }
-  }
-  @keyframes float {
-    0%, 100% { translate: 0 0; }
-    50% { translate: 0 -10px; }
-  }
+}
+
+/* Tokens that follow the surface they are on (dark by default, light in .surface-light). */
+@theme inline {
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-field: var(--field);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
 }
 
 @layer base {
   :root {
+    color-scheme: dark;
+    --fg: #ffffff;
+    --fg-muted: #bdbdbd;
+    --fg-subtle: #8c8c8c;
+    --field: #111111;
+    --edge: #303030;
+    --edge-strong: #5a5a5a;
+    --success: #b7ff00;
+    --warning: #f5b942;
+    --danger: #ff7a6b;
+    --info: #7cc4ff;
+    --focus: #b7ff00;
+  }
+  .surface-light {
     color-scheme: light;
+    --fg: #080808;
+    --fg-muted: #555555;
+    --fg-subtle: #6b6b6b;
+    --field: #ffffff;
+    --edge: #dcdcdc;
+    --edge-strong: #c2c2c2;
+    --success: #1d7a3e;
+    --warning: #9a5b0b;
+    --danger: #b4372a;
+    --info: #0b6aa8;
+    --focus: #080808;
   }
   html {
     -webkit-text-size-adjust: 100%;
@@ -106,8 +127,8 @@
     }
   }
   body {
-    background: var(--color-paper);
-    color: var(--color-ink);
+    background: var(--color-ink);
+    color: #fff;
     font-family: var(--font-sans);
     font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
@@ -115,22 +136,13 @@
     text-rendering: optimizeLegibility;
   }
   ::selection {
-    background: var(--color-gold);
+    background: var(--color-neon);
     color: var(--color-ink);
   }
-  /* Royal blue on light surfaces, gold on navy ones. */
+  /* Neon on black, ink on light surfaces. */
   :focus-visible {
-    outline: 2px solid var(--color-royal);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
-  }
-  .surface-dark :focus-visible,
-  .bg-ink :focus-visible,
-  .bg-ink-2 :focus-visible {
-    outline-color: var(--color-gold);
-  }
-  .surface-dark .bg-white :focus-visible,
-  .bg-ink .bg-white :focus-visible {
-    outline-color: var(--color-royal);
   }
   button,
   [role="button"],
@@ -146,20 +158,19 @@
     font: inherit;
   }
   dialog::backdrop {
-    background: rgb(7 27 58 / 0.72);
-    backdrop-filter: blur(3px);
+    background: rgb(0 0 0 / 0.78);
   }
 }
 
 @layer components {
-  /* Bold athletic headlines (slightly condensed so long words fit on phones). */
+  /* Condensed athletic headlines. */
   .display {
     font-family: var(--font-display);
-    font-stretch: 86%;
+    font-stretch: 72%;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: -0.008em;
-    line-height: 0.95;
+    letter-spacing: -0.005em;
+    line-height: 0.88;
   }
   /* The academy name, set wide and heavy like the logo lockup. */
   .wordmark {
@@ -180,23 +191,12 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
-  /* Thin court-line rule used to divide sections. */
-  .court-rule {
-    background-image: linear-gradient(90deg, transparent, currentColor 12%, currentColor 88%, transparent);
-    height: 1px;
-    opacity: 0.18;
-  }
-  /* Hatched fill for closed / blocked time. */
+  /* Hatched fill for time closed by the academy (blocks, maintenance). */
   .hatched {
-    background-image: repeating-linear-gradient(-45deg, rgb(7 27 58 / 0.06) 0 6px, transparent 6px 12px);
+    background-image: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.05) 0 6px, transparent 6px 12px);
   }
-  /* Faint court lines for navy panels. */
-  .court-lines {
-    background-image:
-      linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
-    background-size: 56px 56px;
-    background-position: -1px -1px;
+  .surface-light .hatched {
+    background-image: repeating-linear-gradient(-45deg, rgb(8 8 8 / 0.06) 0 6px, transparent 6px 12px);
   }
 }
 
@@ -212,29 +212,6 @@
   }
 }
 
-/* Scroll reveals (components/motion/reveal.tsx). Content is visible without JS. */
-.js [data-reveal] {
-  opacity: 0;
-  transform: translateY(18px);
-  transition:
-    opacity 700ms var(--ease-out-expo),
-    transform 900ms var(--ease-out-expo);
-  transition-delay: var(--reveal-delay, 0ms);
-}
-.js [data-reveal][data-visible="true"] {
-  opacity: 1;
-  transform: none;
-}
-.js [data-reveal="image"] {
-  opacity: 1;
-  transform: none;
-  clip-path: inset(12% 6% 12% 6% round 14px);
-  transition: clip-path 1100ms var(--ease-out-expo);
-}
-.js [data-reveal="image"][data-visible="true"] {
-  clip-path: inset(0 0 0 0 round 0px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -246,19 +223,24 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .js [data-reveal],
-  .js [data-reveal="image"] {
-    opacity: 1;
-    transform: none;
-    clip-path: none;
-  }
 }
 
+/* Booking confirmations print as black text on white paper. */
 @media print {
   .no-print {
     display: none !important;
   }
   body {
-    background: white;
+    background: #fff;
+    color: #000;
+  }
+  main,
+  main * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  main * {
+    border-color: #c8c8c8 !important;
   }
 }

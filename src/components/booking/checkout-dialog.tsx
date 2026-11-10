@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Alert, Field, Input, Textarea } from "@/components/ui/field";
-import { Button, Spinner } from "@/components/ui/button";
+import { Button, buttonClass, Spinner } from "@/components/ui/button";
 import { PICKLEBALL_NOTICE } from "@/content/sports";
 import { formatDate, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -31,10 +31,10 @@ type Step = "details" | "review" | "verifying" | "notPaid" | "expired" | "error"
 type Customer = { name: string; email: string; phone: string; notes: string };
 type Errors = Partial<Record<keyof Customer, string>>;
 
-/** Steps 6–8 of the booking flow (1–5 are on the page; 9 is the confirmation page). */
+/** Steps 06–08 of the booking flow (01–05 are on the page). */
 const STEPS = [
-  { key: "details", label: "Your details" },
-  { key: "review", label: "Summary" },
+  { key: "details", label: "Details" },
+  { key: "review", label: "Review" },
   { key: "pay", label: "Pay" },
 ] as const;
 
@@ -70,21 +70,21 @@ function SummaryRows({ s, amount }: { s: CheckoutSelection; amount: number }) {
     ["Duration", formatDuration(s.duration)],
   ];
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-white">
-      <dl className="divide-y divide-line text-sm">
+    <div className="overflow-hidden rounded-[var(--radius-control)] border border-ink-line bg-ink-3">
+      <dl className="divide-y divide-ink-line text-sm">
         {rows.map(([k, v]) => (
           <div key={k} className="flex justify-between gap-4 px-4 py-2.5">
-            <dt className="text-muted">{k}</dt>
+            <dt className="text-ink-muted">{k}</dt>
             <dd className="text-right font-medium">{v}</dd>
           </div>
         ))}
         <div className="flex justify-between gap-4 px-4 py-2.5">
-          <dt className="text-muted">Court rental · {formatDuration(s.duration)}</dt>
+          <dt className="text-ink-muted">Court rental · {formatDuration(s.duration)}</dt>
           <dd className="tabular text-right font-medium">{formatMoney(amount)}</dd>
         </div>
-        <div className="flex items-baseline justify-between gap-4 bg-ink px-4 py-3 text-white">
+        <div className="flex items-baseline justify-between gap-4 bg-ink px-4 py-3">
           <dt className="font-semibold">Total payable</dt>
-          <dd className="display tabular text-[1.85rem] leading-none text-gold">{formatMoney(amount)}</dd>
+          <dd className="display tabular text-[1.85rem] leading-none text-neon">{formatMoney(amount)}</dd>
         </div>
       </dl>
     </div>
@@ -275,11 +275,11 @@ export function CheckoutDialog({
         <ol className="mt-1 flex items-center gap-2" aria-label="Checkout progress">
           {STEPS.map((s, i) => (
             <li key={s.key} className="flex items-center gap-2" aria-current={i === stepIndex ? "step" : undefined}>
-              <span className={cn("grid size-6 place-items-center rounded-full text-[0.68rem] font-bold", i < stepIndex ? "bg-royal text-white" : i === stepIndex ? "bg-gold text-ink" : "bg-paper-2 text-subtle")}>
-                {i < stepIndex ? <Check className="size-3.5" strokeWidth={3} /> : i + 6}
+              <span className={cn("tabular grid size-6 place-items-center rounded-full text-[0.68rem] font-bold", i < stepIndex ? "bg-white text-ink" : i === stepIndex ? "bg-neon text-ink" : "bg-ink-4 text-ink-subtle")}>
+                {i < stepIndex ? <Check className="size-3.5" strokeWidth={3} /> : `0${i + 6}`.slice(-2)}
               </span>
-              <span className={cn("text-xs font-semibold", i === stepIndex ? "text-ink" : "text-subtle")}>{s.label}</span>
-              {i < STEPS.length - 1 ? <span aria-hidden className="h-px w-5 bg-line-strong" /> : null}
+              <span className={cn("text-xs font-semibold", i === stepIndex ? "text-white" : "text-ink-subtle")}>{s.label}</span>
+              {i < STEPS.length - 1 ? <span aria-hidden className="h-px w-5 bg-ink-line-strong" /> : null}
             </li>
           ))}
         </ol>
@@ -287,7 +287,7 @@ export function CheckoutDialog({
       footer={
         step === "details" ? (
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-muted">
+            <p className="text-sm text-ink-muted">
               {selection.courtName} · {formatMinutes(selection.startMinute)}
             </p>
             <Button type="submit" form="checkout-details" size="lg">
@@ -296,11 +296,11 @@ export function CheckoutDialog({
           </div>
         ) : step === "review" ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <button type="button" onClick={() => setStep("details")} disabled={busy} className="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-muted hover:text-ink">
+            <button type="button" onClick={() => setStep("details")} disabled={busy} className="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-ink-muted hover:text-white">
               <ArrowLeft className="size-4" /> Edit details
             </button>
             {problem?.slotLost ? (
-              <Button size="lg" variant="dark" onClick={() => onSlotUnavailable(problem.message)}>
+              <Button size="lg" variant="light" onClick={() => onSlotUnavailable(problem.message)}>
                 Choose another time
               </Button>
             ) : (
@@ -312,7 +312,7 @@ export function CheckoutDialog({
           </div>
         ) : step === "notPaid" ? (
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-            <Button variant="outline" size="lg" onClick={chooseAnother} disabled={busy}>
+            <Button variant="ghostLight" size="lg" onClick={chooseAnother} disabled={busy}>
               Choose another slot
             </Button>
             <Button size="lg" onClick={retry} disabled={busy}>
@@ -321,13 +321,13 @@ export function CheckoutDialog({
           </div>
         ) : step === "expired" ? (
           <div className="flex justify-end">
-            <Button size="lg" variant="dark" onClick={() => onSlotUnavailable("Your hold ran out, so the slot was released. Please choose a slot again.")}>
+            <Button size="lg" variant="light" onClick={() => onSlotUnavailable("Your hold ran out, so the slot was released. Please choose a slot again.")}>
               Pick a slot again
             </Button>
           </div>
         ) : step === "error" && session ? (
           <div className="flex justify-end">
-            <Link href={session.receiptUrl} className="inline-flex h-13 items-center justify-center rounded-full bg-ink px-7 text-sm font-semibold text-white hover:bg-ink-3">
+            <Link href={session.receiptUrl} className={buttonClass({ variant: "light", size: "lg" })}>
               View booking status
             </Link>
           </div>
@@ -336,7 +336,7 @@ export function CheckoutDialog({
     >
       {step === "details" ? (
         <form id="checkout-details" noValidate onSubmit={submitDetails} className="space-y-4">
-          <p className="text-sm text-muted">We only use these to send your confirmation and contact you about this booking. No account needed.</p>
+          <p className="text-sm text-ink-muted">We only use these to send your confirmation and contact you about this booking. No account needed.</p>
           <Field id="checkout-name" label="Full name" error={errors.name}>
             <Input
               autoFocus
@@ -366,7 +366,7 @@ export function CheckoutDialog({
           </Field>
           <Field id="checkout-phone" label="Mobile number" error={errors.phone}>
             <div className="relative">
-              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[0.95rem] text-muted">
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-[0.95rem] text-ink-muted">
                 +91
               </span>
               <Input
@@ -394,14 +394,14 @@ export function CheckoutDialog({
         <div className="space-y-4">
           <SummaryRows s={selection} amount={amount} />
           {selection.sportSlug === "pickleball" ? (
-            <p className="flex gap-2.5 rounded-xl border border-gold/50 bg-gold-50 px-4 py-3 text-sm font-medium text-ink">
-              <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-gold-700" />
+            <p className="flex gap-2.5 rounded-[var(--radius-control)] border border-ink-line bg-ink-3 px-4 py-3 text-sm font-medium">
+              <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-neon" />
               {PICKLEBALL_NOTICE}
             </p>
           ) : null}
-          <div className="rounded-xl border border-line bg-white px-4 py-3 text-sm">
+          <div className="rounded-[var(--radius-control)] border border-ink-line bg-ink-3 px-4 py-3 text-sm">
             <p className="font-semibold">{customer.name}</p>
-            <p className="text-muted">
+            <p className="text-ink-muted">
               {customer.email} · +91 {customer.phone.replace(/[\s()-]/g, "").slice(-10)}
             </p>
           </div>
@@ -410,24 +410,24 @@ export function CheckoutDialog({
               {problem.message}
             </Alert>
           ) : (
-            <p className="flex gap-2.5 text-sm text-muted">
+            <p className="flex gap-2.5 text-sm text-ink-muted">
               <Clock3 aria-hidden className="mt-0.5 size-4 shrink-0" />
               <span>
                 When you continue, the slot is held for you for {holdMinutes} minutes while you pay with Razorpay. It's confirmed only after the payment is verified.
               </span>
             </p>
           )}
-          <p className="flex items-center gap-2 text-xs text-subtle">
-            <ShieldCheck aria-hidden className="size-4 shrink-0 text-success" />
+          <p className="flex items-center gap-2 text-xs text-ink-subtle">
+            <ShieldCheck aria-hidden className="size-4 shrink-0 text-neon" />
             Payments are processed securely by Razorpay. We never see your card or bank details.
           </p>
-          <p className="text-xs text-subtle">
+          <p className="text-xs text-ink-subtle">
             By paying you agree to the{" "}
-            <Link href="/terms" target="_blank" className="underline underline-offset-2 hover:text-ink">
+            <Link href="/terms" target="_blank" className="underline underline-offset-2 hover:text-white">
               terms
             </Link>{" "}
             and the{" "}
-            <Link href="/cancellation-policy" target="_blank" className="underline underline-offset-2 hover:text-ink">
+            <Link href="/cancellation-policy" target="_blank" className="underline underline-offset-2 hover:text-white">
               cancellation &amp; refund policy
             </Link>
             .
@@ -437,9 +437,9 @@ export function CheckoutDialog({
 
       {step === "verifying" ? (
         <div role="status" className="flex flex-col items-center gap-4 py-8 text-center">
-          <Spinner className="size-8 text-royal" />
+          <Spinner className="size-8 text-neon" />
           <p className="font-semibold">Verifying your payment with Razorpay…</p>
-          <p className="max-w-sm text-sm text-muted">Please keep this page open. Your booking is confirmed only after this check.</p>
+          <p className="max-w-sm text-sm text-ink-muted">Please keep this page open. Your booking is confirmed only after this check.</p>
         </div>
       ) : null}
 
@@ -451,10 +451,10 @@ export function CheckoutDialog({
           </Alert>
           {problem ? <Alert tone="danger">{problem.message}</Alert> : null}
           {mmss ? (
-            <p className="flex items-center gap-2 text-sm text-muted">
+            <p className="flex items-center gap-2 text-sm text-ink-muted">
               <Clock3 aria-hidden className="size-4" />
               <span>
-                Slot held for <span className="tabular font-semibold text-ink">{mmss}</span> more.
+                Slot held for <span className="tabular font-semibold text-white">{mmss}</span> more.
               </span>
             </p>
           ) : null}

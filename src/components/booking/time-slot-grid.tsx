@@ -33,10 +33,10 @@ export function TimeSlotGrid({ slots, selected, onSelect, disabled }: { slots: S
         const free = list.filter((s) => s.state === "AVAILABLE").length;
         return (
           <fieldset key={period.label}>
-            <legend className="mb-3 flex w-full items-center gap-2">
-              <span className="eyebrow text-ink">{period.label}</span>
-              <span className="text-xs text-subtle">
-                · {free} of {list.length} free
+            <legend className="mb-3 flex items-baseline gap-2">
+              <span className="eyebrow text-ink-muted">{period.label}</span>
+              <span className="text-xs text-ink-subtle">
+                {free} of {list.length} free
               </span>
             </legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
@@ -53,24 +53,20 @@ export function TimeSlotGrid({ slots, selected, onSelect, disabled }: { slots: S
                     aria-label={`${formatMinutes(slot.startMinute)} to ${formatMinutes(slot.endMinute)}, ${available ? `${formatMoney(slot.price)}, available` : reason}`}
                     onClick={() => onSelect(slot.startMinute)}
                     className={cn(
-                      "group relative flex min-h-[4.25rem] flex-col justify-center rounded-xl border px-3.5 py-2.5 text-left transition-[background-color,border-color,color,box-shadow] duration-200",
-                      available && !isSelected && "border-line bg-white hover:border-royal hover:shadow-[0_0_0_1px_var(--color-royal)]",
-                      isSelected && "border-ink bg-ink text-white shadow-[0_0_0_2px_var(--color-gold)]",
-                      !available && "cursor-not-allowed border-line/80 bg-paper-2/70 text-subtle",
+                      "relative flex min-h-[4.25rem] flex-col justify-center rounded-[var(--radius-control)] border px-3.5 py-2.5 text-left transition-[background-color,border-color,color] duration-150",
+                      available && !isSelected && "border-ink-line-strong bg-ink-3 text-white hover:border-neon",
+                      isSelected && "border-neon bg-neon text-ink",
+                      !available && "cursor-not-allowed border-ink-line bg-transparent text-ink-subtle",
+                      slot.state === "HELD" && "border-dashed",
                       (slot.state === "BLOCKED" || slot.state === "MAINTENANCE") && "hatched border-dashed",
                     )}
                   >
-                    {isSelected ? (
-                      <span aria-hidden className="absolute top-2 right-2 grid size-5 place-items-center rounded-full bg-gold text-ink">
-                        <Check className="size-3" strokeWidth={3} />
-                      </span>
-                    ) : null}
-                    <span className={cn("tabular text-[1rem] font-bold", !available && "line-through decoration-1 opacity-70")}>{formatMinutes(slot.startMinute)}</span>
-                    <span className={cn("mt-0.5 truncate text-xs", isSelected ? "text-white/75" : available ? "text-muted" : "")}>
+                    {isSelected ? <Check aria-hidden className="absolute top-2.5 right-2.5 size-4" strokeWidth={3} /> : null}
+                    <span className={cn("tabular text-[1rem] font-semibold", !available && "line-through decoration-1")}>{formatMinutes(slot.startMinute)}</span>
+                    <span className={cn("mt-0.5 truncate text-xs", isSelected ? "text-ink/75" : available ? "text-ink-muted" : "")}>
                       {available ? (
                         <>
-                          until {formatMinutes(slot.endMinute)}
-                          <span className={cn("ml-1 font-semibold", isSelected ? "text-gold" : "text-success")}>· Free</span>
+                          until {formatMinutes(slot.endMinute)} · <span className={cn("font-semibold", isSelected ? "text-ink" : "text-white")}>{formatMoney(slot.price)}</span>
                         </>
                       ) : (
                         reason
@@ -87,25 +83,24 @@ export function TimeSlotGrid({ slots, selected, onSelect, disabled }: { slots: S
   );
 }
 
-/** Legend plus a plain-language reason for each kind of unavailable slot. */
+/** What each kind of slot looks like, with a word on holds. */
 export function SlotLegend({ holdMinutes }: { holdMinutes: number }) {
-  const item = (cls: string, label: string, detail?: string) => (
-    <li className="flex items-start gap-2">
-      <span aria-hidden className={cn("mt-0.5 size-3.5 shrink-0 rounded-[4px] border", cls)} />
-      <span>
-        <span className="font-semibold text-ink">{label}</span>
-        {detail ? <span className="text-muted"> — {detail}</span> : null}
-      </span>
+  const item = (cls: string, label: string) => (
+    <li className="flex items-center gap-2">
+      <span aria-hidden className={cn("size-3.5 shrink-0 rounded-[4px] border", cls)} />
+      {label}
     </li>
   );
   return (
-    <ul className="grid gap-x-6 gap-y-2 rounded-xl bg-paper px-4 py-3 text-xs sm:grid-cols-2">
-      {item("border-line bg-white", "Available", "tap to select")}
-      {item("border-ink bg-ink shadow-[0_0_0_1.5px_var(--color-gold)]", "Selected")}
-      {item("border-line/80 bg-paper-2", "Booked", "another player has this time")}
-      {item("border-line/80 bg-paper-2", "On hold", `someone is paying; frees up if they don't finish within ${holdMinutes} min`)}
-      {item("hatched border-dashed border-line-strong bg-paper-2", "Unavailable / maintenance", "closed by the academy")}
-      {item("border-line/80 bg-paper-2", "Started", "the time has already begun")}
-    </ul>
+    <div className="space-y-2">
+      <ul className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-muted">
+        {item("border-ink-line-strong bg-ink-3", "Available")}
+        {item("border-neon bg-neon", "Selected")}
+        {item("border-dashed border-ink-line-strong", "On hold")}
+        {item("border-ink-line", "Booked / started")}
+        {item("hatched border-dashed border-ink-line-strong", "Closed")}
+      </ul>
+      <p className="text-xs text-ink-subtle">A slot on hold is being paid for by someone else. It frees up if they don&apos;t finish within {holdMinutes} minutes.</p>
+    </div>
   );
 }

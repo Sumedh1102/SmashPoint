@@ -34,7 +34,7 @@ export function AdminShell({ adminName, logout, children }: { adminName: string;
                 isActive(href) ? "bg-white/10 text-white" : "text-ink-muted hover:bg-white/5 hover:text-white",
               )}
             >
-              <Icon aria-hidden className={cn("size-[1.1rem]", isActive(href) && "text-gold")} />
+              <Icon aria-hidden className={cn("size-[1.1rem]", isActive(href) && "text-neon")} />
               {label}
             </Link>
           </li>
@@ -56,7 +56,7 @@ export function AdminShell({ adminName, logout, children }: { adminName: string;
   );
 
   return (
-    <div data-admin-shell className="min-h-dvh bg-paper lg:grid lg:grid-cols-[16rem_1fr]">
+    <div data-admin-shell className="min-h-dvh bg-paper lg:grid lg:grid-cols-[16rem_1fr] lg:bg-ink">
       <aside className="sticky top-0 hidden h-dvh flex-col bg-ink px-4 py-6 lg:flex">
         <Link href="/admin" className="mb-8 px-2">
           <Wordmark />
@@ -77,7 +77,7 @@ export function AdminShell({ adminName, logout, children }: { adminName: string;
         {nav}
       </div>
 
-      <main id="main" className="min-w-0 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+      <main id="main" className="surface-light min-w-0 bg-paper px-4 py-8 text-ink sm:px-6 lg:px-10 lg:py-10">
         {children}
       </main>
     </div>

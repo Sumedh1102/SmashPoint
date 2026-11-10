@@ -70,7 +70,7 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps<"/ad
                     <td className="px-4 py-3 pl-5 whitespace-nowrap">{formatDateTime(p.createdAt)}</td>
                     <td className="px-4 py-3">
                       {bookingCode ? (
-                        <Link href={`/admin/bookings/${bookingCode}`} className="font-semibold text-royal hover:underline">
+                        <Link href={`/admin/bookings/${bookingCode}`} className="font-semibold text-neon-ink hover:underline">
                           {bookingCode}
                         </Link>
                       ) : (

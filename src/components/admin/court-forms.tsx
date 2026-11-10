@@ -44,7 +44,7 @@ export function BlockForm({ courtId, today, hours }: { courtId: string; today: s
         </Field>
       </div>
       <label className="flex items-center gap-2.5 text-sm">
-        <input type="checkbox" name="wholeDay" value="yes" checked={wholeDay} onChange={(e) => setWholeDay(e.target.checked)} className="size-4 accent-[var(--color-royal)]" />
+        <input type="checkbox" name="wholeDay" value="yes" checked={wholeDay} onChange={(e) => setWholeDay(e.target.checked)} className="size-4 accent-[var(--color-ink)]" />
         Whole day
       </label>
       {!wholeDay ? (

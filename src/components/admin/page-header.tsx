@@ -4,7 +4,7 @@ export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?:
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        {eyebrow ? <p className="eyebrow text-royal">{eyebrow}</p> : null}
+        {eyebrow ? <p className="eyebrow text-neon-ink">{eyebrow}</p> : null}
         <h1 className="display mt-2 text-[clamp(2.2rem,5vw,3.25rem)]">{title}</h1>
         {description ? <div className="mt-2 max-w-2xl text-sm text-muted">{description}</div> : null}
       </div>
