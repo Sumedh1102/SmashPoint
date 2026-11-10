@@ -16,7 +16,7 @@ export default async function AdminLoginPage() {
           <Wordmark />
         </Link>
         <div className="rounded-[var(--radius-card)] bg-paper p-6 shadow-lg sm:p-8">
-          <p className="eyebrow text-court">Administrator</p>
+          <p className="eyebrow text-royal">Administrator</p>
           <h1 className="display mt-2 text-[2.5rem]">Sign in</h1>
           <p className="mt-1 mb-6 text-sm text-muted">For facility staff only. There is no public sign-up.</p>
           <LoginForm />

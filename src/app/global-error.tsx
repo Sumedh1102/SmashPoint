@@ -5,7 +5,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
   return (
     <html lang="en">
       <body style={{ margin: 0, minHeight: "100dvh", display: "grid", placeItems: "center", background: "#0a0c0b", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
-        <title>Something went wrong · SmashPoint</title>
+        <title>Something went wrong · On The Sol Sports Academy</title>
         <main style={{ maxWidth: 440, padding: 24, textAlign: "center" }}>
           <h1 style={{ fontSize: 40, margin: "0 0 12px", textTransform: "uppercase", letterSpacing: "-0.01em" }}>Out of bounds.</h1>
           <p style={{ margin: "0 0 24px", color: "#9aa39c" }}>

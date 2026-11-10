@@ -9,8 +9,13 @@ test("mobile: menu, layout and a full booking with the bottom bar", async ({ pag
   await page.getByRole("button", { name: "Open menu" }).click();
   const menu = page.locator("#mobile-menu");
   await expect(menu).toBeVisible();
-  await menu.getByRole("link", { name: "Courts" }).click();
+  await expect(menu.getByRole("link", { name: "About Us" })).toBeVisible();
+  await menu.getByRole("link", { name: "Court Rentals" }).click();
   await expect(menu).toBeHidden();
+
+  // Phones get rate-card cards instead of the table.
+  await expect(page.locator("#pricing table")).toBeHidden();
+  await expect(page.locator("#pricing li", { hasText: "Wooden Finish (2.5 mm)" })).toContainText("₹16,500");
 
   await page.goto("/#book");
   await chooseSlot(page, { sport: "Badminton", court: "Badminton Court 2", date: D4, duration: "1 hour", start: "8:00 AM" });
@@ -29,7 +34,7 @@ test("mobile: menu, layout and a full booking with the bottom bar", async ({ pag
   expect(box!.y).toBeGreaterThanOrEqual(0);
   expect(box!.y + box!.height).toBeLessThanOrEqual(vp.height + 1);
   expect(box!.width).toBeLessThanOrEqual(vp.width);
-  await page.getByRole("button", { name: /Pay ₹500 securely/ }).click();
+  await page.getByRole("button", { name: /Pay ₹400 securely/ }).click();
   await page.getByRole("dialog", { name: /Razorpay Checkout/ }).getByRole("button", { name: "Pay" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Booking confirmed");
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);

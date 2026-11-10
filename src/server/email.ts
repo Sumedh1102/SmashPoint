@@ -22,7 +22,7 @@ export async function sendEmail(message: { to: string | null | undefined; subjec
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: process.env.EMAIL_FROM || "SmashPoint <bookings@example.com>", to: message.to, subject: message.subject, text: message.text }),
+      body: JSON.stringify({ from: process.env.EMAIL_FROM || "On The Sol Sports Academy <bookings@example.com>", to: message.to, subject: message.subject, text: message.text }),
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) throw new Error(`Resend responded ${res.status}`);

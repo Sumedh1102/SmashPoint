@@ -215,7 +215,7 @@ done
 echo "✅ Live: $SITE"
 if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
   {
-    echo "## SmashPoint demo is live"
+    echo "## On The Sol Sports Academy demo is live"
     echo
     echo "**$SITE**"
     echo

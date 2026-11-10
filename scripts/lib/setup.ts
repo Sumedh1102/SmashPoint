@@ -1,9 +1,12 @@
 /**
  * Production first-run setup, run by `npm run db:deploy` after migrations. Idempotent and
- * non-destructive: it only adds what is missing and never changes prices, courts or
- * passwords that already exist.
+ * non-destructive: it adds what is missing, never deletes anything and never touches
+ * bookings, payments or passwords that already exist.
  *  - default booking and notification settings
  *  - the three sports and five courts (matched by slug)
+ *  - catalogue upgrades: when catalogue.ts has a newer CATALOGUE_REVISION than the database
+ *    (settings key `catalogue`), the catalogue courts' rate-card prices, surfaces and copy are
+ *    applied once, by slug. Later admin edits are kept. Existing bookings keep the amount paid.
  *  - an administrator for ADMIN_EMAIL with ADMIN_PASSWORD (only if that account doesn't exist
  *    yet, or exists without a password)
  */
@@ -12,12 +15,14 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "../../src/server/db/schema";
 import { hashPassword } from "../../src/server/auth/password";
 import { DEFAULT_BOOKING_SETTINGS, DEFAULT_NOTIFICATION_SETTINGS } from "../../src/lib/settings-types";
-import { COURTS, SPORTS } from "./catalogue";
+import { CATALOGUE_REVISION, COURTS, SPORTS } from "./catalogue";
 
 type Db = NodePgDatabase<typeof schema>;
 type Env = Record<string, string | undefined>;
 
 export const MIN_ADMIN_PASSWORD = 12;
+/** Settings key recording the catalogue revision applied to this database. */
+export const CATALOGUE_SETTING = "catalogue";
 
 export async function ensureCatalogue(db: Db) {
   const done: string[] = [];
@@ -43,6 +48,9 @@ export async function ensureCatalogue(db: Db) {
     .returning({ name: schema.courts.name });
   if (newCourts.length) done.push(`courts: ${newCourts.map((c) => c.name).join(", ")}`);
 
+  const upgraded = await upgradeCatalogue(db);
+  if (upgraded) done.push(upgraded);
+
   // Courts from an earlier setup that aren't part of the five stay visible until an admin
   // deactivates them; point that out instead of guessing.
   const extra = await db
@@ -53,6 +61,47 @@ export async function ensureCatalogue(db: Db) {
     console.warn(`⚠️  Courts outside the standard five are still bookable: ${extra.map((c) => c.name).join(", ")}. Set them to Inactive in /admin/courts if they no longer exist.`);
   }
   return done;
+}
+
+/**
+ * Applies the catalogue's current prices, surfaces and descriptions to the catalogue courts
+ * (by slug) and sports once per CATALOGUE_REVISION. Serialised with a row lock on the
+ * `catalogue` settings row, so instances booting together apply it once.
+ */
+export async function upgradeCatalogue(db: Db): Promise<string | null> {
+  return db.transaction(async (tx) => {
+    await tx.insert(schema.settings).values({ key: CATALOGUE_SETTING, value: { revision: 0 } }).onConflictDoNothing();
+    const [row] = await tx.select().from(schema.settings).where(eq(schema.settings.key, CATALOGUE_SETTING)).for("update");
+    const current = Number((row?.value as { revision?: unknown } | undefined)?.revision) || 0;
+    if (current >= CATALOGUE_REVISION) return null;
+
+    for (const sport of SPORTS) {
+      await tx.update(schema.sports).set({ tagline: sport.tagline, description: sport.description }).where(eq(schema.sports.slug, sport.slug));
+    }
+    const updated: string[] = [];
+    for (const c of COURTS) {
+      const [hit] = await tx
+        .update(schema.courts)
+        .set({
+          surface: c.surface ?? null,
+          description: c.description ?? null,
+          price1h: c.price1h,
+          price2h: c.price2h,
+          monthlyPrice1m: c.monthlyPrice1m ?? null,
+          monthlyPrice3m: c.monthlyPrice3m ?? null,
+          monthlyPrice6m: c.monthlyPrice6m ?? null,
+          monthlyPrice12m: c.monthlyPrice12m ?? null,
+        })
+        .where(eq(schema.courts.slug, c.slug))
+        .returning({ slug: schema.courts.slug });
+      if (hit) updated.push(hit.slug);
+    }
+    await tx
+      .update(schema.settings)
+      .set({ value: { revision: CATALOGUE_REVISION, appliedAt: new Date().toISOString() } })
+      .where(eq(schema.settings.key, CATALOGUE_SETTING));
+    return `catalogue revision ${CATALOGUE_REVISION} (rate-card prices for ${updated.length} ${updated.length === 1 ? "court" : "courts"})`;
+  });
 }
 
 export async function ensureAdmin(db: Db, env: Env) {

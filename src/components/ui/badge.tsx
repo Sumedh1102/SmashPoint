@@ -3,12 +3,12 @@ import { cn } from "@/lib/utils";
 
 const tones = {
   neutral: "bg-paper-2 text-muted ring-line",
-  court: "bg-court-50 text-court ring-court/20",
+  royal: "bg-royal-50 text-royal-700 ring-royal/20",
   success: "bg-success-soft text-success ring-success/20",
   warning: "bg-warning-soft text-warning ring-warning/25",
   danger: "bg-danger-soft text-danger ring-danger/20",
   info: "bg-info-soft text-info ring-info/20",
-  lime: "bg-lime text-ink ring-lime-600",
+  gold: "bg-gold text-ink ring-gold-600",
   dark: "bg-ink text-white ring-ink",
 } as const;
 
@@ -22,7 +22,7 @@ export function Badge({ tone = "neutral", children, className }: { tone?: BadgeT
   );
 }
 
-/** Live-availability dot: lime pulse when free, muted otherwise. */
+/** Live-availability dot: green pulse when free, muted otherwise. */
 export function LiveDot({ live, className }: { live: boolean; className?: string }) {
-  return <span aria-hidden className={cn("inline-block size-2 rounded-full", live ? "animate-pulse-dot bg-lime" : "bg-subtle", className)} />;
+  return <span aria-hidden className={cn("inline-block size-2 rounded-full", live ? "animate-pulse-dot bg-live" : "bg-subtle", className)} />;
 }

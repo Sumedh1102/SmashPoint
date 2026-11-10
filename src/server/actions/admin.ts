@@ -13,7 +13,8 @@ import { createSession, destroySession, getSession } from "@/server/auth/session
 import { refreshPublicPages } from "@/server/cache";
 import { DomainError } from "@/server/errors";
 import { rateLimit } from "@/server/security";
-import { cancelBooking, createBlock, deleteBlock, refundCancelledBooking, updateCourt } from "@/server/services/admin";
+import { cancelBooking, createBlock, deleteBlock, refundCancelledBooking, updateBookingHours, updateCourt } from "@/server/services/admin";
+import { formatMinutes } from "@/lib/format";
 import { emailSchema, isoDate, uuid } from "@/lib/validation";
 import { formObject, toActionError, type ActionResult } from "./result";
 
@@ -170,32 +171,85 @@ export async function deleteBlockAction(formData: FormData): Promise<void> {
   refreshPublicPages();
 }
 
-const rupeesToPaise = z.coerce
+/** Hourly prices: at least ₹1 (Razorpay's minimum), whole rupees. */
+const hourlyPrice = z.coerce
   .number({ error: "Enter an amount" })
-  .min(0, "Must be 0 or more")
+  .int("Use whole rupees")
+  .min(1, "Must be at least ₹1")
   .max(100000, "That's too high")
-  .transform((v) => Math.round(v * 100));
+  .transform((v) => v * 100);
+
+/** Monthly plan prices: optional (blank = plan not offered), whole rupees. */
+const monthlyPrice = z
+  .string()
+  .trim()
+  .transform((v, ctx) => {
+    const cleaned = v.replace(/[,\s₹]/g, "");
+    if (!cleaned) return null;
+    const n = Number(cleaned);
+    if (!Number.isInteger(n) || n < 1 || n > 10_000_000) {
+      ctx.addIssue({ code: "custom", message: "Enter whole rupees (at least ₹1), or leave blank" });
+      return z.NEVER;
+    }
+    return n * 100;
+  });
+
+const optionalLine = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((v) => v || null);
 
 const courtSchema = z.object({
   courtId: uuid,
-  description: z
-    .string()
-    .trim()
-    .max(400)
-    .transform((v) => v || null),
+  description: optionalLine(400),
+  surface: optionalLine(80),
   status: z.enum(["ACTIVE", "MAINTENANCE", "INACTIVE"]),
-  hourlyRate: rupeesToPaise,
-  peakHourlyRate: rupeesToPaise,
+  price1h: hourlyPrice,
+  price2h: hourlyPrice,
+  monthlyPrice1m: monthlyPrice,
+  monthlyPrice3m: monthlyPrice,
+  monthlyPrice6m: monthlyPrice,
+  monthlyPrice12m: monthlyPrice,
 });
 
 export async function updateCourtAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   try {
     const admin = await assertAdmin();
-    const input = courtSchema.parse(formObject(formData));
-    await updateCourt(input.courtId, { description: input.description, status: input.status, hourlyRate: input.hourlyRate, peakHourlyRate: input.peakHourlyRate }, admin.id);
+    const { courtId, ...patch } = courtSchema.parse(formObject(formData));
+    await updateCourt(courtId, patch, admin.id);
     revalidatePath("/admin", "layout");
     refreshPublicPages();
     return { ok: true, message: "Court updated." };
+  } catch (err) {
+    return toActionError(err);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Booking hours                                                             */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+const minuteOfDay = z.coerce.number().int().min(0).max(24 * 60);
+const hoursSchema = z
+  .object({ openMinute: minuteOfDay, closeMinute: minuteOfDay })
+  .refine((h) => h.closeMinute - h.openMinute >= 60, { message: "Closing must be at least one hour after opening", path: ["closeMinute"] });
+
+export async function updateBookingHoursAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  try {
+    const admin = await assertAdmin();
+    const input = hoursSchema.parse(formObject(formData));
+    const { hours, outsideCodes } = await updateBookingHours(input, admin.id);
+    revalidatePath("/admin", "layout");
+    refreshPublicPages();
+    const range = `${formatMinutes(hours.openMinute)} – ${formatMinutes(hours.closeMinute % (24 * 60))}`;
+    return {
+      ok: true,
+      message: outsideCodes.length
+        ? `Booking hours set to ${range}. ${outsideCodes.length} confirmed upcoming ${outsideCodes.length === 1 ? "booking falls" : "bookings fall"} outside them and stay valid: ${outsideCodes.slice(0, 5).join(", ")}${outsideCodes.length > 5 ? ", …" : ""}.`
+        : `Booking hours set to ${range}.`,
+    };
   } catch (err) {
     return toActionError(err);
   }

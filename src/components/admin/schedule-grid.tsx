@@ -13,15 +13,14 @@ function spans(cells: ScheduleCell[]) {
     const same =
       prev &&
       ((prev.cell.kind === "booking" && cell.kind === "booking" && prev.cell.code === cell.code) ||
-        (prev.cell.kind === "block" && cell.kind === "block" && prev.cell.reason === cell.reason) ||
-        (prev.cell.kind === "closure" && cell.kind === "closure"));
+        (prev.cell.kind === "block" && cell.kind === "block" && prev.cell.reason === cell.reason));
     if (same) prev.span++;
     else out.push({ cell, span: 1 });
   }
   return out;
 }
 
-/** Day view of every court, 7 AM – 10 PM: bookings, payment holds, blocks and the academy closure. */
+/** Day view of every court over the booking hours: bookings, payment holds and blocks. */
 export function ScheduleGrid({ hours, courts, linkCourts = true }: { hours: number[]; courts: Court[]; linkCourts?: boolean }) {
   return (
     <div className="overflow-x-auto">
@@ -56,7 +55,7 @@ export function ScheduleGrid({ hours, courts, linkCourts = true }: { hours: numb
                 if (cell.kind === "booking") {
                   const held = cell.status === "PENDING" || cell.status === "PAYMENT_INITIATED";
                   return (
-                    <td key={i} colSpan={span} className={cn(base, held ? "bg-warning-soft text-warning ring-1 ring-warning/25 ring-inset" : "bg-court text-white")}>
+                    <td key={i} colSpan={span} className={cn(base, held ? "bg-warning-soft text-warning ring-1 ring-warning/25 ring-inset" : "bg-royal text-white")}>
                       <Link href={`/admin/bookings/${cell.code}`} className="block truncate leading-tight hover:underline" title={`${cell.code} · ${cell.customer}`}>
                         <span className="font-semibold">{held ? "Hold · " : ""}{cell.customer}</span>
                         <span className="block opacity-75">{cell.code}</span>
@@ -72,13 +71,6 @@ export function ScheduleGrid({ hours, courts, linkCourts = true }: { hours: numb
                     </td>
                   );
                 }
-                if (cell.kind === "closure") {
-                  return (
-                    <td key={i} colSpan={span} className={cn(base, "hatched bg-paper-2 text-muted ring-1 ring-line ring-inset")}>
-                      <span className="block truncate font-semibold">{cell.label}</span>
-                    </td>
-                  );
-                }
                 return <td key={i} className={cn(base, "bg-white ring-1 ring-line ring-inset")} aria-label="Free" />;
               })}
             </tr>
@@ -86,10 +78,9 @@ export function ScheduleGrid({ hours, courts, linkCourts = true }: { hours: numb
         </tbody>
       </table>
       <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 px-1 text-xs text-muted">
-        <li className="flex items-center gap-2"><span className="size-3 rounded bg-court" /> Confirmed</li>
+        <li className="flex items-center gap-2"><span className="size-3 rounded bg-royal" /> Confirmed</li>
         <li className="flex items-center gap-2"><span className="size-3 rounded bg-warning-soft ring-1 ring-warning/30" /> Payment hold</li>
         <li className="flex items-center gap-2"><span className="size-3 rounded bg-ink" /> Blocked / maintenance</li>
-        <li className="flex items-center gap-2"><span className="hatched size-3 rounded bg-paper-2 ring-1 ring-line" /> Academy session</li>
         <li className="flex items-center gap-2"><span className="size-3 rounded bg-white ring-1 ring-line" /> Free</li>
       </ul>
     </div>

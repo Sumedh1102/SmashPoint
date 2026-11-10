@@ -1,14 +1,14 @@
 import "server-only";
-import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "@/server/db";
-import { bookings, courtBlocks, courts, payments, type CourtStatus } from "@/server/db/schema";
-import { CLOSE_MINUTE, OPEN_MINUTE } from "@/lib/booking/rules";
+import { bookings, courtBlocks, courts, payments, settings as settingsTable, type CourtStatus } from "@/server/db/schema";
+import { describeHours, normalizeBookingHours, type BookingHours } from "@/lib/booking/rules";
 import { formatDate, formatTimeRange } from "@/lib/format";
 import { addDays, diffDays, isValidISODate, rangesOverlap } from "@/lib/time";
 import { audit } from "@/server/audit";
 import { DomainError } from "@/server/errors";
 import { refundPayment } from "@/server/payments/service";
-import { getBookingSettings } from "@/server/settings";
+import { getBookingSettings, hoursOf } from "@/server/settings";
 import { bookingWindow, expireStaleHolds, lockCourt, transitionBooking } from "./bookings";
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -100,8 +100,9 @@ export async function createBlock(input: BlockInput, actorId: string) {
   if (!wholeDay) {
     const s = input.startMinute!;
     const e = input.endMinute!;
-    if (s < OPEN_MINUTE || e > CLOSE_MINUTE || e <= s || s % 60 !== 0 || e % 60 !== 0) {
-      throw new DomainError("Choose whole hours between 7:00 AM and 10:00 PM, with the end after the start.");
+    const hours = hoursOf(settings);
+    if (s < hours.openMinute || e > hours.closeMinute || e <= s || s % 60 !== 0 || e % 60 !== 0) {
+      throw new DomainError(`Choose whole hours within the booking hours (${describeHours(hours)}), with the end after the start.`);
     }
   }
 
@@ -164,11 +165,26 @@ export async function deleteBlock(blockId: string, actorId: string) {
 /* Courts                                                                    */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-export async function updateCourt(
-  courtId: string,
-  patch: { description: string | null; status: CourtStatus; hourlyRate: number; peakHourlyRate: number },
-  actorId: string,
-) {
+export type CourtPatch = {
+  description: string | null;
+  surface: string | null;
+  status: CourtStatus;
+  /** Rate card (minor units): exact one-hour and two-hour prices, optional monthly plans. */
+  price1h: number;
+  price2h: number;
+  monthlyPrice1m: number | null;
+  monthlyPrice3m: number | null;
+  monthlyPrice6m: number | null;
+  monthlyPrice12m: number | null;
+};
+
+/**
+ * Updates a court's status, copy and rate card. New prices apply to bookings made from now on
+ * (the booking service reads them when it holds a slot); existing bookings keep the amount
+ * that was charged.
+ */
+export async function updateCourt(courtId: string, patch: CourtPatch, actorId: string) {
+  if (patch.price1h < 100 || patch.price2h < 100) throw new DomainError("Hourly prices must be at least ₹1 (online payments can't be smaller).");
   const [row] = await db.update(courts).set(patch).where(eq(courts.id, courtId)).returning();
   if (!row) throw new DomainError("Court not found.", "NOT_FOUND", 404);
   await audit(actorId, "court.update", "court", courtId, patch);
@@ -184,4 +200,38 @@ export async function upcomingBookingCount(courtId: string) {
     .from(bookings)
     .where(and(eq(bookings.courtId, courtId), gte(bookings.date, today), lte(bookings.date, addDays(today, 400)), inArray(bookings.status, ["PAID", "CONFIRMED"])));
   return rows.length;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Booking hours                                                             */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Changes the daily booking window (stored in the `booking` settings row, which the database
+ * trigger reads too). Applies to new bookings only: existing bookings outside the new hours
+ * stay valid, and are reported so the facility can contact those customers.
+ */
+export async function updateBookingHours(hours: BookingHours, actorId: string) {
+  const normalized = normalizeBookingHours(hours);
+  if (normalized.openMinute !== hours.openMinute || normalized.closeMinute !== hours.closeMinute) {
+    throw new DomainError("Choose whole hours, with closing at least one hour after opening.");
+  }
+  const settings = await getBookingSettings();
+  const { today } = bookingWindow(settings);
+  const outside = await db
+    .select({ code: bookings.code })
+    .from(bookings)
+    .where(
+      and(
+        gte(bookings.date, today),
+        inArray(bookings.status, ["PAID", "CONFIRMED"]),
+        or(lt(bookings.startMinute, normalized.openMinute), gt(bookings.endMinute, normalized.closeMinute)),
+      ),
+    );
+  await db
+    .insert(settingsTable)
+    .values({ key: "booking", value: normalized, updatedById: actorId })
+    .onConflictDoUpdate({ target: settingsTable.key, set: { value: sql`${settingsTable.value} || ${JSON.stringify(normalized)}::jsonb`, updatedById: actorId } });
+  await audit(actorId, "settings.booking_hours", "settings", "booking", { ...normalized, outside: outside.length });
+  return { hours: normalized, outsideCodes: outside.map((b) => b.code) };
 }

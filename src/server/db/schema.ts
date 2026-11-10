@@ -1,11 +1,11 @@
 /**
- * SmashPoint database schema (PostgreSQL + Drizzle ORM): five courts, guest bookings,
- * Razorpay payments and the administrator accounts that manage them.
+ * On The Sol Sports Academy database schema (PostgreSQL + Drizzle ORM): courts and their rental
+ * prices, guest bookings, Razorpay payments and the administrator accounts that manage them.
  *
  * Conventions
  * - Money columns are integers in minor units (paise). ₹400.00 → 40000.
  * - Facility-local calendar dates are `date` (YYYY-MM-DD, Asia/Kolkata) and times of day are
- *   minutes from midnight (`start_minute`, `end_minute`). Opening hours never cross midnight.
+ *   minutes from midnight (`start_minute`, `end_minute`). Booking hours never cross midnight.
  * - Instants (created_at, paid_at, …) are `timestamptz`.
  *
  * Double bookings are prevented at three levels:
@@ -13,8 +13,8 @@
  *   2. the booking service re-validates inside a transaction holding a row lock on the court,
  *   3. PostgreSQL itself: the `bookings_no_overlap` EXCLUDE constraint
  *      (drizzle/0001_booking_constraints.sql) and the `bookings_enforce_rules` trigger
- *      (drizzle/0004_court_booking_focus.sql: opening hours, 1–2 h durations and the
- *      badminton academy closure).
+ *      (drizzle/0005_rental_pricing.sql: booking hours from the `booking` settings row,
+ *      1–2 h durations on the hour, sport/court match).
  *
  * Tables from the earlier academy-management app (students, coaches, attendance, memberships,
  * events, …) were moved to the `legacy_archive` schema by migration 0004; nothing here uses them.
@@ -158,16 +158,33 @@ export const courts = pgTable(
     name: varchar("name", { length: 60 }).notNull(),
     description: text("description"),
     status: courtStatus("status").notNull().default("ACTIVE"),
-    /** Off-peak price per hour (minor units). */
-    hourlyRate: integer("hourly_rate").notNull(),
-    /** Peak price per hour (minor units). Peak windows live in the booking settings. */
-    peakHourlyRate: integer("peak_hourly_rate").notNull(),
+    /** Playing surface shown to customers, e.g. "Green Mat (5 mm)". */
+    surface: varchar("surface", { length: 80 }),
+    /**
+     * Rental price (minor units) for a one-hour booking. Prices are flat: the same at every
+     * time of day, with no peak surcharge.
+     */
+    price1h: integer("price_1h").notNull(),
+    /** Rental price for a two-hour booking: a package price, not necessarily 2 × price_1h. */
+    price2h: integer("price_2h").notNull(),
+    /**
+     * Monthly rental plans (minor units; Monday–Saturday). Shown on the website with an
+     * enquiry button — they are arranged with the facility, not bought through online checkout.
+     * Null = plan not offered for this court.
+     */
+    monthlyPrice1m: integer("monthly_price_1m"),
+    monthlyPrice3m: integer("monthly_price_3m"),
+    monthlyPrice6m: integer("monthly_price_6m"),
+    monthlyPrice12m: integer("monthly_price_12m"),
     sortOrder: smallint("sort_order").notNull().default(0),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
-    check("courts_rates_positive", sql`${t.hourlyRate} >= 0 AND ${t.peakHourlyRate} >= 0`),
+    check(
+      "courts_prices_valid",
+      sql`${t.price1h} >= 0 AND ${t.price2h} >= 0 AND coalesce(${t.monthlyPrice1m}, 0) >= 0 AND coalesce(${t.monthlyPrice3m}, 0) >= 0 AND coalesce(${t.monthlyPrice6m}, 0) >= 0 AND coalesce(${t.monthlyPrice12m}, 0) >= 0`,
+    ),
     index("courts_sort_idx").on(t.sortOrder),
     index("courts_sport_idx").on(t.sportId),
   ],
@@ -344,6 +361,11 @@ export const paymentWebhookEvents = pgTable("payment_webhook_events", {
 /* Platform                                                                  */
 /* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * JSON documents: `booking` (hold minutes, advance days, booking hours — read by the rules
+ * trigger too), `notifications`, `catalogue` (applied catalogue revision, scripts/lib/setup.ts)
+ * and, on demo databases only, `demo_data`.
+ */
 export const settings = pgTable("settings", {
   key: varchar("key", { length: 60 }).primaryKey(),
   value: jsonb("value").notNull(),

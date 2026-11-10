@@ -6,7 +6,7 @@ export function LegalPage({ title, updated, children }: { title: string; updated
   return (
     <div className="bg-paper pt-28 pb-24 sm:pt-36">
       <article className="mx-auto max-w-3xl px-4 sm:px-6">
-        <p className="eyebrow text-court">{site.name}</p>
+        <p className="eyebrow text-royal">{site.name}</p>
         <h1 className="display mt-3 text-[clamp(2.6rem,8vw,4.5rem)]">{title}</h1>
         <p className="mt-3 text-sm text-subtle">Last updated {updated}</p>
         {isPlaceholder(site.legalName) ? (

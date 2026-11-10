@@ -4,13 +4,22 @@ import { useActionState, useState } from "react";
 import { submitWithoutReset } from "@/components/forms/submit-without-reset";
 import { Button, Spinner } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
-import { createBlockAction, deleteBlockAction, updateCourtAction } from "@/server/actions/admin";
-import { formatHour } from "@/lib/format";
+import { createBlockAction, deleteBlockAction, updateBookingHoursAction, updateCourtAction } from "@/server/actions/admin";
+import type { BookingHours } from "@/lib/booking/rules";
+import { formatHour, formatMoney } from "@/lib/format";
+import { MONTHLY_TERMS } from "@/lib/pricing";
 import { FormMessage, fieldError } from "./form-message";
 
-const HOURS = Array.from({ length: 16 }, (_, i) => 7 * 60 + i * 60); // 7 AM … 10 PM
+/** Hour marks from opening to closing, inclusive (e.g. 7 AM … 10 PM). */
+function hourOptions(hours: BookingHours) {
+  const out: number[] = [];
+  for (let m = hours.openMinute; m <= hours.closeMinute; m += 60) out.push(m);
+  return out;
+}
 
-export function BlockForm({ courtId, today, isBadminton }: { courtId: string; today: string; isBadminton: boolean }) {
+export function BlockForm({ courtId, today, hours }: { courtId: string; today: string; hours: BookingHours }) {
+  const HOURS = hourOptions(hours);
+  const defaultFrom = Math.max(hours.openMinute, Math.min(9 * 60, hours.closeMinute - 60));
   const [state, dispatch, pending] = useActionState(createBlockAction, null);
   const [wholeDay, setWholeDay] = useState(false);
   return (
@@ -35,13 +44,13 @@ export function BlockForm({ courtId, today, isBadminton }: { courtId: string; to
         </Field>
       </div>
       <label className="flex items-center gap-2.5 text-sm">
-        <input type="checkbox" name="wholeDay" value="yes" checked={wholeDay} onChange={(e) => setWholeDay(e.target.checked)} className="size-4 accent-[var(--color-court)]" />
+        <input type="checkbox" name="wholeDay" value="yes" checked={wholeDay} onChange={(e) => setWholeDay(e.target.checked)} className="size-4 accent-[var(--color-royal)]" />
         Whole day
       </label>
       {!wholeDay ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <Field id="block-from" label="From" error={fieldError(state, "startMinute")}>
-            <Select id="block-from" name="startMinute" defaultValue={String(9 * 60)}>
+            <Select id="block-from" name="startMinute" defaultValue={String(defaultFrom)}>
               {HOURS.slice(0, -1).map((m) => (
                 <option key={m} value={m}>
                   {formatHour(m)}
@@ -50,7 +59,7 @@ export function BlockForm({ courtId, today, isBadminton }: { courtId: string; to
             </Select>
           </Field>
           <Field id="block-to" label="Until">
-            <Select id="block-to" name="endMinute" defaultValue={String(10 * 60)}>
+            <Select id="block-to" name="endMinute" defaultValue={String(defaultFrom + 60)}>
               {HOURS.slice(1).map((m) => (
                 <option key={m} value={m}>
                   {formatHour(m)}
@@ -61,7 +70,8 @@ export function BlockForm({ courtId, today, isBadminton }: { courtId: string; to
         </div>
       ) : null}
       <p className="text-xs text-muted">
-        Blocks can&apos;t cover existing bookings — cancel those first.{isBadminton ? " The 5–7 PM academy closure always applies and isn't changed here." : ""}
+        Blocks can&apos;t cover existing bookings — cancel those first. For a recurring closure (for example academy sessions at the same time every day), choose the
+        date range and the hours.
       </p>
       <Button type="submit" variant="dark" disabled={pending}>
         {pending ? <Spinner /> : null} Block court
@@ -88,19 +98,47 @@ export function DeleteBlockButton({ blockId }: { blockId: string }) {
   );
 }
 
-export function CourtSettingsForm({
-  court,
-  upcoming,
-  peakText,
-}: {
-  court: { id: string; description: string | null; status: string; hourlyRate: number; peakHourlyRate: number };
-  upcoming: number;
-  peakText: string;
-}) {
+type CourtForForm = {
+  id: string;
+  description: string | null;
+  surface: string | null;
+  status: string;
+  price1h: number;
+  price2h: number;
+  monthlyPrice1m: number | null;
+  monthlyPrice3m: number | null;
+  monthlyPrice6m: number | null;
+  monthlyPrice12m: number | null;
+};
+
+const rupeesValue = (paise: number | null) => (paise === null ? "" : String(paise / 100));
+
+/** Rupee input with a ₹ prefix. */
+function RupeeInput({ id, name, defaultValue, required, describedBy, invalid }: { id: string; name: string; defaultValue: string; required?: boolean; describedBy?: string; invalid?: boolean }) {
+  return (
+    <div className="relative">
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-muted">
+        ₹
+      </span>
+      <Input id={id} name={name} type="text" inputMode="numeric" autoComplete="off" defaultValue={defaultValue} required={required} className="tabular pl-8" aria-describedby={describedBy} aria-invalid={invalid} />
+    </div>
+  );
+}
+
+/**
+ * Status, surface, description and the court's rate card: the exact one-hour and two-hour
+ * prices that online bookings charge, and the monthly plans shown on the website.
+ */
+export function CourtSettingsForm({ court, upcoming, sportName }: { court: CourtForForm; upcoming: number; sportName: string }) {
   const [state, dispatch, pending] = useActionState(updateCourtAction, null);
   const [status, setStatus] = useState(court.status);
+  const [p1, setP1] = useState(rupeesValue(court.price1h));
+  const [p2, setP2] = useState(rupeesValue(court.price2h));
+  const n1 = Number(p1);
+  const n2 = Number(p2);
+  const saving = Number.isFinite(n1) && Number.isFinite(n2) && n1 > 0 && n2 > 0 ? n1 * 2 - n2 : 0;
   return (
-    <form onSubmit={submitWithoutReset(dispatch)} className="space-y-4" noValidate>
+    <form onSubmit={submitWithoutReset(dispatch)} className="space-y-5" noValidate>
       <input type="hidden" name="courtId" value={court.id} />
       <FormMessage state={state} />
       <Field id="court-status" label="Status">
@@ -115,20 +153,97 @@ export function CourtSettingsForm({
           This court has {upcoming} upcoming confirmed {upcoming === 1 ? "booking" : "bookings"}. Changing the status doesn&apos;t cancel them — cancel and refund each one from Bookings.
         </p>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field id="court-rate" label="Off-peak price / hour (₹)" error={fieldError(state, "hourlyRate")}>
-          <Input id="court-rate" name="hourlyRate" type="number" min={0} step={1} inputMode="numeric" defaultValue={court.hourlyRate / 100} required />
-        </Field>
-        <Field id="court-peak" label="Peak price / hour (₹)" hint={peakText} error={fieldError(state, "peakHourlyRate")}>
-          <Input id="court-peak" name="peakHourlyRate" type="number" min={0} step={1} inputMode="numeric" defaultValue={court.peakHourlyRate / 100} required />
-        </Field>
-      </div>
+
+      <fieldset className="rounded-xl border border-line p-4">
+        <legend className="px-1 text-sm font-semibold">Hourly rental — charged for online bookings</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field id="court-price1h" label="1 hour (₹)" error={fieldError(state, "price1h")}>
+            <div className="relative">
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-muted">
+                ₹
+              </span>
+              <Input id="court-price1h" name="price1h" type="text" inputMode="numeric" autoComplete="off" value={p1} onChange={(e) => setP1(e.target.value)} required className="tabular pl-8" />
+            </div>
+          </Field>
+          <Field
+            id="court-price2h"
+            label="2 hours (₹)"
+            hint={saving > 0 ? `Package price — saves ${formatMoney(saving * 100)} vs two 1-hour bookings.` : "Package price for two consecutive hours (not necessarily 2 × the 1-hour price)."}
+            error={fieldError(state, "price2h")}
+          >
+            <div className="relative">
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-muted">
+                ₹
+              </span>
+              <Input id="court-price2h" name="price2h" type="text" inputMode="numeric" autoComplete="off" value={p2} onChange={(e) => setP2(e.target.value)} required className="tabular pl-8" />
+            </div>
+          </Field>
+        </div>
+        <p className="mt-3 text-xs text-muted">The same price applies at every time of day.</p>
+      </fieldset>
+
+      <fieldset className="rounded-xl border border-line p-4">
+        <legend className="px-1 text-sm font-semibold">Monthly rental plans — shown on the website (Mon–Sat)</legend>
+        <div className="grid grid-cols-2 gap-3">
+          {MONTHLY_TERMS.map((t) => {
+            const err = fieldError(state, t.key);
+            return (
+              <Field key={t.key} id={`court-${t.key}`} label={`${t.label} (₹)`} error={err}>
+                <RupeeInput id={`court-${t.key}`} name={t.key} defaultValue={rupeesValue(court[t.key])} invalid={!!err} />
+              </Field>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-xs text-muted">Optional: leave a plan blank if it isn&apos;t offered for this court. Monthly plans are arranged with the customer directly, not paid online.</p>
+      </fieldset>
+
+      <Field id="court-surface" label="Playing surface" optional hint={`Shown to customers, e.g. "Green Mat (5 mm)". ${sportName} courts with the same prices and surface share one row on the rate card.`}>
+        <Input id="court-surface" name="surface" maxLength={80} defaultValue={court.surface ?? ""} />
+      </Field>
       <Field id="court-desc" label="Description" optional>
         <Textarea id="court-desc" name="description" rows={2} maxLength={400} defaultValue={court.description ?? ""} />
       </Field>
-      <p className="text-xs text-muted">New prices apply to bookings made from now on; existing bookings keep the price that was paid.</p>
+      <p className="text-xs text-muted">New prices apply to bookings made from now on and appear on the website immediately; existing bookings keep the price that was paid.</p>
       <Button type="submit" variant="dark" disabled={pending}>
         {pending ? <Spinner /> : null} Save court
+      </Button>
+    </form>
+  );
+}
+
+/** The daily online booking window (applies to every court). */
+export function BookingHoursForm({ hours }: { hours: BookingHours }) {
+  const [state, dispatch, pending] = useActionState(updateBookingHoursAction, null);
+  const marks = Array.from({ length: 25 }, (_, i) => i * 60);
+  return (
+    <form onSubmit={submitWithoutReset(dispatch)} className="space-y-4" noValidate>
+      <FormMessage state={state} />
+      <p className="text-sm text-muted">
+        Online bookings must start and end within these hours (every day). The defaults, 7 AM – 10 PM, still need to be confirmed with the facility. Changing them doesn&apos;t affect
+        existing bookings.
+      </p>
+      <div className="grid gap-3 sm:max-w-md sm:grid-cols-2">
+        <Field id="hours-open" label="First slot starts" error={fieldError(state, "openMinute")}>
+          <Select id="hours-open" name="openMinute" defaultValue={String(hours.openMinute)}>
+            {marks.slice(0, -1).map((m) => (
+              <option key={m} value={m}>
+                {formatHour(m)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field id="hours-close" label="Last slot ends" error={fieldError(state, "closeMinute")}>
+          <Select id="hours-close" name="closeMinute" defaultValue={String(hours.closeMinute)}>
+            {marks.slice(1).map((m) => (
+              <option key={m} value={m}>
+                {m === 24 * 60 ? "Midnight" : formatHour(m)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+      <Button type="submit" variant="dark" disabled={pending}>
+        {pending ? <Spinner /> : null} Save booking hours
       </Button>
     </form>
   );

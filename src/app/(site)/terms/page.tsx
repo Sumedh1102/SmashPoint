@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Terms & conditions", description: `T
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms & conditions" updated="15 October 2026">
+    <LegalPage title="Terms & conditions" updated="10 November 2026">
       <section>
         <h2>About these terms</h2>
         <p>
@@ -17,8 +17,11 @@ export default function TermsPage() {
       <section>
         <h2>Bookings</h2>
         <ul>
-          <li>Courts can be booked for one or two hours, starting on the hour, between 7:00 AM and 10:00 PM. Every booking ends by 10:00 PM.</li>
-          <li>Badminton courts can&apos;t be booked from 5:00 PM to 7:00 PM, when academy sessions use them.</li>
+          <li>Courts can be booked online for one or two hours, starting on the hour, within the online booking hours shown on the booking page.</li>
+          <li>The price of a booking is the court&apos;s published one-hour or two-hour rental price, shown before you pay. The two-hour price is a package price for two consecutive hours.</li>
+          <li>Pickleball rentals include paddles. Balls need to be purchased separately.</li>
+          <li>Monthly rental plans (1, 3, 6 or 12 months) are valid Monday to Saturday and are arranged directly with the academy; they are not sold through online checkout.</li>
+          <li>Timings and availability are subject to change. Advance booking is recommended.</li>
           <li>A booking reserves one court for the booked time only. Please arrive on time; the court must be vacated at the end of your slot.</li>
           <li>A booking is confirmed only once payment has been verified. Bring your booking reference.</li>
         </ul>

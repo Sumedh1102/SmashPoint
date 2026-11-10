@@ -1,22 +1,40 @@
-import { cn } from "@/lib/utils";
+import Image from "next/image";
+import emblem from "@/assets/brand/on-the-sol-emblem.png";
 import { site } from "@/content/site";
+import { cn } from "@/lib/utils";
 
-/** The mark: a court corner (service lines) with a shuttle in flight. */
-export function Mark({ className }: { className?: string }) {
+/** The academy's logo emblem ("Sol To Success!"), cut out of its rate card. */
+export function Mark({ className, size = 44, eager = false }: { className?: string; size?: number; eager?: boolean }) {
   return (
-    <svg viewBox="0 0 32 32" aria-hidden className={cn("size-8 shrink-0", className)}>
-      <rect width="32" height="32" rx="8" fill="var(--color-lime)" />
-      <path d="M7 25V11M7 25h14M11.5 25V15.5H25" fill="none" stroke="var(--color-ink)" strokeWidth="2.2" strokeLinecap="square" />
-      <circle cx="22.5" cy="9.5" r="3" fill="var(--color-ink)" />
-    </svg>
+    <span className={cn("relative inline-grid shrink-0 place-items-center rounded-full bg-white p-[2px] shadow-[0_0_0_2px_var(--color-gold)]", className)} style={{ width: size, height: size }}>
+      <Image src={emblem} alt="" width={size} height={size} sizes={`${size}px`} quality={80} loading={eager ? "eager" : undefined} className="size-full rounded-full" />
+    </span>
   );
 }
 
-export function Wordmark({ className, tone = "light" }: { className?: string; tone?: "light" | "dark" }) {
+/**
+ * Logo lockup: the emblem with "ON THE SOL" over a gold, tracked "SPORTS ACADEMY" — the
+ * typographic treatment of the academy's rate card.
+ */
+export function Wordmark({ className, tone = "light", size = "md", eager = false }: { className?: string; tone?: "light" | "dark"; size?: "sm" | "md" | "lg"; eager?: boolean }) {
+  const mark = size === "lg" ? 60 : size === "sm" ? 36 : 44;
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
-      <Mark />
-      <span className={cn("display text-[1.45rem] leading-none tracking-[0.01em]", tone === "light" ? "text-white" : "text-ink")}>{site.name}</span>
+      <Mark size={mark} eager={eager} />
+      <span className="flex flex-col">
+        <span className={cn("wordmark whitespace-nowrap", size === "lg" ? "text-[1.85rem]" : size === "sm" ? "text-[1.1rem]" : "text-[1.32rem]", tone === "light" ? "text-white" : "text-ink")}>
+          {site.brand.primary}
+        </span>
+        <span
+          className={cn(
+            "mt-[3px] font-display font-bold whitespace-nowrap uppercase",
+            size === "lg" ? "text-[0.74rem] tracking-[0.42em]" : size === "sm" ? "text-[0.5rem] tracking-[0.36em]" : "text-[0.58rem] tracking-[0.4em]",
+            tone === "light" ? "text-gold" : "text-gold-700",
+          )}
+        >
+          {site.brand.secondary}
+        </span>
+      </span>
     </span>
   );
 }

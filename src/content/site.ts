@@ -1,22 +1,26 @@
 /**
- * Facility details shown on the website, in emails and on Razorpay Checkout.
+ * Facility details shown on the website, in emails, on Razorpay Checkout and in calendar files.
  *
- * EDIT ME: values in [square brackets] are placeholders. The project didn't contain verified
- * contact details, so none have been made up — replace each placeholder with the facility's
- * real information. Until then, placeholders are shown as-is (and never turned into phone or
- * email links) so they are easy to spot.
+ * EDIT ME: values in [square brackets] are placeholders. The rate card the site is based on
+ * has no contact details, address or opening hours, so none have been made up — replace each
+ * placeholder with the academy's real information. Until then, placeholders are shown as-is
+ * (and never turned into phone, email or map links) so they are easy to spot.
  *
- * Opening hours, durations and the badminton academy closure are booking rules
- * (src/lib/booking/rules.ts); court names, descriptions and prices live in the database and
- * are managed from /admin.
+ * Prices are not here: each court's rate card (1 h, 2 h, monthly plans) lives in the database
+ * and is managed from /admin/courts. Online booking hours are a booking setting (also in
+ * /admin/courts); `openingHours` below is the facility's published opening-hours text.
  */
 
 export const site = {
-  name: "SmashPoint",
+  name: "On The Sol Sports Academy",
+  /** The two lines of the logo lockup. */
+  brand: { primary: "On The Sol", secondary: "Sports Academy" },
+  /** The motto on the academy's logo. */
+  motto: "Sol To Success!",
   /** Shown under the wordmark and in page titles. */
   descriptor: "Badminton · Pickleball · Basketball",
   description:
-    "Book premium indoor badminton, pickleball and basketball courts at SmashPoint. Choose your sport, see live availability and pay securely with Razorpay.",
+    "Badminton, pickleball and basketball court rentals at On The Sol Sports Academy. Book a court by the hour online with live availability and secure Razorpay checkout, or ask about monthly rental plans.",
   url: (
     process.env.NEXT_PUBLIC_SITE_URL ||
     (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000")
@@ -24,13 +28,18 @@ export const site = {
   /** Registered business name used in the legal pages. */
   legalName: "[Registered business name]",
   contact: {
-    phone: "[Facility phone number]",
-    email: "[Facility email address]",
+    phone: "[Academy phone number]",
+    email: "[Academy email address]",
     addressLines: ["[Street address]", "[City, State, PIN code]"],
     /** Google Maps search text for the "Get directions" link; leave as a placeholder to hide it. */
-    mapQuery: "[Map search text, e.g. facility name and city]",
+    mapQuery: "[Map search text, e.g. academy name and city]",
   },
-  hours: "Every day · 7:00 AM – 10:00 PM",
+  /**
+   * The facility's opening hours as the academy publishes them. CLIENT TO CONFIRM: not on the
+   * rate card. (The online booking window is separate: a booking setting, 7 AM – 10 PM by
+   * default, shown on the site as "online booking hours".)
+   */
+  openingHours: "[Opening hours — to be confirmed]",
 } as const;
 
 /** True for a value that still holds its [placeholder] text. */
@@ -42,8 +51,9 @@ export function telHref(phone: string) {
   return isPlaceholder(phone) ? null : `tel:${phone.replace(/[^\d+]/g, "")}`;
 }
 
-export function mailHref(email: string) {
-  return isPlaceholder(email) ? null : `mailto:${email}`;
+export function mailHref(email: string, subject?: string) {
+  if (isPlaceholder(email)) return null;
+  return subject ? `mailto:${email}?subject=${encodeURIComponent(subject)}` : `mailto:${email}`;
 }
 
 export function mapHref(query: string) {

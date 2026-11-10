@@ -4,7 +4,7 @@ export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?:
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        {eyebrow ? <p className="eyebrow text-court">{eyebrow}</p> : null}
+        {eyebrow ? <p className="eyebrow text-royal">{eyebrow}</p> : null}
         <h1 className="display mt-2 text-[clamp(2.2rem,5vw,3.25rem)]">{title}</h1>
         {description ? <div className="mt-2 max-w-2xl text-sm text-muted">{description}</div> : null}
       </div>
@@ -17,7 +17,7 @@ export function Panel({ title, actions, children, className }: { title?: string;
   return (
     <section className={`rounded-[var(--radius-card)] border border-line bg-white ${className ?? ""}`}>
       {title ? (
-        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
           <h2 className="display text-[1.4rem]">{title}</h2>
           {actions}
         </div>

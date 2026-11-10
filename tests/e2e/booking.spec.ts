@@ -7,10 +7,21 @@ const D3 = dayFromToday(3);
 
 test.describe.configure({ mode: "serial" });
 
-test("home page: hero, five courts with live availability, no errors or overflow", async ({ page, consoleErrors }) => {
+test("home page: multi-sport hero, sports, live courts, rate card, no errors or overflow", async ({ page, consoleErrors }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Your game\.\s*Your court\./i);
-  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Book a Court" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/One destination\.\s*Three ways to play\./i);
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await expect(nav.getByRole("link", { name: /Book Now/ })).toBeVisible();
+  for (const label of ["Home", "Sports", "Court Rentals", "Book a Court", "About Us", "Contact"]) await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+
+  // The three sports get equal billing in the hero and the sports section.
+  const heroSports = page.getByRole("list", { name: "Our sports" });
+  for (const sport of ["Badminton", "Pickleball", "Basketball"]) await expect(heroSports.getByRole("link", { name: new RegExp(`Book ${sport}`) })).toBeVisible();
+  await expect(page.locator("#sports > div > ul > li")).toHaveCount(3);
+  await expect(page.locator("#sport-badminton")).toContainText("Court 1 – Green Mat (5 mm)");
+  await expect(page.locator("#sport-badminton")).toContainText("Court 2 – Wooden Finish (2.5 mm)");
+  await expect(page.locator("#sport-pickleball")).toContainText("Paddle included. Ball needs to be purchased separately.");
+
   const cards = page.locator("#courts article");
   await expect(cards).toHaveCount(5);
   for (const name of ["Badminton Court 1", "Badminton Court 2", "Pickleball Court 1", "Pickleball Court 2", "Basketball Court 1"]) {
@@ -18,45 +29,64 @@ test("home page: hero, five courts with live availability, no errors or overflow
   }
   await expect(page.locator("#courts article img")).toHaveCount(5);
   for (const img of await page.locator("#courts article img").all()) expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth > 0 || !el.complete)).toBe(true);
+
+  // The rate card: exact published prices, hourly and monthly.
+  const table = page.locator("#pricing table");
+  await expect(table.locator("tbody tr")).toHaveCount(4);
+  const rows: [RegExp, string[]][] = [
+    [/Green Mat/, ["₹500", "₹900", "₹7,000", "₹19,500", "₹37,500", "₹72,000"]],
+    [/Wooden Finish/, ["₹400", "₹700", "₹6,000", "₹16,500", "₹31,500", "₹60,000"]],
+    [/Pickleball/, ["₹400", "₹700", "₹5,500", "₹15,000", "₹27,500", "₹50,000"]],
+    [/Basketball/, ["₹700", "₹1,300", "₹7,000", "₹19,500", "₹37,500", "₹72,000"]],
+  ];
+  for (const [label, prices] of rows) {
+    const cells = await table.locator("tbody tr", { has: page.getByRole("rowheader", { name: label }) }).locator("td").allInnerTexts();
+    expect(cells.slice(0, 6).map((c) => c.split("\n")[0]!.trim())).toEqual(prices);
+  }
+  for (const note of ["Monthly rentals are valid from Monday to Saturday.", "Timings and availability are subject to change.", "Advance booking is recommended.", "Terms and conditions apply."]) {
+    await expect(page.locator("#pricing")).toContainText(note);
+  }
+  await expect(page.locator("#coaching")).toContainText("state certified");
+
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
   await expect(page.getByRole("link", { name: "Privacy policy" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Cancellation & refund policy" })).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });
 
-test("badminton academy closure is shown and enforced; other sports stay open", async ({ page, request }) => {
-  await page.goto("/#book");
+test("book buttons pre-select the sport or court; no peak surcharge; badminton bookable 5–7 PM", async ({ page, request }) => {
+  await page.goto("/");
   const book = page.locator("#book");
-  await book.getByRole("group", { name: "Sport" }).getByRole("button", { name: /Badminton/ }).click();
+  await page.locator("#sport-basketball").getByRole("link", { name: "Book Basketball now" }).click();
+  await expect(book.getByRole("group", { name: "Sport" }).getByRole("button", { name: /Basketball/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(book.getByRole("group", { name: "Court" }).getByRole("button", { name: /Basketball Court 1/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page).toHaveURL(/\?sport=basketball#book$/);
+
+  // A rate-card row books its court.
+  await page.locator("#pricing table").getByRole("link", { name: "Book Badminton Court 2" }).click();
+  await expect(book.getByRole("group", { name: "Court" }).getByRole("button", { name: /Badminton Court 2/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(book.getByRole("group", { name: "Court" }).getByRole("button", { name: /Badminton Court 2/ })).toContainText("Wooden Finish (2.5 mm)");
+
+  // Duration options show the exact rate-card prices.
   await book.locator(`[data-date="${D2}"]`).click();
-  for (const t of ["5:00 PM", "6:00 PM"]) {
-    const slot = book.getByRole("button", { name: new RegExp(`^${t} to`) });
-    await expect(slot).toBeDisabled();
-    await expect(slot).toContainText("Academy session");
-  }
-  await expect(book.getByRole("button", { name: /^4:00 PM to/ })).toBeEnabled();
-  await expect(book.getByRole("button", { name: /^7:00 PM to/ })).toBeEnabled();
-  await book.getByRole("group", { name: "Duration" }).getByRole("button", { name: "2 hours" }).click();
-  await expect(book.getByRole("button", { name: /^4:00 PM to 6:00 PM/ })).toBeDisabled();
-  await expect(book.getByRole("button", { name: /^6:00 PM to 8:00 PM/ })).toBeDisabled();
-  await expect(book.getByRole("button", { name: /^3:00 PM to 5:00 PM/ })).toBeEnabled();
-  await expect(book.getByRole("button", { name: /^7:00 PM to 9:00 PM/ })).toBeEnabled();
+  const durations = book.getByRole("group", { name: "Duration" });
+  await expect(durations.getByRole("button", { name: /1 hour/ })).toContainText("₹400");
+  await expect(durations.getByRole("button", { name: /2 hours/ })).toContainText("₹700");
+  await expect(durations.getByRole("button", { name: /2 hours/ })).toContainText("Save ₹100");
+
+  // Evening slots — including 5–7 PM on badminton — are open at the same price.
+  for (const t of ["5:00 PM", "6:00 PM"]) await expect(book.getByRole("button", { name: new RegExp(`^${t} to .*₹400, available`) })).toBeEnabled();
+  await durations.getByRole("button", { name: /2 hours/ }).click();
+  await expect(book.getByRole("button", { name: /^4:00 PM to 6:00 PM, ₹700, available/ })).toBeEnabled();
+  await expect(book.getByRole("button", { name: /^8:00 PM to 10:00 PM, ₹700, available/ })).toBeEnabled();
   // The last two-hour slot ends at 10 PM
   await expect(book.getByRole("button", { name: /^9:00 PM to/ })).toHaveCount(0);
 
-  await book.getByRole("group", { name: "Sport" }).getByRole("button", { name: /Pickleball/ }).click();
-  await book.getByRole("group", { name: "Duration" }).getByRole("button", { name: "1 hour" }).click();
-  await expect(book.getByRole("button", { name: /^5:00 PM to/ })).toBeEnabled();
-  await expect(book.getByRole("button", { name: /^6:00 PM to/ })).toBeEnabled();
-
-  // The backend rejects it too, whatever the browser sends.
-  const availability = await (await request.get(`/api/availability?date=${D2}&duration=60&sport=badminton`)).json();
-  const courtId = availability.courts[0].courtId as string;
-  const res = await request.post("/api/bookings", {
-    headers: { Origin: E2E.baseURL },
-    data: { courtId, date: D2, startMinute: 17 * 60, duration: 60, name: "Rule Breaker", email: "rb@example.com", phone: "9876543210" },
-  });
-  expect(res.status()).toBe(422);
-  expect((await res.json()).error).toMatch(/academy sessions/);
+  // The API agrees: every badminton court-1 slot costs ₹500 for one hour, ₹900 for two.
+  for (const [duration, price] of [[60, 50_000], [120, 90_000]] as const) {
+    const availability = await (await request.get(`/api/availability?date=${D2}&duration=${duration}&court=badminton-court-1`)).json();
+    expect(new Set(availability.courts[0].slots.map((s: { price: number }) => s.price))).toEqual(new Set([price]));
+  }
 });
 
 test("books a two-hour pickleball slot end to end and locks it", async ({ page, consoleErrors }) => {
@@ -70,17 +100,17 @@ test("books a two-hour pickleball slot end to end and locks it", async ({ page, 
   const summary = page.getByRole("complementary", { name: "Booking summary" });
   await expect(summary).toContainText("Pickleball Court 1");
   await expect(summary).toContainText("7:00 PM – 9:00 PM");
-  await expect(summary).toContainText("₹1,600");
+  await expect(summary).toContainText("₹700");
   await summary.getByRole("button", { name: "Continue" }).click();
 
   await fillDetails(page);
   const review = page.getByRole("dialog", { name: "Review booking" });
-  for (const text of ["Pickleball", "Pickleball Court 1", "7:00 PM", "9:00 PM", "2 hours", "₹1,600"]) await expect(review).toContainText(text);
-  await page.getByRole("button", { name: /Pay ₹1,600 securely/ }).click();
+  for (const text of ["Pickleball", "Pickleball Court 1", "7:00 PM", "9:00 PM", "2 hours", "₹700", "Paddle included. Ball needs to be purchased separately."]) await expect(review).toContainText(text);
+  await page.getByRole("button", { name: /Pay ₹700 securely/ }).click();
 
   const checkout = page.getByRole("dialog", { name: /Razorpay Checkout/ });
   await expect(checkout).toBeVisible();
-  await expect(checkout.locator("[data-amount]")).toHaveText("160000"); // paise, from the server
+  await expect(checkout.locator("[data-amount]")).toHaveText("70000"); // paise, from the server
   await expect(checkout.locator("[data-key]")).toHaveText(E2E.keyId); // only the public key id reaches the browser
   await checkout.getByRole("button", { name: "Pay" }).click();
 
@@ -107,7 +137,7 @@ test("closing checkout doesn't confirm; choosing another slot releases the hold"
   await chooseSlot(page, { sport: "Basketball", court: "Basketball Court 1", date: D3, duration: "1 hour", start: "10:00 AM" });
   await page.getByRole("complementary", { name: "Booking summary" }).getByRole("button", { name: "Continue" }).click();
   await fillDetails(page);
-  await page.getByRole("button", { name: /Pay ₹1,500 securely/ }).click();
+  await page.getByRole("button", { name: /Pay ₹700 securely/ }).click();
   const checkout = page.getByRole("dialog", { name: /Razorpay Checkout/ });
   await checkout.getByRole("button", { name: "Fail attempt" }).click();
   await checkout.getByRole("button", { name: "Close" }).click();
@@ -203,7 +233,7 @@ test("admin: login required, dashboard shows real bookings, cancel with refund",
   await page.getByLabel("Reason").fill("Court resurfacing");
   await page.getByLabel(/Cancel and refund in full/).check();
   await page.getByLabel(/I understand/).check();
-  await page.getByRole("button", { name: /Cancel & refund ₹1,600/ }).click();
+  await page.getByRole("button", { name: /Cancel & refund ₹700/ }).click();
   await expect(page.getByText("Booking cancelled and a full refund was requested from Razorpay.")).toBeVisible();
   await expect(page.locator("main")).toContainText("Refunded");
   await expect(page.locator("main")).toContainText(/Refund rfnd_\w+ · processed/);

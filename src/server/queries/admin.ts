@@ -2,10 +2,10 @@ import "server-only";
 import { and, asc, count, desc, eq, gt, gte, ilike, inArray, isNull, lte, or, sql, sum, type SQL } from "drizzle-orm";
 import { db } from "@/server/db";
 import { bookingEvents, bookings, courtBlocks, courts, payments, sports, users, type BookingStatus, type PaymentStatus } from "@/server/db/schema";
-import { closureOverlapping, CLOSE_MINUTE, OPEN_MINUTE } from "@/lib/booking/rules";
+import { hourMarks } from "@/lib/booking/rules";
 import { addDays, nowMinutesInTz, rangesOverlap } from "@/lib/time";
 import { bookingWindow } from "@/server/services/bookings";
-import { getBookingSettings } from "@/server/settings";
+import { getBookingSettings, hoursOf } from "@/server/settings";
 
 export const PAGE_SIZE = 25;
 
@@ -85,10 +85,9 @@ export async function getOverview() {
 export type ScheduleCell =
   | { kind: "free" }
   | { kind: "booking"; code: string; customer: string; status: BookingStatus; startMinute: number; endMinute: number }
-  | { kind: "block"; type: "MAINTENANCE" | "BLOCKED"; reason: string | null }
-  | { kind: "closure"; label: string };
+  | { kind: "block"; type: "MAINTENANCE" | "BLOCKED"; reason: string | null };
 
-/** Hour-by-hour grid (7 AM – 10 PM) of every court on a date: bookings, holds, blocks and closures. */
+/** Hour-by-hour grid (the booking hours) of every court on a date: bookings, holds and blocks. */
 export async function getScheduleForDate(date: string, courtId?: string) {
   const courtRows = await db
     .select({ court: courts, sport: { slug: sports.slug, name: sports.name } })
@@ -110,8 +109,7 @@ export async function getScheduleForDate(date: string, courtId?: string) {
       .where(and(inArray(courtBlocks.courtId, ids), lte(courtBlocks.startDate, date), gte(courtBlocks.endDate, date))),
   ]);
 
-  const hours: number[] = [];
-  for (let m = OPEN_MINUTE; m < CLOSE_MINUTE; m += 60) hours.push(m);
+  const hours = hourMarks(hoursOf(await getBookingSettings()));
   return {
     date,
     hours,
@@ -128,8 +126,6 @@ export async function getScheduleForDate(date: string, courtId?: string) {
         if (block) return { kind: "block", type: block.type, reason: block.reason };
         const b = dayBookings.find((x) => x.courtId === court.id && rangesOverlap(h, h + 60, x.startMinute, x.endMinute));
         if (b) return { kind: "booking", ...b };
-        const closure = closureOverlapping(sport.slug, h, h + 60);
-        if (closure) return { kind: "closure", label: closure.label };
         return { kind: "free" };
       }),
     })),
