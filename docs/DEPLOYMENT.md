@@ -164,7 +164,7 @@ point the demo workflow at a real database.
       and complete the bracketed sections of the policy pages (`src/app/(site)/{privacy,terms,cancellation-policy}`).
 - [ ] Check court prices (1 h, 2 h, monthly plans), surfaces, descriptions and status in `/admin/courts`.
 - [ ] Confirm the online booking hours with the academy and set them in `/admin/courts`
-      (defaults to 7 AM – 10 PM), and set `openingHours` in `src/content/site.ts`.
+      (defaults to 7 AM – 10 PM), and keep `openingHours` in `src/content/site.ts` in line with it.
 - [ ] Confirm the number of pickleball courts before advertising it (the system has two).
 - [ ] Complete the Razorpay steps above and make a test booking end to end.
 - [ ] Email: verify your sending domain in Resend and set `EMAIL_FROM` to an address on it.

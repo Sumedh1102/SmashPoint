@@ -50,9 +50,11 @@ export function SiteFooter() {
           <div>
             <h2 className="eyebrow text-ink-subtle">Contact</h2>
             <address className="mt-4 space-y-2.5 text-sm not-italic text-white/80">
-              <p>
-                <ContactValue value={site.contact.phone} href={telHref(site.contact.phone)} />
-              </p>
+              {site.contact.phones.map((p) => (
+                <p key={p}>
+                  <ContactValue value={p} href={telHref(p)} />
+                </p>
+              ))}
               <p>
                 <ContactValue value={site.contact.email} href={mailHref(site.contact.email)} className="break-all" />
               </p>

@@ -6,7 +6,15 @@ import { describeHours, type BookingHours } from "@/lib/booking/rules";
 export function ContactSection({ hours }: { hours: BookingHours }) {
   const directions = mapHref(site.contact.mapQuery);
   const items = [
-    { icon: Phone, label: "Call", content: <ContactValue value={site.contact.phone} href={telHref(site.contact.phone)} /> },
+    {
+      icon: Phone,
+      label: "Call",
+      content: site.contact.phones.map((p) => (
+        <span key={p} className="block">
+          <ContactValue value={p} href={telHref(p)} />
+        </span>
+      )),
+    },
     { icon: Mail, label: "Email", content: <ContactValue value={site.contact.email} href={mailHref(site.contact.email)} className="break-all" /> },
     {
       icon: MapPin,
@@ -31,8 +39,15 @@ export function ContactSection({ hours }: { hours: BookingHours }) {
       label: "Opening hours",
       content: (
         <>
-          <ContactValue value={site.openingHours} href={null} />
-          <span className="mt-1.5 block text-sm font-normal text-ink-muted">Online booking: {describeHours(hours)}, daily</span>
+          <dl className="space-y-2.5">
+            {site.openingHours.map((h) => (
+              <div key={h.label}>
+                <dt className="text-sm font-normal text-ink-muted">{h.label}</dt>
+                <dd className="tabular text-base">{h.text}</dd>
+              </div>
+            ))}
+          </dl>
+          <span className="mt-2 block text-sm font-normal text-ink-subtle">Online booking: {describeHours(hours)}, daily</span>
         </>
       ),
     },

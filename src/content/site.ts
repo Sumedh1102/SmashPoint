@@ -1,10 +1,9 @@
 /**
  * Facility details shown on the website, in emails, on Razorpay Checkout and in calendar files.
  *
- * EDIT ME: values in [square brackets] are placeholders. The rate card the site is based on
- * has no contact details, address or opening hours, so none have been made up — replace each
- * placeholder with the academy's real information. Until then, placeholders are shown as-is
- * (and never turned into phone, email or map links) so they are easy to spot.
+ * Phone numbers, address and opening hours are the academy's own. Values in [square brackets]
+ * are still placeholders (the email address): replace them with the real information. Until
+ * then they are shown as-is (and never turned into email or map links) so they are easy to spot.
  *
  * Prices are not here: each court's rate card (1 h, 2 h, monthly plans) lives in the database
  * and is managed from /admin/courts. Online booking hours are a booking setting (also in
@@ -28,18 +27,24 @@ export const site = {
   /** Registered business name used in the legal pages. */
   legalName: "[Registered business name]",
   contact: {
-    phone: "[Academy phone number]",
+    /** Both numbers are shown and dialable; the first is the primary one (structured data, enquiry links). */
+    phones: ["+91 70218 35019", "+91 80076 55554"],
+    phone: "+91 70218 35019",
     email: "[Academy email address]",
-    addressLines: ["[Street address]", "[City, State, PIN code]"],
+    addressLines: ["Ram Wadi, behind Bharat Petrol Pump", "Patel Pada, Dahanu, Maharashtra 401602"],
     /** Google Maps search text for the "Get directions" link; leave as a placeholder to hide it. */
-    mapQuery: "[Map search text, e.g. academy name and city]",
+    mapQuery: "Ram Wadi, behind Bharat Petrol Pump, Patel Pada, Dahanu, Maharashtra 401602, India",
   },
   /**
-   * The facility's opening hours as the academy publishes them. CLIENT TO CONFIRM: not on the
-   * rate card. (The online booking window is separate: a booking setting, 7 AM – 10 PM by
-   * default, shown on the site as "online booking hours".)
+   * The facility's opening hours. (The online booking window is separate: a booking setting,
+   * 7 AM – 10 PM by default, shown on the site as "online booking hours" — set it in
+   * /admin/courts to match.) `days` uses schema.org day names for the structured data.
    */
-  openingHours: "[Opening hours — to be confirmed]",
+  openingHours: [
+    { label: "Mon – Tue, Thu – Sat", days: ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"], opens: "06:00", closes: "23:30", text: "6:00 AM – 11:30 PM" },
+    { label: "Wednesday", days: ["Wednesday"], opens: "06:00", closes: "23:00", text: "6:00 AM – 11:00 PM" },
+    { label: "Sunday", days: ["Sunday"], opens: "10:00", closes: "23:30", text: "10:00 AM – 11:30 PM" },
+  ],
 } as const;
 
 /** True for a value that still holds its [placeholder] text. */
