@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Schema change: edit `src/server/db/schema.ts`, `npm run db:generate`, commit the new `drizzle/` file. Hand-written SQL: `drizzle/0001_booking_constraints.sql` (EXCLUDE constraint), `drizzle/0004_court_booking_focus.sql` (legacy archive) and `drizzle/0005_rental_pricing.sql` (rate-card columns, current rules trigger). If drizzle-kit prompts for renames non-interactively, write the SQL by hand, add its entry to `drizzle/meta/_journal.json`, and write `drizzle/meta/NNNN_snapshot.json` with `generateDrizzleJson(schema, <previous snapshot's id>)` from `drizzle-kit/api` (run that script from inside the repo so the import resolves).
 - Scripts that import `src/server/*` modules marked `server-only` must run with `tsx --conditions=react-server`, as `db:seed` / `db:deploy` / `admin` do.
 - `npm run db:reset` drops every schema (it refuses only when `NODE_ENV=production`); development databases only.
-- Demo admin after `db:seed`: `admin@example.com` / `SmashPoint@123`. Admin sign-in is rate-limited (6 attempts per account / 20 per IP per 15 min, in the shared `rate_limits` table): scripted logins against a dev database can lock you out — clear that table.
+- Demo admin after `db:seed`: `admin@example.com` / `onthesol@123`. Admin sign-in is rate-limited (6 attempts per account / 20 per IP per 15 min, in the shared `rate_limits` table): scripted logins against a dev database can lock you out — clear that table.
 
 ## Architecture
 

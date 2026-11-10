@@ -219,7 +219,7 @@ if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
     echo
     echo "**$SITE**"
     echo
-    echo "Admin: $SITE/admin/login — admin@example.com / \`SmashPoint@123\` (demo data only)."
+    echo "Admin: $SITE/admin/login — admin@example.com / \`onthesol@123\` (demo data only)."
   } >> "$GITHUB_STEP_SUMMARY"
 fi
 if [[ -n ${GITHUB_OUTPUT:-} ]]; then echo "url=$SITE" >> "$GITHUB_OUTPUT"; fi

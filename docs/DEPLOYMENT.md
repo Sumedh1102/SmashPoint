@@ -153,7 +153,7 @@ the live URL.
    checkout on the demo; live keys are refused.
 4. Run the **Deploy demo** workflow. Every push to the branch redeploys.
 
-The demo admin is `admin@example.com` / `SmashPoint@123` at `/admin/login`. A nightly job
+The demo admin is `admin@example.com` / `onthesol@123` at `/admin/login`. A nightly job
 reloads the demo data; it refuses to touch a database that wasn't created as a demo, so never
 point the demo workflow at a real database.
 

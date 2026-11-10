@@ -18,7 +18,7 @@ export const DEMO_MARKER = "demo_data";
  */
 export const DEMO_VERSION = 4;
 
-export const DEMO_ADMIN = { email: "admin@example.com", password: "SmashPoint@123", name: "Demo Admin" } as const;
+export const DEMO_ADMIN = { email: "admin@example.com", password: "onthesol@123", name: "Demo Admin" } as const;
 
 export async function seedDemo(db: NodePgDatabase<typeof schema>) {
   console.log("🌱 Loading the demo facility (5 courts, demo admin; no bookings)…");
