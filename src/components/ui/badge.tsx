@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+/** Status tones follow the surface (dark on the site, light in the admin's .surface-light). */
 const tones = {
-  neutral: "bg-paper-2 text-muted ring-line",
-  royal: "bg-royal-50 text-royal-700 ring-royal/20",
-  success: "bg-success-soft text-success ring-success/20",
-  warning: "bg-warning-soft text-warning ring-warning/25",
-  danger: "bg-danger-soft text-danger ring-danger/20",
-  info: "bg-info-soft text-info ring-info/20",
-  gold: "bg-gold text-ink ring-gold-600",
+  neutral: "bg-fg/8 text-fg-muted ring-edge",
+  success: "bg-success/12 text-success ring-success/30",
+  warning: "bg-warning/12 text-warning ring-warning/30",
+  danger: "bg-danger/12 text-danger ring-danger/30",
+  info: "bg-info/12 text-info ring-info/30",
+  neon: "bg-neon text-ink ring-neon",
   dark: "bg-ink text-white ring-ink",
 } as const;
 
@@ -22,7 +22,7 @@ export function Badge({ tone = "neutral", children, className }: { tone?: BadgeT
   );
 }
 
-/** Live-availability dot: green pulse when free, muted otherwise. */
+/** Availability dot: neon when a court has free time, grey otherwise. */
 export function LiveDot({ live, className }: { live: boolean; className?: string }) {
-  return <span aria-hidden className={cn("inline-block size-2 rounded-full", live ? "animate-pulse-dot bg-live" : "bg-subtle", className)} />;
+  return <span aria-hidden className={cn("inline-block size-2 shrink-0 rounded-full", live ? "bg-neon" : "bg-ink-line-strong", className)} />;
 }

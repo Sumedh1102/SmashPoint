@@ -93,7 +93,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps<"/ad
                 {result.rows.map((b) => (
                   <tr key={b.id} className="hover:bg-paper">
                     <td className="px-4 py-3 pl-5 font-semibold">
-                      <Link href={`/admin/bookings/${b.code}`} className="tabular text-royal hover:underline">
+                      <Link href={`/admin/bookings/${b.code}`} className="tabular font-semibold text-neon-ink hover:underline">
                         {b.code}
                       </Link>
                     </td>

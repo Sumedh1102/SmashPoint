@@ -7,12 +7,12 @@ const D3 = dayFromToday(3);
 
 test.describe.configure({ mode: "serial" });
 
-test("home page: multi-sport hero, sports, live courts, rate card, no errors or overflow", async ({ page, consoleErrors }) => {
+test("home page: hero with the three sports, sports, live courts, rate card, no errors or overflow", async ({ page, consoleErrors }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/One destination\.\s*Three ways to play\./i);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Your game\.\s*Your court\./i);
   const nav = page.getByRole("navigation", { name: "Main" });
-  await expect(nav.getByRole("link", { name: /Book Now/ })).toBeVisible();
-  for (const label of ["Home", "Sports", "Court Rentals", "Book a Court", "About Us", "Contact"]) await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Book a Court", exact: true })).toBeVisible();
+  for (const label of ["Home", "Sports", "Courts", "Court Rentals", "About Us", "Contact"]) await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
 
   // The three sports get equal billing in the hero and the sports section.
   const heroSports = page.getByRole("list", { name: "Our sports" });

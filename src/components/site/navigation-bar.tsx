@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -12,20 +12,22 @@ import { cn } from "@/lib/utils";
 export const NAV_LINKS = [
   { href: "/#top", id: "top", label: "Home" },
   { href: "/#sports", id: "sports", label: "Sports" },
+  { href: "/#courts", id: "courts", label: "Courts" },
   { href: "/#pricing", id: "pricing", label: "Court Rentals" },
-  { href: "/#book", id: "book", label: "Book a Court" },
   { href: "/#about", id: "about", label: "About Us" },
   { href: "/#contact", id: "contact", label: "Contact" },
 ] as const;
+
+/** Sections tracked for the active link; the booking section has the button instead of a link. */
+const TRACKED = [...NAV_LINKS.map((l) => l.id), "book"];
 
 /** The home-page section currently in view, for highlighting its link. */
 function useActiveSection(enabled: boolean) {
   const [active, setActive] = useState<string>("top");
   useEffect(() => {
     if (!enabled) return;
-    const sections = NAV_LINKS.map((l) => document.getElementById(l.id)).filter((el): el is HTMLElement => !!el);
-    // The section whose top is closest above a line a third of the way down the screen
-    // (sections aren't in the same order on the page as in the menu).
+    const sections = TRACKED.map((id) => document.getElementById(id)).filter((el): el is HTMLElement => !!el);
+    // The section whose top is closest above a line a third of the way down the screen.
     const onScroll = () => {
       const line = window.innerHeight * 0.35;
       let current = "top";
@@ -47,9 +49,9 @@ function useActiveSection(enabled: boolean) {
 }
 
 /**
- * Site navigation. Transparent over the navy hero, solid navy once the page scrolls (or always,
- * on pages without the hero). Below 1280px the links open in a full-screen menu: Escape or a
- * link closes it, focus moves into it when it opens and back to the button when it closes.
+ * Site navigation. Transparent over the hero, solid black once the page scrolls (or always, on
+ * pages without the hero). Below 1280px the links open in a full-screen menu: Escape or a link
+ * closes it, focus moves into it when it opens and back to the button when it closes.
  */
 export function NavigationBar() {
   const onHome = usePathname() === "/";
@@ -104,16 +106,16 @@ export function NavigationBar() {
   return (
     <header
       className={cn(
-        "surface-dark fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,box-shadow] duration-300",
-        filled ? "border-b border-white/10 bg-ink/95 shadow-[0_8px_24px_-16px_rgb(0_0_0/0.6)] backdrop-blur-md" : "border-b border-transparent bg-transparent",
+        "fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-300 print:hidden",
+        filled ? "border-b border-ink-line bg-ink" : "border-b border-transparent bg-transparent",
       )}
     >
-      <nav aria-label="Main" className="mx-auto flex h-[4.25rem] max-w-7xl items-center justify-between gap-4 px-4 sm:h-[4.75rem] sm:px-6 lg:px-8">
+      <nav aria-label="Main" className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:h-[4.5rem] sm:px-6 lg:px-8">
         <Link href="/#top" className="rounded-lg" aria-label={`${site.name} — home`} onClick={() => setOpen(false)}>
-          <Wordmark eager className="max-[359px]:[&_.wordmark]:text-[1.1rem]" />
+          <Wordmark eager className="max-[359px]:[&_.wordmark]:text-[1.05rem]" />
         </Link>
 
-        <ul className="hidden items-center gap-0.5 xl:flex">
+        <ul className="hidden items-center gap-1 xl:flex">
           {NAV_LINKS.map((l) => {
             const current = onHome && active === l.id;
             return (
@@ -121,12 +123,7 @@ export function NavigationBar() {
                 <Link
                   href={l.href}
                   aria-current={current ? "location" : undefined}
-                  className={cn(
-                    "relative rounded-full px-3.5 py-2 text-sm font-semibold transition-colors",
-                    current ? "text-white" : "text-white/70 hover:text-white",
-                    "after:absolute after:inset-x-3.5 after:-bottom-0.5 after:h-0.5 after:origin-left after:rounded-full after:bg-gold after:transition-transform after:duration-300",
-                    current ? "after:scale-x-100" : "after:scale-x-0",
-                  )}
+                  className={cn("rounded-full px-3.5 py-2 text-sm font-medium transition-colors", current ? "text-neon" : "text-ink-muted hover:text-white")}
                 >
                   {l.label}
                 </Link>
@@ -135,9 +132,9 @@ export function NavigationBar() {
           })}
         </ul>
 
-        <div className="flex items-center gap-1.5">
-          <Link href="/#book" className={buttonClass({ variant: "primary", size: "md" }, "hidden uppercase tracking-wide sm:inline-flex")}>
-            Book Now <ArrowRight aria-hidden className="size-4" />
+        <div className="flex items-center gap-2">
+          <Link href="/#book" className={buttonClass({ variant: "primary", size: "md" }, "hidden sm:inline-flex")}>
+            Book a Court
           </Link>
           <button
             ref={toggle}
@@ -153,32 +150,26 @@ export function NavigationBar() {
         </div>
       </nav>
 
-      <div
-        id="mobile-menu"
-        ref={menu}
-        hidden={!open}
-        className="court-lines fixed inset-x-0 top-[4.25rem] bottom-0 overflow-y-auto bg-ink px-4 pt-4 pb-10 sm:top-[4.75rem] sm:px-6 xl:hidden"
-      >
+      <div id="mobile-menu" ref={menu} hidden={!open} className="fixed inset-x-0 top-16 bottom-0 overflow-y-auto bg-ink px-4 pt-4 pb-10 sm:top-[4.5rem] sm:px-6 xl:hidden">
         <ul className="mx-auto max-w-3xl">
-          {NAV_LINKS.map((l, i) => (
-            <li key={l.href} className="animate-rise" style={{ animationDelay: `${i * 35}ms` }}>
+          {NAV_LINKS.map((l) => (
+            <li key={l.href}>
               <Link
                 href={l.href}
                 onClick={() => setOpen(false)}
                 aria-current={onHome && active === l.id ? "location" : undefined}
-                className="display flex items-center justify-between border-b border-white/10 py-4 text-[2rem] text-white transition-colors hover:text-gold aria-[current=location]:text-gold sm:text-[2.4rem]"
+                className="display block border-b border-ink-line py-4 text-[2.4rem] text-white transition-colors hover:text-neon aria-[current=location]:text-neon"
               >
                 {l.label}
-                <ArrowRight aria-hidden className="size-5 text-white/40" />
               </Link>
             </li>
           ))}
         </ul>
         <div className="mx-auto max-w-3xl">
-          <Link href="/#book" onClick={() => setOpen(false)} className={buttonClass({ variant: "primary", size: "lg" }, "mt-8 w-full uppercase tracking-wide")}>
-            Book Now
+          <Link href="/#book" onClick={() => setOpen(false)} className={buttonClass({ variant: "primary", size: "lg" }, "mt-8 w-full")}>
+            Book a Court
           </Link>
-          <p className="mt-6 text-center text-sm text-ink-muted">{site.descriptor}</p>
+          <p className="mt-6 text-center text-sm text-ink-subtle">{site.descriptor}</p>
         </div>
       </div>
     </header>

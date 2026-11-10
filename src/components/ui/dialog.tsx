@@ -62,30 +62,30 @@ export function Dialog({
         if (dismissible && e.target === ref.current) onClose();
       }}
       className={cn(
-        "m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-[1.25rem] bg-paper p-0 text-ink shadow-lg open:flex open:flex-col open:animate-rise",
+        "m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-[var(--radius-card)] border border-ink-line bg-ink-2 p-0 text-white open:flex open:flex-col open:animate-rise",
         "sm:m-auto sm:max-h-[min(88dvh,52rem)] sm:w-[min(36rem,calc(100vw-2rem))] sm:rounded-[var(--radius-card)]",
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-4 border-b border-line px-5 pt-5 pb-4 sm:px-7 sm:pt-6">
+      <div className="flex items-start justify-between gap-4 border-b border-ink-line px-5 pt-5 pb-4 sm:px-7 sm:pt-6">
         <div className="min-w-0">
           <h2 id={titleId} className="display text-[1.75rem] sm:text-[2rem]">
             {title}
           </h2>
           {description ? (
-            <div id={descId} className="mt-1.5 text-sm text-muted">
+            <div id={descId} className="mt-1.5 text-sm text-ink-muted">
               {description}
             </div>
           ) : null}
         </div>
         {dismissible ? (
-          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 grid size-10 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-paper-2 hover:text-ink">
+          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 grid size-10 shrink-0 place-items-center rounded-full text-ink-muted transition-colors hover:bg-white/8 hover:text-white">
             <X className="size-5" />
           </button>
         ) : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7">{children}</div>
-      {footer ? <div className="safe-bottom border-t border-line bg-white/70 px-5 pt-3 sm:px-7 sm:pb-4">{footer}</div> : null}
+      {footer ? <div className="safe-bottom border-t border-ink-line bg-ink px-5 pt-3 sm:px-7 sm:pb-4">{footer}</div> : null}
     </dialog>
   );
 }

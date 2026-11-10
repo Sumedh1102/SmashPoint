@@ -34,7 +34,7 @@ export default async function AdminCourtsPage({ searchParams }: PageProps<"/admi
               </Badge>
             </div>
             <p className="display mt-3 text-[1.6rem]">{court.name}</p>
-            {court.surface ? <p className="mt-1 text-xs font-semibold text-royal-700">{court.surface}</p> : null}
+            {court.surface ? <p className="mt-1 text-xs font-semibold text-neon-ink">{court.surface}</p> : null}
             <p className="mt-2 text-sm text-muted">
               <span className="tabular font-semibold text-ink">{formatMoney(court.price1h)}</span> / 1 h · <span className="tabular font-semibold text-ink">{formatMoney(court.price2h)}</span> / 2 h
             </p>

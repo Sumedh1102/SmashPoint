@@ -1,71 +1,68 @@
+import { ArrowRight, CalendarRange, LayoutGrid, Layers, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import facilityHall from "@/assets/images/facility-hall.webp";
-import { Mark } from "@/components/brand/wordmark";
+import { buttonClass } from "@/components/ui/button";
 import { site } from "@/content/site";
+import { enquiryHref } from "./rental-pricing";
 
-/** Facts taken from the academy's rate card — no invented claims. */
-const FACTS = [
-  { value: "3", label: "Sports", detail: "Badminton, pickleball and basketball" },
-  { value: "1–2", label: "Hour bookings", detail: "Book a court online" },
-  { value: "1–12", label: "Month plans", detail: "Monthly rentals, Monday to Saturday" },
+/** Only what the rate card states or the booking system does — no invented amenities. */
+const HIGHLIGHTS = [
+  { icon: LayoutGrid, title: "Three sports, one academy", body: "Badminton, pickleball and basketball courts in one place — bring the whole group." },
+  { icon: Layers, title: "Two badminton surfaces", body: "Play on a 5 mm green mat on Court 1 or a 2.5 mm wooden finish on Court 2." },
+  { icon: CalendarRange, title: "Hourly or monthly", body: "Book one or two hours online, or take a 1, 3, 6 or 12-month plan (Monday to Saturday)." },
+  { icon: ShieldCheck, title: "Live, secure booking", body: "See which slots are free right now and pay with Razorpay. Your court is confirmed once the payment is verified." },
 ];
 
+/**
+ * About the academy, what sets it apart, and its coaching — as stated on the rate card: "All our
+ * coaches are state certified and highly experienced in training players for states and
+ * nationals." No coach names, certificates or results are shown; none have been provided.
+ */
 export function AboutSection() {
   return (
-    <section id="about" aria-labelledby="about-title" className="scroll-mt-16 overflow-hidden bg-white py-20 sm:py-28">
-      <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
-        <div className="relative">
-          <div data-reveal="image" className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem] bg-ink shadow-lg">
-            <Image
-              src={facilityHall}
-              alt="Illustration of a sports hall with courts under arena lights"
-              fill
-              sizes="(min-width: 1024px) 46vw, 100vw"
-              placeholder="blur"
-              className="object-cover"
-            />
-            <span aria-hidden className="absolute inset-0 bg-[linear-gradient(200deg,rgb(8_120_201/0.25),rgb(7_27_58/0.35))]" />
+    <section id="about" aria-labelledby="about-title" className="relative isolate scroll-mt-16 overflow-hidden bg-ink py-24 text-white sm:py-28">
+      <div aria-hidden className="absolute inset-0 -z-10">
+        <Image src={facilityHall} alt="" fill sizes="100vw" quality={70} placeholder="blur" className="object-cover opacity-50" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--color-ink)_0%,rgb(8_8_8/0.55)_35%,rgb(8_8_8/0.8)_70%,var(--color-ink)_100%)]" />
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-end">
+          <div>
+            <p className="eyebrow text-neon">About us</p>
+            <h2 id="about-title" className="display mt-4 text-[clamp(2.75rem,6.5vw,5rem)]">
+              Three sports.
+              <br />
+              One academy.
+            </h2>
           </div>
-          <div className="absolute -bottom-6 left-4 flex items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lg sm:left-8">
-            <Mark size={46} />
-            <span>
-              <span className="eyebrow block text-[0.62rem] text-gold">Our motto</span>
-              <span className="font-display text-lg font-bold italic">{site.motto}</span>
-            </span>
-          </div>
-          <span aria-hidden className="absolute -top-4 -right-4 -z-0 hidden h-28 w-28 rounded-3xl border-2 border-gold/50 lg:block" />
+          <p className="max-w-xl text-base leading-relaxed text-white/80 sm:text-lg lg:justify-self-end">
+            {site.name} brings badminton, pickleball and basketball together in one place. Rent a court by the hour for a game with friends, take a monthly plan for
+            regular play, or train with our coaches.
+          </p>
         </div>
 
-        <div>
-          <p data-reveal className="eyebrow flex items-center gap-3 text-gold-700">
-            <span aria-hidden className="h-0.5 w-8 rounded-full bg-gold" />
-            About us
-          </p>
-          <h2 id="about-title" data-reveal className="display mt-4 text-[clamp(2.4rem,6vw,4.4rem)]">
-            Three sports. <span className="text-royal">One academy.</span>
-          </h2>
-          <div data-reveal className="mt-6 space-y-4 text-base leading-relaxed text-muted sm:text-lg">
-            <p>
-              On The Sol Sports Academy brings badminton, pickleball and basketball together in one place. Rent a court by the hour for a game with friends, take
-              a monthly plan for regular play, or train with our coaches.
-            </p>
-            <p>
-              Our coaches are state certified and highly experienced in preparing players for state-level and national-level competitions.
-            </p>
-          </div>
+        <ul className="mt-14 grid gap-px overflow-hidden rounded-[var(--radius-card)] border border-ink-line bg-ink-line sm:grid-cols-2 lg:grid-cols-4">
+          {HIGHLIGHTS.map(({ icon: Icon, title, body }) => (
+            <li key={title} className="bg-ink p-6 sm:p-7">
+              <Icon aria-hidden className="size-6 text-neon" strokeWidth={1.75} />
+              <h3 className="display mt-6 text-[1.55rem]">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{body}</p>
+            </li>
+          ))}
+        </ul>
 
-          <dl className="mt-10 grid grid-cols-3 gap-3 sm:gap-4">
-            {FACTS.map((f, i) => (
-              <div key={f.label} data-reveal style={{ ["--reveal-delay" as string]: `${i * 80}ms` }} className="rounded-2xl border border-line bg-paper p-3.5 sm:p-5">
-                <dt className="sr-only">{f.label}</dt>
-                <dd>
-                  <span className="display block text-[1.75rem] text-royal sm:text-[2.3rem]">{f.value}</span>
-                  <span className="mt-1 block text-[0.7rem] font-bold tracking-wide text-ink uppercase sm:text-xs">{f.label}</span>
-                  <span className="mt-1 hidden text-xs text-muted sm:block">{f.detail}</span>
-                </dd>
-              </div>
-            ))}
-          </dl>
+        <div
+          id="coaching"
+          className="mt-6 flex scroll-mt-24 flex-col gap-4 rounded-[var(--radius-card)] border border-neon/30 bg-neon/[0.05] px-5 py-5 sm:px-6 md:flex-row md:items-center md:gap-6"
+        >
+          <h3 className="eyebrow shrink-0 text-neon">Coaching</h3>
+          <p className="flex-1 leading-relaxed text-white/85">
+            All our coaches are state certified and highly experienced in training players for state and national competitions.
+          </p>
+          <a href={enquiryHref("Coaching enquiry")} className={buttonClass({ variant: "light", size: "md" }, "shrink-0 self-start md:self-auto")}>
+            Enquire about coaching <ArrowRight aria-hidden className="size-4" />
+          </a>
         </div>
       </div>
     </section>

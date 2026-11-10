@@ -25,14 +25,12 @@ export function DateSelector({ value, onChange, today, lastDate }: { value: stri
   return (
     <div className="relative">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm text-muted">
-          Selected: <span className="font-semibold text-ink">{formatDate(value, "long")}</span>
-        </p>
+        <p className="text-sm font-semibold">{formatDate(value, "long")}</p>
         <div className="hidden gap-1 sm:flex">
-          <button type="button" onClick={() => page(-1)} aria-label="Earlier dates" className="grid size-9 place-items-center rounded-full border border-line-strong bg-white text-ink transition-colors hover:border-royal hover:text-royal">
+          <button type="button" onClick={() => page(-1)} aria-label="Earlier dates" className="grid size-9 place-items-center rounded-full border border-ink-line-strong text-white transition-colors hover:border-white">
             <ChevronLeft className="size-4" />
           </button>
-          <button type="button" onClick={() => page(1)} aria-label="Later dates" className="grid size-9 place-items-center rounded-full border border-line-strong bg-white text-ink transition-colors hover:border-royal hover:text-royal">
+          <button type="button" onClick={() => page(1)} aria-label="Later dates" className="grid size-9 place-items-center rounded-full border border-ink-line-strong text-white transition-colors hover:border-white">
             <ChevronRight className="size-4" />
           </button>
         </div>
@@ -51,13 +49,13 @@ export function DateSelector({ value, onChange, today, lastDate }: { value: stri
               aria-label={`${i === 0 ? "Today, " : i === 1 ? "Tomorrow, " : ""}${formatDate(d, "long")}`}
               onClick={() => onChange(d)}
               className={cn(
-                "flex w-[4.4rem] shrink-0 snap-start flex-col items-center rounded-2xl border py-2.5 transition-[background-color,border-color,color,box-shadow] duration-200",
-                selected ? "border-ink bg-ink text-white shadow-[0_0_0_2px_var(--color-gold)]" : "border-line bg-white text-ink hover:border-royal/60",
+                "flex w-[4.25rem] shrink-0 snap-start flex-col items-center rounded-[var(--radius-control)] border py-2.5 transition-[background-color,border-color,color] duration-200",
+                selected ? "border-white bg-white text-ink" : "border-ink-line bg-ink-3 text-white hover:border-ink-line-strong",
               )}
             >
-              <span className={cn("text-[0.68rem] font-semibold tracking-[0.12em] uppercase", selected ? "text-gold" : "text-subtle")}>{label}</span>
+              <span className={cn("text-[0.68rem] font-semibold tracking-[0.12em] uppercase", selected ? "text-ink/60" : "text-ink-subtle")}>{label}</span>
               <span className="display mt-1 text-[1.65rem] leading-none">{p.day}</span>
-              <span className={cn("mt-1 text-[0.7rem] font-medium", selected ? "text-white/70" : "text-muted")}>{p.month}</span>
+              <span className={cn("mt-1 text-[0.7rem] font-medium", selected ? "text-ink/70" : "text-ink-muted")}>{p.month}</span>
             </button>
           );
         })}

@@ -21,11 +21,12 @@ Razorpay**. (The repository and package keep their original technical name, `sma
 
 ## What it does
 
-**Public site** (`/`) — navy, royal blue and gold brand from the academy's logo and rate card:
-a hero with the three sports side by side, sport cards (badminton surfaces, pickleball paddle/ball
-note), about, live court availability, the full **court rental & pricing** section (hourly and
-monthly, from the database — a table on desktop, cards on phones), coaching credentials, why
-choose us, the booking flow, contact details, and policy pages. No account is needed to book.
+**Public site** (`/`) — black and white with a neon-green accent (`#B7FF00`), in the layout of
+the original court-booking site: a full-height hero with the three sports side by side, one row
+per sport (badminton surfaces, pickleball paddle/ball note), live court availability, the full
+**court rental rates** section (hourly and monthly, from the database — a table on desktop, cards
+on phones), about the academy with its coaching credentials, the booking flow, contact details,
+and policy pages. No account is needed to book.
 
 **Booking flow** — sport → court (with surface, live availability and prices) → date → 1 or
 2 hours → time slot → name, email, mobile → summary → pay with Razorpay → confirmation page with

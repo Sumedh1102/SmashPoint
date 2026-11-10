@@ -55,7 +55,7 @@ export function ScheduleGrid({ hours, courts, linkCourts = true }: { hours: numb
                 if (cell.kind === "booking") {
                   const held = cell.status === "PENDING" || cell.status === "PAYMENT_INITIATED";
                   return (
-                    <td key={i} colSpan={span} className={cn(base, held ? "bg-warning-soft text-warning ring-1 ring-warning/25 ring-inset" : "bg-royal text-white")}>
+                    <td key={i} colSpan={span} className={cn(base, held ? "bg-warning-soft text-warning ring-1 ring-warning/25 ring-inset" : "bg-neon text-ink")}>
                       <Link href={`/admin/bookings/${cell.code}`} className="block truncate leading-tight hover:underline" title={`${cell.code} · ${cell.customer}`}>
                         <span className="font-semibold">{held ? "Hold · " : ""}{cell.customer}</span>
                         <span className="block opacity-75">{cell.code}</span>
@@ -78,7 +78,7 @@ export function ScheduleGrid({ hours, courts, linkCourts = true }: { hours: numb
         </tbody>
       </table>
       <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 px-1 text-xs text-muted">
-        <li className="flex items-center gap-2"><span className="size-3 rounded bg-royal" /> Confirmed</li>
+        <li className="flex items-center gap-2"><span className="size-3 rounded bg-neon ring-1 ring-ink/10" /> Confirmed</li>
         <li className="flex items-center gap-2"><span className="size-3 rounded bg-warning-soft ring-1 ring-warning/30" /> Payment hold</li>
         <li className="flex items-center gap-2"><span className="size-3 rounded bg-ink" /> Blocked / maintenance</li>
         <li className="flex items-center gap-2"><span className="size-3 rounded bg-white ring-1 ring-line" /> Free</li>

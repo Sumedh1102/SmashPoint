@@ -145,7 +145,7 @@ export default async function AdminBookingPage({ params, searchParams }: PagePro
             <ol className="space-y-4 p-5">
               {d.events.map((e) => (
                 <li key={e.id} className="relative border-l-2 border-line pl-4">
-                  <span className="absolute top-1.5 -left-[5px] size-2 rounded-full bg-royal" />
+                  <span className="absolute top-1.5 -left-[5px] size-2 rounded-full bg-ink" />
                   <p className="text-sm font-semibold">
                     <BookingStatusBadge status={e.status} />
                   </p>

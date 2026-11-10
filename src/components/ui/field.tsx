@@ -1,8 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+/** Form controls follow the surface: black fields on the site, white ones in the admin. */
 const control =
-  "block w-full rounded-[var(--radius-control)] border border-line-strong bg-white px-3.5 text-[0.95rem] text-ink placeholder:text-subtle transition-colors focus:border-royal focus:outline-none focus:ring-2 focus:ring-royal/20 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/15 disabled:bg-paper-2";
+  "block w-full rounded-[var(--radius-control)] border border-edge-strong bg-field px-3.5 text-[0.95rem] text-fg placeholder:text-fg-subtle transition-colors focus:border-fg focus:outline-none focus:ring-2 focus:ring-fg/15 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/20 disabled:opacity-60";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(control, "h-12", className)} {...props} />;
@@ -36,9 +37,9 @@ export function Field({
 }) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label htmlFor={id} className="flex items-baseline justify-between text-sm font-semibold text-ink">
+      <label htmlFor={id} className="flex items-baseline justify-between text-sm font-semibold text-fg">
         {label}
-        {optional ? <span className="text-xs font-normal text-subtle">Optional</span> : null}
+        {optional ? <span className="text-xs font-normal text-fg-subtle">Optional</span> : null}
       </label>
       {children}
       {error ? (
@@ -46,7 +47,7 @@ export function Field({
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-sm text-muted">
+        <p id={`${id}-hint`} className="text-sm text-fg-muted">
           {hint}
         </p>
       ) : null}
@@ -56,15 +57,15 @@ export function Field({
 
 export function Alert({ tone = "info", title, children, className }: { tone?: "info" | "success" | "warning" | "danger"; title?: string; children?: ReactNode; className?: string }) {
   const tones = {
-    info: "border-info/20 bg-info-soft text-info",
-    success: "border-success/20 bg-success-soft text-success",
-    warning: "border-warning/25 bg-warning-soft text-warning",
-    danger: "border-danger/20 bg-danger-soft text-danger",
+    info: "border-info/35 bg-info/10 text-info",
+    success: "border-success/35 bg-success/10 text-success",
+    warning: "border-warning/35 bg-warning/10 text-warning",
+    danger: "border-danger/35 bg-danger/10 text-danger",
   };
   return (
-    <div role={tone === "danger" ? "alert" : "status"} className={cn("rounded-xl border px-4 py-3 text-sm", tones[tone], className)}>
+    <div role={tone === "danger" ? "alert" : "status"} className={cn("rounded-[var(--radius-control)] border px-4 py-3 text-sm", tones[tone], className)}>
       {title ? <p className="font-semibold">{title}</p> : null}
-      {children ? <div className={cn(title && "mt-0.5", "text-ink/80")}>{children}</div> : null}
+      {children ? <div className={cn(title && "mt-0.5", "text-fg/85")}>{children}</div> : null}
     </div>
   );
 }
