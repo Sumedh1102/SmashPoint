@@ -58,7 +58,7 @@ export default async function AdminOverviewPage() {
                   <span className="block text-muted">{a.refundStatus === "failed" ? "Refund failed at Razorpay — retry from the booking." : a.failureReason}</span>
                 </span>
                 {a.code ? (
-                  <Link href={`/admin/bookings/${a.code}`} className="font-semibold text-court hover:underline">
+                  <Link href={`/admin/bookings/${a.code}`} className="font-semibold text-royal hover:underline">
                     Open booking
                   </Link>
                 ) : null}
@@ -68,7 +68,7 @@ export default async function AdminOverviewPage() {
         </Panel>
       ) : null}
 
-      <Panel title="Today on court" className="mt-6" actions={<Link href="/admin/courts" className="text-sm font-semibold text-court hover:underline">Manage courts</Link>}>
+      <Panel title="Today on court" className="mt-6" actions={<Link href="/admin/courts" className="text-sm font-semibold text-royal hover:underline">Manage courts</Link>}>
         <div className="p-3 sm:p-4">
           <ScheduleGrid hours={o.schedule.hours} courts={o.schedule.courts} />
         </div>
@@ -78,7 +78,7 @@ export default async function AdminOverviewPage() {
         title="Latest bookings"
         className="mt-6"
         actions={
-          <Link href="/admin/bookings" className="inline-flex items-center gap-1 text-sm font-semibold text-court hover:underline">
+          <Link href="/admin/bookings" className="inline-flex items-center gap-1 text-sm font-semibold text-royal hover:underline">
             All bookings <ArrowRight className="size-4" />
           </Link>
         }

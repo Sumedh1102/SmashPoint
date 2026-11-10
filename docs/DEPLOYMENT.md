@@ -1,4 +1,4 @@
-# Deploying SmashPoint
+# Deploying On The Sol Sports Academy
 
 The app is a standard Next.js server backed by PostgreSQL. Every deploy runs one release step,
 `npm run db:deploy`, which:
@@ -6,7 +6,11 @@ The app is a standard Next.js server backed by PostgreSQL. Every deploy runs one
 1. applies pending database migrations (safe to run from several instances at once), then
 2. fills in anything missing: default settings, the three sports and five courts
    (`scripts/lib/catalogue.ts`, matched by slug) and an administrator from `ADMIN_EMAIL` /
-   `ADMIN_PASSWORD`. It never overwrites prices, courts or passwords that already exist.
+   `ADMIN_PASSWORD`. It never deletes anything and never touches bookings, payments or
+   passwords that already exist. When the catalogue has a newer `CATALOGUE_REVISION` than the
+   database (settings key `catalogue`), it applies the catalogue's rate card (prices, monthly
+   plans, surfaces, descriptions) to the catalogue courts **once**, by slug — see
+   [Rate card upgrade](#rate-card-upgrade-catalogue-revision-2). Later admin edits are kept.
 3. With `SEED_DEMO_DATA=true` **and an empty (or demo) database**, it loads the demo facility
    instead: the five courts and a demo admin, no bookings.
 
@@ -30,6 +34,37 @@ Take a backup first (`pg_dump`), deploy, and check the site. Existing courts kee
 setup step adds any of the five standard courts that are missing and logs any *other* active
 courts — set those to **Inactive** in `/admin/courts` if they no longer exist. When you no longer
 need the archive: `DROP SCHEMA legacy_archive CASCADE;`.
+
+## Rate card upgrade (catalogue revision 2)
+
+The academy's published rate card replaced the earlier demo pricing (off-peak/peak hourly
+rates). Migration `0005_rental_pricing` and catalogue revision 2 together:
+
+- give every court an exact **1-hour** and **2-hour** price (`price_1h`, `price_2h`; the
+  two-hour price is a package price, not twice the hourly price) and optional **monthly plan**
+  prices (1, 3, 6, 12 months) plus a playing-surface label. There is no peak surcharge;
+- copy the old `hourly_rate` / `peak_hourly_rate` of every court to
+  `legacy_archive.court_rates` before dropping those columns. Courts outside the catalogue keep
+  their previous off-peak price (1 h = old hourly rate, 2 h = twice that) until an admin edits
+  them;
+- set the five catalogue courts (matched by slug) to the rate card once:
+
+  | Court | 1 h | 2 h | 1 month | 3 months | 6 months | 12 months |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+  | `badminton-court-1` — Green Mat (5 mm) | ₹500 | ₹900 | ₹7,000 | ₹19,500 | ₹37,500 | ₹72,000 |
+  | `badminton-court-2` — Wooden Finish (2.5 mm) | ₹400 | ₹700 | ₹6,000 | ₹16,500 | ₹31,500 | ₹60,000 |
+  | `pickleball-court-1`, `pickleball-court-2` | ₹400 | ₹700 | ₹5,500 | ₹15,000 | ₹27,500 | ₹50,000 |
+  | `basketball-court-1` | ₹700 | ₹1,300 | ₹7,000 | ₹19,500 | ₹37,500 | ₹72,000 |
+
+- remove the hard-coded badminton closure (5–7 PM) from the database rules trigger and the app,
+  since the facility hasn't confirmed it. If it is confirmed, create it as a recurring block on
+  each badminton court in `/admin/courts` (date range + hours);
+- make the online booking hours a setting (`booking` settings row, `openMinute`/`closeMinute`,
+  default 7 AM – 10 PM, editable in `/admin/courts`). The trigger reads the same row.
+
+Existing bookings and payments are untouched: a booking keeps the amount that was charged.
+Nothing is reset or truncated. The demo (`SEED_DEMO_DATA=true`) is reloaded because
+`DEMO_VERSION` moved to 4.
 
 ## Razorpay
 
@@ -127,7 +162,10 @@ point the demo workflow at a real database.
 - [ ] Sign in at `/admin/login` and change the password (Account).
 - [ ] Replace every `[placeholder]` in `src/content/site.ts` (phone, email, address, legal name)
       and complete the bracketed sections of the policy pages (`src/app/(site)/{privacy,terms,cancellation-policy}`).
-- [ ] Check court prices, descriptions and status in `/admin/courts`.
+- [ ] Check court prices (1 h, 2 h, monthly plans), surfaces, descriptions and status in `/admin/courts`.
+- [ ] Confirm the online booking hours with the academy and set them in `/admin/courts`
+      (defaults to 7 AM – 10 PM), and set `openingHours` in `src/content/site.ts`.
+- [ ] Confirm the number of pickleball courts before advertising it (the system has two).
 - [ ] Complete the Razorpay steps above and make a test booking end to end.
 - [ ] Email: verify your sending domain in Resend and set `EMAIL_FROM` to an address on it.
 - [ ] Point an uptime monitor at `https://<your-domain>/api/health`.

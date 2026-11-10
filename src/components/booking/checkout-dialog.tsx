@@ -1,12 +1,13 @@
 "use client";
 
-import { AlertTriangle, ArrowLeft, Check, Clock3, Lock, RotateCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, Clock3, Info, Lock, RotateCcw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Alert, Field, Input, Textarea } from "@/components/ui/field";
 import { Button, Spinner } from "@/components/ui/button";
+import { PICKLEBALL_NOTICE } from "@/content/sports";
 import { formatDate, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { api, ApiError } from "./api";
@@ -15,13 +16,14 @@ import { openRazorpay, type CheckoutParams, type RazorpaySuccess } from "./razor
 export type CheckoutSelection = {
   courtId: string;
   courtName: string;
+  courtSurface: string | null;
   sportName: string;
+  sportSlug: string;
   date: string;
   startMinute: number;
   duration: number;
-  /** Price shown in the slot grid; the server's amount is what gets charged. */
+  /** Rate-card price shown in the wizard; the server computes the amount actually charged. */
   price: number;
-  isPeak: boolean;
 };
 
 type Session = { code: string; token: string; receiptUrl: string; amount: number; holdExpiresAt: string | null; checkout: CheckoutParams };
@@ -29,9 +31,10 @@ type Step = "details" | "review" | "verifying" | "notPaid" | "expired" | "error"
 type Customer = { name: string; email: string; phone: string; notes: string };
 type Errors = Partial<Record<keyof Customer, string>>;
 
+/** Steps 6–8 of the booking flow (1–5 are on the page; 9 is the confirmation page). */
 const STEPS = [
-  { key: "details", label: "Details" },
-  { key: "review", label: "Review" },
+  { key: "details", label: "Your details" },
+  { key: "review", label: "Summary" },
   { key: "pay", label: "Pay" },
 ] as const;
 
@@ -60,6 +63,7 @@ function SummaryRows({ s, amount }: { s: CheckoutSelection; amount: number }) {
   const rows: [string, string][] = [
     ["Sport", s.sportName],
     ["Court", s.courtName],
+    ...(s.courtSurface ? ([["Surface", s.courtSurface]] as [string, string][]) : []),
     ["Date", formatDate(s.date, "long")],
     ["Start time", formatMinutes(s.startMinute)],
     ["End time", formatMinutes(s.startMinute + s.duration)],
@@ -75,12 +79,12 @@ function SummaryRows({ s, amount }: { s: CheckoutSelection; amount: number }) {
           </div>
         ))}
         <div className="flex justify-between gap-4 px-4 py-2.5">
-          <dt className="text-muted">Court fee{s.isPeak ? " (includes peak-hour rate)" : ""}</dt>
+          <dt className="text-muted">Court rental · {formatDuration(s.duration)}</dt>
           <dd className="tabular text-right font-medium">{formatMoney(amount)}</dd>
         </div>
-        <div className="flex items-baseline justify-between gap-4 bg-paper px-4 py-3">
+        <div className="flex items-baseline justify-between gap-4 bg-ink px-4 py-3 text-white">
           <dt className="font-semibold">Total payable</dt>
-          <dd className="display tabular text-[1.75rem] leading-none">{formatMoney(amount)}</dd>
+          <dd className="display tabular text-[1.85rem] leading-none text-gold">{formatMoney(amount)}</dd>
         </div>
       </dl>
     </div>
@@ -271,8 +275,8 @@ export function CheckoutDialog({
         <ol className="mt-1 flex items-center gap-2" aria-label="Checkout progress">
           {STEPS.map((s, i) => (
             <li key={s.key} className="flex items-center gap-2" aria-current={i === stepIndex ? "step" : undefined}>
-              <span className={cn("grid size-5 place-items-center rounded-full text-[0.65rem] font-bold", i < stepIndex ? "bg-court text-white" : i === stepIndex ? "bg-ink text-lime" : "bg-paper-2 text-subtle")}>
-                {i < stepIndex ? <Check className="size-3" /> : `0${i + 6}`.slice(-2)}
+              <span className={cn("grid size-6 place-items-center rounded-full text-[0.68rem] font-bold", i < stepIndex ? "bg-royal text-white" : i === stepIndex ? "bg-gold text-ink" : "bg-paper-2 text-subtle")}>
+                {i < stepIndex ? <Check className="size-3.5" strokeWidth={3} /> : i + 6}
               </span>
               <span className={cn("text-xs font-semibold", i === stepIndex ? "text-ink" : "text-subtle")}>{s.label}</span>
               {i < STEPS.length - 1 ? <span aria-hidden className="h-px w-5 bg-line-strong" /> : null}
@@ -389,6 +393,12 @@ export function CheckoutDialog({
       {step === "review" ? (
         <div className="space-y-4">
           <SummaryRows s={selection} amount={amount} />
+          {selection.sportSlug === "pickleball" ? (
+            <p className="flex gap-2.5 rounded-xl border border-gold/50 bg-gold-50 px-4 py-3 text-sm font-medium text-ink">
+              <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-gold-700" />
+              {PICKLEBALL_NOTICE}
+            </p>
+          ) : null}
           <div className="rounded-xl border border-line bg-white px-4 py-3 text-sm">
             <p className="font-semibold">{customer.name}</p>
             <p className="text-muted">
@@ -407,6 +417,10 @@ export function CheckoutDialog({
               </span>
             </p>
           )}
+          <p className="flex items-center gap-2 text-xs text-subtle">
+            <ShieldCheck aria-hidden className="size-4 shrink-0 text-success" />
+            Payments are processed securely by Razorpay. We never see your card or bank details.
+          </p>
           <p className="text-xs text-subtle">
             By paying you agree to the{" "}
             <Link href="/terms" target="_blank" className="underline underline-offset-2 hover:text-ink">
@@ -423,7 +437,7 @@ export function CheckoutDialog({
 
       {step === "verifying" ? (
         <div role="status" className="flex flex-col items-center gap-4 py-8 text-center">
-          <Spinner className="size-8 text-court" />
+          <Spinner className="size-8 text-royal" />
           <p className="font-semibold">Verifying your payment with Razorpay…</p>
           <p className="max-w-sm text-sm text-muted">Please keep this page open. Your booking is confirmed only after this check.</p>
         </div>

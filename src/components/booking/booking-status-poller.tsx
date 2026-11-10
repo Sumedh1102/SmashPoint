@@ -43,7 +43,7 @@ export function BookingStatusPoller({ code, token, status }: { code: string; tok
     <p className="text-sm text-muted">Still waiting for Razorpay. Refresh this page in a few minutes — or contact us with your booking reference.</p>
   ) : (
     <p role="status" className="flex items-center gap-2 text-sm text-muted">
-      <Spinner className="text-court" /> Checking for your payment confirmation…
+      <Spinner className="text-royal" /> Checking for your payment confirmation…
     </p>
   );
 }

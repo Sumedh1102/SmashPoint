@@ -34,7 +34,7 @@ export function AdminShell({ adminName, logout, children }: { adminName: string;
                 isActive(href) ? "bg-white/10 text-white" : "text-ink-muted hover:bg-white/5 hover:text-white",
               )}
             >
-              <Icon aria-hidden className={cn("size-[1.1rem]", isActive(href) && "text-lime")} />
+              <Icon aria-hidden className={cn("size-[1.1rem]", isActive(href) && "text-gold")} />
               {label}
             </Link>
           </li>
@@ -60,7 +60,7 @@ export function AdminShell({ adminName, logout, children }: { adminName: string;
       <aside className="sticky top-0 hidden h-dvh flex-col bg-ink px-4 py-6 lg:flex">
         <Link href="/admin" className="mb-8 px-2">
           <Wordmark />
-          <span className="eyebrow mt-2 block pl-[2.6rem] text-[0.62rem] text-ink-muted">Admin</span>
+          <span className="eyebrow mt-3 block text-[0.62rem] text-ink-muted">Admin dashboard</span>
         </Link>
         {nav}
       </aside>

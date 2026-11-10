@@ -7,11 +7,11 @@ import { ScheduleGrid } from "@/components/admin/schedule-grid";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
-import { formatDate, formatHour, formatTimeRange } from "@/lib/format";
-import { addDays, isValidISODate, WEEKDAYS_SHORT } from "@/lib/time";
+import { formatDate, formatTimeRange } from "@/lib/format";
+import { addDays, isValidISODate } from "@/lib/time";
 import { getCourtAdmin, getScheduleForDate } from "@/server/queries/admin";
 import { upcomingBookingCount } from "@/server/services/admin";
-import { getBookingSettings } from "@/server/settings";
+import { getBookingSettings, hoursOf } from "@/server/settings";
 
 export async function generateMetadata({ params }: PageProps<"/admin/courts/[slug]">) {
   return { title: `Court · ${(await params).slug}` };
@@ -25,9 +25,6 @@ export default async function AdminCourtPage({ params, searchParams }: PageProps
   const { court, sport, blocks, today } = data;
   const date = typeof dateParam === "string" && isValidISODate(dateParam) ? dateParam : today;
   const [schedule, upcoming, settings] = await Promise.all([getScheduleForDate(date, court.id), upcomingBookingCount(court.id), getBookingSettings()]);
-  const peakText = settings.peakWindows.length
-    ? `Peak: ${settings.peakWindows.map((w) => `${formatHour(w.startMinute)} – ${formatHour(w.endMinute)}${w.days.length && w.days.length < 7 ? ` (${w.days.map((d) => WEEKDAYS_SHORT[d]).join(", ")})` : ""}`).join("; ")}`
-    : "No peak hours set";
 
   return (
     <>
@@ -43,7 +40,7 @@ export default async function AdminCourtPage({ params, searchParams }: PageProps
             <Link href={`/admin/courts/${slug}?date=${addDays(date, -1)}`} className={buttonClass({ variant: "outline", size: "sm" })} aria-label="Previous day">
               ←
             </Link>
-            <Input type="date" name="date" defaultValue={date} className="h-9 w-40" aria-label="Date" />
+            <Input type="date" name="date" defaultValue={date} className="h-9 w-34 sm:w-40" aria-label="Date" />
             <button type="submit" className={buttonClass({ variant: "dark", size: "sm" })}>
               Go
             </button>
@@ -61,7 +58,7 @@ export default async function AdminCourtPage({ params, searchParams }: PageProps
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <Panel title="Block slots">
           <div className="p-5">
-            <BlockForm courtId={court.id} today={today} isBadminton={sport.slug === "badminton"} />
+            <BlockForm courtId={court.id} today={today} hours={hoursOf(settings)} />
           </div>
         </Panel>
 
@@ -89,9 +86,9 @@ export default async function AdminCourtPage({ params, searchParams }: PageProps
             )}
           </Panel>
 
-          <Panel title="Court settings">
+          <Panel title="Court settings & rate card">
             <div className="p-5">
-              <CourtSettingsForm court={court} upcoming={upcoming} peakText={peakText} />
+              <CourtSettingsForm court={court} upcoming={upcoming} sportName={sport.name} />
             </div>
           </Panel>
         </div>

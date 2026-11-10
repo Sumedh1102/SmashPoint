@@ -2,12 +2,12 @@ import "server-only";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, lte, ne, or } from "drizzle-orm";
 import { db, type DbOrTx, type Transaction } from "@/server/db";
 import { bookingEvents, bookings, courtBlocks, courts, sports, type Booking, type BookingStatus, type Court } from "@/server/db/schema";
-import { computeAvailability, priceForRange, type BlockRange, type CourtForAvailability, type OccupiedRange } from "@/lib/booking/engine";
+import { computeAvailability, priceForDuration, type BlockRange, type CourtForAvailability, type OccupiedRange } from "@/lib/booking/engine";
 import { checkSlotRules, isDuration, type Duration } from "@/lib/booking/rules";
 import type { BookingSettings } from "@/lib/settings-types";
 import { addDays, isValidISODate, nowMinutesInTz, rangesOverlap, todayInTz } from "@/lib/time";
 import { formatDate, formatTimeRange } from "@/lib/format";
-import { getBookingSettings } from "@/server/settings";
+import { getBookingSettings, hoursOf } from "@/server/settings";
 import { bookingRuleViolation, DomainError, isExclusionViolation, isUniqueViolation } from "@/server/errors";
 import { randomCode } from "@/server/security";
 
@@ -42,8 +42,8 @@ function engineCourt(row: CourtRow): CourtForAvailability {
     name: row.court.name,
     sportSlug: row.sport.slug,
     status: row.court.status,
-    hourlyRate: row.court.hourlyRate,
-    peakHourlyRate: row.court.peakHourlyRate,
+    price1h: row.court.price1h,
+    price2h: row.court.price2h,
   };
 }
 
@@ -119,7 +119,7 @@ export async function getAvailability(input: { date: string; duration: number; s
   return computeAvailability({
     date: input.date,
     duration: input.duration,
-    peakWindows: settings.peakWindows,
+    hours: hoursOf(settings),
     courts: rows.map(engineCourt),
     bookings: day.bookings,
     blocks: day.blocks,
@@ -145,7 +145,7 @@ export async function getCourtSnapshots(): Promise<Map<string, CourtSnapshot>> {
   const rows = await loadCourts(db);
   const ids = rows.map((r) => r.court.id);
   const [dayToday, dayTomorrow] = await Promise.all([loadDay(db, today, ids), loadDay(db, tomorrow, ids)]);
-  const base = { duration: 60 as Duration, peakWindows: settings.peakWindows, courts: rows.map(engineCourt) };
+  const base = { duration: 60 as Duration, hours: hoursOf(settings), courts: rows.map(engineCourt) };
   const a = computeAvailability({ ...base, date: today, ...dayToday, nowMinute: nowMinuteFor(today, today, settings.timezone) });
   const b = settings.advanceDays > 1 ? computeAvailability({ ...base, date: tomorrow, ...dayTomorrow, nowMinute: null }) : null;
 
@@ -254,7 +254,7 @@ export async function createBookingHold(input: CreateHoldInput): Promise<Booking
         if (court.status === "INACTIVE" || !sport.isActive) throw new DomainError("That court isn't available for booking.", "NOT_FOUND", 404);
         if (court.status === "MAINTENANCE") throw new DomainError(`${court.name} is closed for maintenance.`, "SLOT_UNAVAILABLE", 409);
 
-        const violation = checkSlotRules(sport.slug, input.startMinute, input.duration);
+        const violation = checkSlotRules(input.startMinute, input.duration, hoursOf(settings));
         if (violation) throw new DomainError(violation.message, "RULE_VIOLATION", 422);
         const { today } = bookingWindow(settings);
         if (input.date === today && input.startMinute <= nowMinutesInTz(settings.timezone)) {
@@ -266,7 +266,8 @@ export async function createBookingHold(input: CreateHoldInput): Promise<Booking
         const conflict = conflictIn(day, court.id, input.startMinute, endMinute);
         if (conflict) throw new DomainError(describeConflict(conflict), "SLOT_UNAVAILABLE", 409);
 
-        const { price } = priceForRange(court, settings.peakWindows, input.date, input.startMinute, endMinute);
+        // The amount charged: the court's rate-card price for this duration (never the browser's).
+        const price = priceForDuration(court, input.duration as Duration); // validated by checkSlotRules
         const [booking] = await tx
           .insert(bookings)
           .values({

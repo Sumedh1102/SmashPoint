@@ -29,8 +29,8 @@ export function isExclusionViolation(err: unknown): boolean {
 }
 
 /**
- * Errors raised by the `bookings_enforce_rules` trigger (drizzle/0004_court_booking_focus.sql):
- * SP001 outside opening hours, SP002 bad duration/alignment, SP003 badminton academy closure,
+ * Errors raised by the `bookings_enforce_rules` trigger (drizzle/0005_rental_pricing.sql):
+ * SP001 outside the booking hours, SP002 bad duration/alignment, (SP003: the former badminton closure),
  * SP004 sport/court mismatch. Returns the trigger's message, or null for other errors.
  */
 export function bookingRuleViolation(err: unknown): string | null {

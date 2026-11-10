@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarPlus, Check, Clock3, RotateCcw, XCircle } from "lucide-react";
+import { CalendarPlus, Check, Clock3, Info, RotateCcw, XCircle } from "lucide-react";
 import { BookingStatusPoller } from "@/components/booking/booking-status-poller";
 import { PrintButton } from "@/components/booking/print-button";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { formatDate, formatDateTime, formatDuration, formatMinutes, formatMoney } from "@/lib/format";
 import { site } from "@/content/site";
+import { PICKLEBALL_NOTICE } from "@/content/sports";
 import { findCustomerBooking } from "@/server/queries/public";
 import { getSetting } from "@/server/settings";
 
@@ -61,6 +62,7 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
   const rows: [string, string][] = [
     ["Sport", sport.name],
     ["Court", court.name],
+    ...(court.surface ? ([["Surface", court.surface]] as [string, string][]) : []),
     ["Date", formatDate(booking.date, "long")],
     ["Start time", formatMinutes(booking.startMinute)],
     ["End time", formatMinutes(booking.endMinute)],
@@ -75,14 +77,29 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
   return (
     <div className="bg-paper pt-28 pb-20 sm:pt-32">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
-        <div className="overflow-hidden rounded-[var(--radius-card)] border border-line bg-white shadow-md">
-          <div className={view.tone === "success" ? "bg-ink px-6 py-8 text-white sm:px-10 sm:py-10" : "border-b border-line px-6 py-8 sm:px-10"}>
+        {view.tone === "success" ? (
+          <ol aria-label="Booking progress" className="mb-5 flex items-center gap-2 text-xs font-semibold text-muted">
+            <li className="flex items-center gap-1.5">
+              <span className="grid size-5 place-items-center rounded-full bg-royal text-white">
+                <Check className="size-3" strokeWidth={3} />
+              </span>
+              Paid
+            </li>
+            <li aria-hidden className="h-px w-5 bg-line-strong" />
+            <li className="flex items-center gap-1.5 text-ink" aria-current="step">
+              <span className="grid size-5 place-items-center rounded-full bg-gold text-[0.65rem] text-ink">9</span>
+              Confirmed
+            </li>
+          </ol>
+        ) : null}
+        <div className="overflow-hidden rounded-[1.25rem] border border-line bg-white shadow-md">
+          <div className={view.tone === "success" ? "surface-dark court-lines bg-ink px-6 py-8 text-white sm:px-10 sm:py-10" : "border-b border-line px-6 py-8 sm:px-10"}>
             <div className="flex items-start justify-between gap-4">
               <span
                 aria-hidden
                 className={
                   view.tone === "success"
-                    ? "grid size-14 place-items-center rounded-full bg-lime text-ink"
+                    ? "grid size-14 place-items-center rounded-full bg-gold text-ink shadow-[0_0_0_6px_rgb(217_154_19/0.2)]"
                     : view.tone === "pending"
                       ? "grid size-14 place-items-center rounded-full bg-warning-soft text-warning"
                       : "grid size-14 place-items-center rounded-full bg-paper-2 text-muted"
@@ -112,6 +129,25 @@ export default async function BookingPage({ params, searchParams }: PageProps<"/
               </div>
             ))}
           </dl>
+
+          {view.tone === "success" ? (
+            <div className="border-t border-line px-6 py-5 text-sm sm:px-10">
+              <p className="eyebrow text-gold-700">Before you play</p>
+              <ul className="mt-3 space-y-2 text-muted">
+                <li className="flex gap-2.5">
+                  <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-royal" /> Arrive a few minutes early — the court is yours for the booked time only.
+                </li>
+                <li className="flex gap-2.5">
+                  <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-royal" /> Keep your booking reference <span className="font-semibold text-ink">{booking.code}</span> handy.
+                </li>
+                {sport.slug === "pickleball" ? (
+                  <li className="flex gap-2.5 font-medium text-ink">
+                    <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-gold-700" /> {PICKLEBALL_NOTICE}
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+          ) : null}
 
           {payment?.refundStatus ? (
             <div className="border-t border-line px-6 py-4 text-sm sm:px-10">

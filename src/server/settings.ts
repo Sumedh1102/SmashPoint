@@ -9,6 +9,7 @@ import {
   type BookingSettings,
   type NotificationSettings,
 } from "@/lib/settings-types";
+import { normalizeBookingHours } from "@/lib/booking/rules";
 import { clamp } from "@/lib/utils";
 
 type SettingsMap = {
@@ -27,13 +28,21 @@ export const getSetting = cache(async <K extends keyof SettingsMap>(key: K): Pro
   return { ...DEFAULTS[key], ...((row?.value as Partial<SettingsMap[K]>) ?? {}) };
 });
 
-/** Booking settings with values kept inside safe bounds (the row is plain JSON). */
+/**
+ * Booking settings with values kept inside safe bounds (the row is plain JSON). Booking hours
+ * go through normalizeBookingHours, the same check the database trigger applies.
+ */
 export const getBookingSettings = cache(async (): Promise<BookingSettings> => {
   const s = await getSetting("booking");
   return {
     timezone: DEFAULT_BOOKING_SETTINGS.timezone,
     holdMinutes: clamp(Math.round(Number(s.holdMinutes) || DEFAULT_BOOKING_SETTINGS.holdMinutes), 5, 30),
     advanceDays: clamp(Math.round(Number(s.advanceDays) || DEFAULT_BOOKING_SETTINGS.advanceDays), 1, 90),
-    peakWindows: Array.isArray(s.peakWindows) ? s.peakWindows : DEFAULT_BOOKING_SETTINGS.peakWindows,
+    ...normalizeBookingHours(s),
   };
 });
+
+/** The booking hours from booking settings. */
+export function hoursOf(settings: Pick<BookingSettings, "openMinute" | "closeMinute">) {
+  return { openMinute: settings.openMinute, closeMinute: settings.closeMinute };
+}

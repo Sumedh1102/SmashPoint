@@ -1,14 +1,16 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/server/db";
-import { bookings, courts, payments } from "@/server/db/schema";
+import { bookings, courts, payments, settings } from "@/server/db/schema";
 import { DomainError } from "@/server/errors";
 import { addDays, todayInTz } from "@/lib/time";
 import { createBookingHold, expireStaleHolds, getAvailability, releaseHold } from "@/server/services/bookings";
-import { cancelBooking, createBlock } from "@/server/services/admin";
+import { cancelBooking, createBlock, updateBookingHours, updateCourt } from "@/server/services/admin";
 import { checkoutSignature } from "@/server/payments/razorpay";
 import { reconcilePayments, recordCapture, recordFailure, startCheckout, verifyCheckout } from "@/server/payments/service";
 import { fakePay } from "../fake-razorpay";
+import { CATALOGUE_SETTING, upgradeCatalogue } from "../../scripts/lib/setup";
+import { COURTS } from "../../scripts/lib/catalogue";
 
 const H = 60;
 const FAKE = process.env.FAKE_RAZORPAY_URL!;
@@ -60,10 +62,129 @@ afterAll(async () => {
   await (globalThis as { __smashpointPool?: { end(): Promise<void> } }).__smashpointPool?.end();
 });
 
+/** The published rate card, in paise: [1 hour, 2 hours]. */
+const RATES: Record<string, [number, number]> = {
+  "badminton-court-1": [50_000, 90_000],
+  "badminton-court-2": [40_000, 70_000],
+  "pickleball-court-1": [40_000, 70_000],
+  "pickleball-court-2": [40_000, 70_000],
+  "basketball-court-1": [70_000, 130_000],
+};
+
+/** Merges keys into the `booking` settings document (read by the app and the rules trigger). */
+async function patchBookingSettings(patch: Record<string, unknown>) {
+  await db.update(settings).set({ value: sql`${settings.value} || ${JSON.stringify(patch)}::jsonb` }).where(eq(settings.key, "booking"));
+}
+async function resetBookingHours() {
+  await db.update(settings).set({ value: sql`${settings.value} - 'openMinute' - 'closeMinute'` }).where(eq(settings.key, "booking"));
+}
+
 describe("catalogue", () => {
   it("has exactly 2 badminton, 2 pickleball and 1 basketball court", async () => {
     const a = await getAvailability({ date: DAY, duration: 60 });
     expect(a.courts.map((c) => c.courtSlug)).toEqual(["badminton-court-1", "badminton-court-2", "pickleball-court-1", "pickleball-court-2", "basketball-court-1"]);
+  });
+
+  it("stores the rate card: exact 1 h / 2 h prices, monthly plans and badminton surfaces", async () => {
+    const rows = await db.select().from(courts);
+    for (const [slug, [h1, h2]] of Object.entries(RATES)) {
+      const c = rows.find((r) => r.slug === slug)!;
+      expect([c.price1h, c.price2h]).toEqual([h1, h2]);
+    }
+    const bySlug = (slug: string) => rows.find((r) => r.slug === slug)!;
+    expect(bySlug("badminton-court-1")).toMatchObject({ surface: "Green Mat (5 mm)", monthlyPrice1m: 700_000, monthlyPrice3m: 1_950_000, monthlyPrice6m: 3_750_000, monthlyPrice12m: 7_200_000 });
+    expect(bySlug("badminton-court-2")).toMatchObject({ surface: "Wooden Finish (2.5 mm)", monthlyPrice1m: 600_000, monthlyPrice3m: 1_650_000, monthlyPrice6m: 3_150_000, monthlyPrice12m: 6_000_000 });
+    for (const slug of ["pickleball-court-1", "pickleball-court-2"]) {
+      expect(bySlug(slug)).toMatchObject({ monthlyPrice1m: 550_000, monthlyPrice3m: 1_500_000, monthlyPrice6m: 2_750_000, monthlyPrice12m: 5_000_000 });
+    }
+    expect(bySlug("basketball-court-1")).toMatchObject({ monthlyPrice1m: 700_000, monthlyPrice3m: 1_950_000, monthlyPrice6m: 3_750_000, monthlyPrice12m: 7_200_000 });
+  });
+
+  it("applies a new catalogue revision once to an existing database, by slug, and keeps later admin edits", async () => {
+    const slug = "pickleball-court-1";
+    const [before] = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, CATALOGUE_SETTING));
+    try {
+      // A database set up before the rate card: old demo prices, no monthly plans, revision 1.
+      await db.update(courts).set({ price1h: 60_000, price2h: 120_000, monthlyPrice1m: null, monthlyPrice3m: null, monthlyPrice6m: null, monthlyPrice12m: null }).where(eq(courts.slug, slug));
+      await db.update(settings).set({ value: { revision: 1 } }).where(eq(settings.key, CATALOGUE_SETTING));
+      expect(await upgradeCatalogue(db)).toMatch(/catalogue revision 2/);
+      let [c] = await db.select().from(courts).where(eq(courts.slug, slug));
+      expect([c!.price1h, c!.price2h, c!.monthlyPrice1m, c!.monthlyPrice12m]).toEqual([40_000, 70_000, 550_000, 5_000_000]);
+
+      // An admin changes the price afterwards: the next deploy leaves it alone.
+      await db.update(courts).set({ price1h: 45_000 }).where(eq(courts.slug, slug));
+      expect(await upgradeCatalogue(db)).toBeNull();
+      [c] = await db.select().from(courts).where(eq(courts.slug, slug));
+      expect(c!.price1h).toBe(45_000);
+    } finally {
+      const original = COURTS.find((x) => x.slug === slug)!;
+      await db.update(courts).set({ price1h: original.price1h, price2h: original.price2h }).where(eq(courts.slug, slug));
+      if (before) await db.update(settings).set({ value: before.value }).where(eq(settings.key, CATALOGUE_SETTING));
+    }
+  });
+});
+
+describe("rate card — prices computed by the server", () => {
+  it("charges each court's exact one-hour price, morning or evening", async () => {
+    for (const [slug, [oneHour]] of Object.entries(RATES)) {
+      expect((await hold(slug, 8 * H)).total).toBe(oneHour);
+      expect((await hold(slug, 19 * H)).total).toBe(oneHour); // formerly a peak hour: no surcharge
+    }
+  });
+
+  it("charges each court's two-hour package price, not twice the hourly price", async () => {
+    for (const [slug, [oneHour, twoHours]] of Object.entries(RATES)) {
+      const b = await hold(slug, 10 * H, 120);
+      expect(b.total).toBe(twoHours);
+      expect(b.total).toBeLessThan(oneHour * 2);
+      expect(b.subtotal).toBe(twoHours);
+      expect(b.discount).toBe(0);
+      const evening = await hold(slug, 17 * H, 120); // 5–7 PM
+      expect(evening.total).toBe(twoHours);
+    }
+  });
+
+  it("shows the same price in availability as the hold charges", async () => {
+    for (const duration of [60, 120] as const) {
+      const a = await getAvailability({ date: DAY, duration });
+      for (const c of a.courts) {
+        const expected = RATES[c.courtSlug]![duration === 60 ? 0 : 1];
+        expect(new Set(c.slots.map((s) => s.price))).toEqual(new Set([expected]));
+      }
+    }
+  });
+
+  it("creates the Razorpay order for the server's amount", async () => {
+    const booking = await hold("basketball-court-1", 18 * H, 120);
+    const checkout = await startCheckout(booking);
+    expect(checkout.amount).toBe(130_000);
+  });
+
+  it("uses a price an admin sets for new bookings; existing bookings keep what they were charged", async () => {
+    const id = await courtId("badminton-court-2");
+    const earlier = await hold("badminton-court-2", 9 * H);
+    const [court] = await db.select().from(courts).where(eq(courts.id, id));
+    const patch = {
+      description: court!.description,
+      surface: court!.surface,
+      status: court!.status,
+      price1h: 45_000,
+      price2h: 80_000,
+      monthlyPrice1m: court!.monthlyPrice1m,
+      monthlyPrice3m: court!.monthlyPrice3m,
+      monthlyPrice6m: court!.monthlyPrice6m,
+      monthlyPrice12m: court!.monthlyPrice12m,
+    };
+    try {
+      await updateCourt(id, patch, null as unknown as string);
+      expect((await hold("badminton-court-2", 11 * H)).total).toBe(45_000);
+      expect((await hold("badminton-court-2", 12 * H, 120)).total).toBe(80_000);
+      const [kept] = await db.select().from(bookings).where(eq(bookings.id, earlier.id));
+      expect(kept!.total).toBe(40_000);
+      await expectRejected(updateCourt(id, { ...patch, price1h: 0 }, null as unknown as string), "INVALID_INPUT");
+    } finally {
+      await updateCourt(id, { ...patch, price1h: 40_000, price2h: 70_000 }, null as unknown as string);
+    }
   });
 });
 
@@ -72,30 +193,25 @@ describe("booking rules enforced by the backend", () => {
     const b = await hold("pickleball-court-1", 10 * H);
     expect(b.status).toBe("PENDING");
     expect(b.endMinute).toBe(11 * H);
-    expect(b.total).toBe(60_000); // ₹600 off-peak
+    expect(b.total).toBe(40_000); // ₹400 for one hour
     const minutes = (b.holdExpiresAt!.getTime() - Date.now()) / 60_000;
     expect(minutes).toBeGreaterThan(9);
     expect(minutes).toBeLessThanOrEqual(10);
   });
 
-  it("creates a valid two-hour hold that spans both hours and their rates", async () => {
+  it("creates a valid two-hour hold that occupies both hours at the two-hour price", async () => {
     const b = await hold("pickleball-court-1", 16 * H, 120);
     expect([b.startMinute, b.endMinute]).toEqual([16 * H, 18 * H]);
-    expect(b.total).toBe(60_000 + 80_000); // one off-peak + one peak hour
+    expect(b.total).toBe(70_000); // ₹700 two-hour package
     expect(await slotState("pickleball-court-1", 16 * H)).toBe("HELD");
     expect(await slotState("pickleball-court-1", 17 * H)).toBe("HELD");
   });
 
-  it("rejects badminton bookings during the 5–7 PM academy closure, on both courts", async () => {
-    for (const slug of ["badminton-court-1", "badminton-court-2"]) {
-      await expectRejected(hold(slug, 17 * H), "RULE_VIOLATION");
-      await expectRejected(hold(slug, 18 * H), "RULE_VIOLATION");
-      await expectRejected(hold(slug, 16 * H, 120), "RULE_VIOLATION"); // 4–6 PM overlaps
-      await expectRejected(hold(slug, 18 * H, 120), "RULE_VIOLATION"); // 6–8 PM overlaps
-    }
-    expect((await hold("badminton-court-1", 15 * H)).status).toBe("PENDING"); // 3–4 PM
-    expect((await hold("badminton-court-1", 16 * H)).status).toBe("PENDING"); // 4–5 PM
-    expect((await hold("badminton-court-1", 19 * H)).status).toBe("PENDING"); // 7–8 PM
+  it("has no unconfirmed badminton closure: both courts are bookable from 5 to 7 PM", async () => {
+    expect((await hold("badminton-court-1", 17 * H)).status).toBe("PENDING");
+    expect((await hold("badminton-court-1", 18 * H)).status).toBe("PENDING");
+    expect((await hold("badminton-court-2", 16 * H, 120)).status).toBe("PENDING"); // 4–6 PM
+    expect((await hold("badminton-court-2", 18 * H, 120)).status).toBe("PENDING"); // 6–8 PM
   });
 
   it("keeps pickleball and basketball bookable from 5 to 7 PM", async () => {
@@ -126,14 +242,48 @@ describe("booking rules enforced by the backend", () => {
     expect((await hold("badminton-court-1", 21 * H)).status).toBe("PENDING"); // after it
   });
 
-  it("the database itself refuses a badminton booking in the closure (trigger)", async () => {
+  it("the database itself enforces the booking hours, durations and alignment (trigger)", async () => {
     const id = await courtId("badminton-court-1");
     const [court] = await db.select().from(courts).where(eq(courts.id, id));
-    const err = await db
-      .insert(bookings)
-      .values({ code: "SP-TRIGGR", sportId: court!.sportId, courtId: id, customerName: "x", customerPhone: "x", date: DAY, startMinute: 17 * H, endMinute: 18 * H, subtotal: 0, total: 0, status: "CONFIRMED" })
-      .then(() => null, (e: unknown) => e);
-    expect(String((err as Error)?.cause ?? err)).toMatch(/academy sessions/);
+    let n = 0;
+    const insert = (startMinute: number, endMinute: number) =>
+      db
+        .insert(bookings)
+        .values({ code: `SP-TRG${String(++n).padStart(3, "0")}`, sportId: court!.sportId, courtId: id, customerName: "x", customerPhone: "x", date: DAY, startMinute, endMinute, subtotal: 0, total: 0, status: "CONFIRMED" })
+        .then(
+          () => null,
+          (e: unknown) => String((e as Error)?.cause ?? e),
+        );
+    expect(await insert(17 * H, 18 * H)).toBeNull(); // no badminton closure in the database either
+    expect(await insert(6 * H, 7 * H)).toMatch(/outside the booking hours/);
+    expect(await insert(21 * H, 23 * H)).toMatch(/outside the booking hours/);
+    expect(await insert(9 * H + 30, 10 * H + 30)).toMatch(/start on the hour/);
+    expect(await insert(10 * H, 13 * H)).toMatch(/one or two hours/);
+  });
+
+  it("follows the booking hours setting in the app and the database alike", async () => {
+    try {
+      await patchBookingSettings({ openMinute: 6 * H, closeMinute: 23 * H });
+      const a = await getAvailability({ date: DAY, duration: 60, courtSlug: "basketball-court-1" });
+      expect(a.courts[0]!.slots[0]!.startMinute).toBe(6 * H);
+      expect(a.courts[0]!.slots.at(-1)!.endMinute).toBe(23 * H);
+      expect((await hold("basketball-court-1", 6 * H)).status).toBe("PENDING");
+      expect((await hold("basketball-court-1", 21 * H, 120)).endMinute).toBe(23 * H);
+
+      // Invalid stored hours fall back to 7 AM – 10 PM on both sides.
+      await patchBookingSettings({ openMinute: 6 * H + 30 });
+      await expectRejected(hold("pickleball-court-1", 6 * H), "RULE_VIOLATION");
+      expect((await hold("pickleball-court-1", 7 * H)).status).toBe("PENDING");
+
+      // The admin service refuses invalid hours and reports bookings outside new ones.
+      await expectRejected(updateBookingHours({ openMinute: 9 * H, closeMinute: 9 * H }, null as unknown as string), "INVALID_INPUT");
+      const result = await updateBookingHours({ openMinute: 8 * H, closeMinute: 20 * H }, null as unknown as string);
+      expect(result.hours).toEqual({ openMinute: 8 * H, closeMinute: 20 * H });
+      await expectRejected(hold("pickleball-court-2", 7 * H), "RULE_VIOLATION");
+    } finally {
+      await resetBookingHours();
+    }
+    expect((await hold("pickleball-court-2", 7 * H)).status).toBe("PENDING");
   });
 });
 
@@ -221,7 +371,7 @@ describe("Razorpay payments", () => {
   it("rejects a payment whose amount doesn't match the booking", async () => {
     const booking = await hold("pickleball-court-1", 11 * H);
     const checkout = await startCheckout(booking);
-    const paid = await fakePay(FAKE, checkout.orderId, "captured", 100); // ₹1 instead of ₹600
+    const paid = await fakePay(FAKE, checkout.orderId, "captured", 100); // ₹1 instead of ₹400
     await expectRejected(verifyCheckout({ code: booking.code, orderId: checkout.orderId, paymentId: paid.paymentId, signature: paid.signature }), "PAYMENT_FAILED");
     const [b] = await db.select().from(bookings).where(eq(bookings.id, booking.id));
     expect(b!.status).not.toBe("CONFIRMED");

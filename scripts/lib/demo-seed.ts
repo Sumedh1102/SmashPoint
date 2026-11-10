@@ -1,5 +1,5 @@
 /**
- * Public demo database: WIPES the application tables and loads the five courts plus a demo
+ * Public demo database: WIPES the application tables and loads the catalogue courts plus a demo
  * administrator. No customers, bookings or payments are invented — the demo shows real
  * activity only (bookings made on it with Razorpay test keys).
  * Used by `npm run db:seed` and by `npm run db:deploy` when SEED_DEMO_DATA=true.
@@ -12,8 +12,11 @@ import { ensureCatalogue } from "./setup";
 
 /** Settings key marking a database as a demo (the seed refuses to wipe anything else). */
 export const DEMO_MARKER = "demo_data";
-/** Bump when the demo data changes shape; `db:deploy` re-seeds demo databases on an older version. */
-export const DEMO_VERSION = 3;
+/**
+ * Bump when the demo data changes shape; `db:deploy` re-seeds demo databases on an older version.
+ * 4 — On The Sol rate card (exact 1 h / 2 h prices, monthly plans), no badminton closure.
+ */
+export const DEMO_VERSION = 4;
 
 export const DEMO_ADMIN = { email: "admin@example.com", password: "SmashPoint@123", name: "Demo Admin" } as const;
 

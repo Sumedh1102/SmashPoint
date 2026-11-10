@@ -20,15 +20,15 @@ export function courtImage(courtSlug: string, sportSlug: string): StaticImageDat
 }
 
 const ALT_BY_SLUG: Record<string, string> = {
-  "badminton-court-1": "a low view along an indoor badminton court towards the net, with a racket and shuttlecocks on the green court",
-  "badminton-court-2": "a side view of indoor badminton courts with nets and white court lines",
-  "pickleball-court-1": "a low view across a blue indoor pickleball court towards the net, with a paddle and pickleballs",
-  "pickleball-court-2": "an elevated view of indoor pickleball courts with nets and kitchen lines",
-  "basketball-court-1": "an indoor basketball court with a hardwood floor, painted key, hoop and a basketball",
+  "badminton-court-1": "a low view along a green-mat badminton court towards the net, with a racket and shuttlecocks on the court",
+  "badminton-court-2": "a side view of a wooden-finish badminton court with nets and white court lines",
+  "pickleball-court-1": "a low view across a blue pickleball court towards the net, with a paddle and pickleballs",
+  "pickleball-court-2": "an elevated view of pickleball courts with nets and kitchen lines",
+  "basketball-court-1": "a basketball court with a wooden floor, painted key, hoop and a basketball",
 };
 
 /** Illustrative 3D renders, described for screen readers. */
 export function courtImageAlt(courtName: string, courtSlug: string, sportSlug: string) {
-  const what = ALT_BY_SLUG[courtSlug] ?? `an indoor ${sportSlug} court`;
+  const what = ALT_BY_SLUG[courtSlug] ?? `a ${sportSlug} court`;
   return `${courtName} (illustration): ${what}, under arena lights`;
 }

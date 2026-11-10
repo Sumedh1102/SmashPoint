@@ -1,47 +1,82 @@
+import type { Metadata } from "next";
 import { BookingWizard } from "@/components/booking/booking-wizard";
-import { BookingSelectionProvider } from "@/components/booking/selection-context";
+import { AboutSection } from "@/components/home/about-section";
+import { CoachingSection } from "@/components/home/coaching-section";
 import { ContactSection } from "@/components/home/contact-section";
 import { CourtListing } from "@/components/home/court-listing";
-import { FacilityHighlights } from "@/components/home/facility-highlights";
+import { RentalPricing } from "@/components/home/rental-pricing";
+import { SectionHeading } from "@/components/home/section-heading";
 import { SportsHero } from "@/components/home/sports-hero";
-import { site } from "@/content/site";
+import { SportsOverview } from "@/components/home/sports-overview";
+import { WhyChooseUs } from "@/components/home/why-choose-us";
+import { isPlaceholder, site } from "@/content/site";
+import { SPORT_SLUGS } from "@/lib/booking/rules";
+import { courtDisplayName, lowestHourlyBySport, tariffRows } from "@/lib/pricing";
 import { getHomeData } from "@/server/queries/public";
 
 // Live availability on every request.
 export const dynamic = "force-dynamic";
 
-export default async function HomePage({ searchParams }: PageProps<"/">) {
-  const { court } = await searchParams;
-  const data = await getHomeData();
-  const initialCourt = typeof court === "string" ? court : null;
+// Only the canonical URL here: an `openGraph` key would replace (not extend) the root layout's
+// Open Graph metadata, including the share image.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
-  const jsonLd = {
+/** schema.org description of the academy with its hourly court-rental offers (from the live rate card). */
+function structuredData(data: Awaited<ReturnType<typeof getHomeData>>) {
+  const rupees = (paise: number) => (paise / 100).toFixed(2);
+  const offers = tariffRows(data.courts).flatMap((row) => {
+    const what = row.courtLabel || row.surface ? `${row.sportName} ${[row.courtLabel, row.surface].filter(Boolean).join(" – ")}` : row.sportName;
+    return [
+      { "@type": "Offer", name: `${what} court rental — 1 hour`, price: rupees(row.price1h), priceCurrency: "INR", category: "Hourly court rental" },
+      { "@type": "Offer", name: `${what} court rental — 2 hours`, price: rupees(row.price2h), priceCurrency: "INR", category: "Hourly court rental" },
+    ];
+  });
+  const address = site.contact.addressLines.filter((l) => !isPlaceholder(l));
+  return {
     "@context": "https://schema.org",
     "@type": "SportsActivityLocation",
     name: site.name,
+    slogan: site.motto,
     description: site.description,
     url: site.url,
-    openingHours: "Mo-Su 07:00-22:00",
+    image: `${site.url}/opengraph-image.jpg`,
+    sport: ["Badminton", "Pickleball", "Basketball"],
+    ...(isPlaceholder(site.contact.phone) ? {} : { telephone: site.contact.phone }),
+    ...(isPlaceholder(site.contact.email) ? {} : { email: site.contact.email }),
+    ...(address.length ? { address: { "@type": "PostalAddress", streetAddress: address.join(", "), addressCountry: "IN" } } : {}),
+    amenityFeature: data.courts.map((c) => ({ "@type": "LocationFeatureSpecification", name: courtDisplayName(c), value: true })),
+    makesOffer: offers,
   };
+}
+
+export default async function HomePage({ searchParams }: PageProps<"/">) {
+  const { court, sport } = await searchParams;
+  const data = await getHomeData();
+  const initialCourt = typeof court === "string" ? court : null;
+  const initialSport = typeof sport === "string" && (SPORT_SLUGS as readonly string[]).includes(sport) ? sport : null;
+  const jsonLd = JSON.stringify(structuredData(data)).replace(/</g, "\\u003c");
 
   return (
-    <BookingSelectionProvider>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <SportsHero />
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
+      <SportsHero fromPrices={lowestHourlyBySport(data.courts)} />
+      <SportsOverview courts={data.courts} />
+      <AboutSection />
 
-      <section id="courts" aria-labelledby="courts-title" className="bg-paper py-24 sm:py-28">
+      <section id="courts" aria-labelledby="courts-title" className="scroll-mt-16 bg-paper py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div data-reveal>
-              <p className="eyebrow text-court">The courts</p>
-              <h2 id="courts-title" className="display mt-4 text-[clamp(2.8rem,7vw,5.5rem)]">
-                Pick your court.
-              </h2>
-            </div>
-            <p data-reveal className="max-w-md text-muted lg:text-right">
-              Two badminton, two pickleball and one basketball court. Availability below is live — straight from the booking system.
-            </p>
-          </div>
+          <SectionHeading
+            id="courts-title"
+            eyebrow="Court availability"
+            title={
+              <>
+                Pick your <span className="text-royal">court.</span>
+              </>
+            }
+            intro="Availability below is live — straight from the booking system. Choose a court to start booking."
+          />
           <div className="mt-10">
             <CourtListing courts={data.courts} today={data.window.today} />
           </div>
@@ -49,33 +84,37 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </div>
       </section>
 
-      <FacilityHighlights />
+      <RentalPricing courts={data.courts} />
+      <CoachingSection />
+      <WhyChooseUs />
 
-      <section id="book" aria-labelledby="book-title" className="scroll-mt-16 bg-paper py-24 sm:py-28">
+      <section id="book" aria-labelledby="book-title" className="scroll-mt-16 border-t border-line bg-paper py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-12 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div data-reveal>
-              <p className="eyebrow text-court">Book a court</p>
-              <h2 id="book-title" className="display mt-4 text-[clamp(2.8rem,7vw,5.5rem)]">
-                Find your slot.
-              </h2>
-            </div>
-            <p data-reveal className="max-w-md text-muted lg:text-right">
-              Choose a sport, court, date and time. You&apos;ll pay securely with Razorpay, and your court is confirmed the moment the payment is verified.
-            </p>
-          </div>
+          <SectionHeading
+            id="book-title"
+            eyebrow="Book a court"
+            title={
+              <>
+                Reserve your <span className="text-royal">court.</span>
+              </>
+            }
+            intro="Choose a sport, court, date and time. Pay securely with Razorpay — your court is confirmed the moment the payment is verified."
+            className="mb-10"
+          />
           <BookingWizard
             courts={data.courts}
             today={data.window.today}
             lastDate={data.window.lastDate}
             holdMinutes={data.holdMinutes}
+            hours={data.hours}
             paymentsEnabled={data.paymentsEnabled}
             initialCourtSlug={initialCourt}
+            initialSportSlug={initialSport}
           />
         </div>
       </section>
 
-      <ContactSection />
-    </BookingSelectionProvider>
+      <ContactSection hours={data.hours} />
+    </>
   );
 }

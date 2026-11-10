@@ -24,15 +24,15 @@ export function CancelBookingForm({ bookingId, paidAmount }: { bookingId: string
       {paidAmount ? (
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold">Payment of {formatMoney(paidAmount)}</legend>
-          <label className="flex items-start gap-3 rounded-xl border border-line p-3 text-sm has-[:checked]:border-court has-[:checked]:bg-court-50">
-            <input type="radio" name="refund" value="yes" checked={refund === "yes"} onChange={() => setRefund("yes")} className="mt-1 accent-[var(--color-court)]" />
+          <label className="flex items-start gap-3 rounded-xl border border-line p-3 text-sm has-[:checked]:border-royal has-[:checked]:bg-royal-50">
+            <input type="radio" name="refund" value="yes" checked={refund === "yes"} onChange={() => setRefund("yes")} className="mt-1 accent-[var(--color-royal)]" />
             <span>
               <span className="font-semibold">Cancel and refund in full</span>
               <span className="block text-muted">Razorpay refunds the customer&apos;s original payment method. The booking is only cancelled if Razorpay accepts the refund.</span>
             </span>
           </label>
-          <label className="flex items-start gap-3 rounded-xl border border-line p-3 text-sm has-[:checked]:border-court has-[:checked]:bg-court-50">
-            <input type="radio" name="refund" value="no" checked={refund === "no"} onChange={() => setRefund("no")} className="mt-1 accent-[var(--color-court)]" />
+          <label className="flex items-start gap-3 rounded-xl border border-line p-3 text-sm has-[:checked]:border-royal has-[:checked]:bg-royal-50">
+            <input type="radio" name="refund" value="no" checked={refund === "no"} onChange={() => setRefund("no")} className="mt-1 accent-[var(--color-royal)]" />
             <span>
               <span className="font-semibold">Cancel without a refund</span>
               <span className="block text-muted">The payment stays as it is. You can still refund it later from this page.</span>

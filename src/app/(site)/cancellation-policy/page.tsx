@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Payments, cancellations & refunds", 
 
 export default function CancellationPolicyPage() {
   return (
-    <LegalPage title="Payments, cancellations & refunds" updated="15 October 2026">
+    <LegalPage title="Payments, cancellations & refunds" updated="10 November 2026">
       <section>
         <h2>Paying for a booking</h2>
         <ul>
@@ -33,8 +33,8 @@ export default function CancellationPolicyPage() {
         </ul>
       </section>
       <section>
-        <h2>Badminton academy hours</h2>
-        <p>Both badminton courts are used for academy sessions every day from 5:00 PM to 7:00 PM and can&apos;t be booked during that time.</p>
+        <h2>Monthly rental plans</h2>
+        <p>Monthly plans are arranged directly with the academy, so their payment and cancellation terms are agreed when the plan is set up. [Add the academy&apos;s monthly plan terms here.]</p>
       </section>
     </LegalPage>
   );
