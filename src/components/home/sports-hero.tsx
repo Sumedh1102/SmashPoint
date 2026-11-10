@@ -1,10 +1,8 @@
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { getImageProps } from "next/image";
-import Link from "next/link";
 import heroCourt from "@/assets/images/hero-court.webp";
 import heroCourtPortrait from "@/assets/images/hero-court-portrait.webp";
 import { BookLink } from "@/components/booking/selection-context";
-import { buttonClass } from "@/components/ui/button";
 import { site } from "@/content/site";
 import { SPORTS_CONTENT } from "@/content/sports";
 import { describeHours, type BookingHours } from "@/lib/booking/rules";
@@ -47,14 +45,6 @@ export function SportsHero({ fromPrices, hours }: { fromPrices: Record<string, n
         <p className="mt-6 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
           Rent a badminton, pickleball or basketball court at {site.name}. Check live availability, book one or two hours and pay online — or take a monthly plan.
         </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link href="#book" className={buttonClass({ variant: "primary", size: "lg" }, "uppercase tracking-wide")}>
-            Book a court <ArrowRight aria-hidden className="size-4" />
-          </Link>
-          <Link href="#pricing" className={buttonClass({ variant: "ghostLight", size: "lg" }, "uppercase tracking-wide")}>
-            View rates
-          </Link>
-        </div>
 
         <div className="mt-12 grid grid-cols-3 border-t border-white/15 sm:mt-14 sm:grid-cols-4">
           <ul aria-label="Our sports" className="col-span-3 grid grid-cols-3">
